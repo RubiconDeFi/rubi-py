@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "rubi"
+version = "0.4.2"
+description = "a python SDK for the Rubicon Protocol"
+authors = ["denver <denver@rubicon.finance>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+sphinx = "^5.3.0"
+web3 = { version = ">5.23.0,<7.0", allow-prereleases = true }
+hexbytes = "^0.3.0"
+attributedict = "^0.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
