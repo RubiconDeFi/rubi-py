@@ -11,6 +11,7 @@ sphinx = "^5.3.0"
 web3 = { version = ">5.23.0,<7.0", allow-prereleases = true }
 hexbytes = "^0.3.0"
 attributedict = "^0.3.0"
+eth-abi = "^3.0.1"
 
 [build-system]
 requires = ["poetry-core"]

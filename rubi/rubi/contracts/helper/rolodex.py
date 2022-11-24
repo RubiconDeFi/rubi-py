@@ -26,7 +26,7 @@ class OptimismMainnet:
         self.house_abi = json.load(open(path + 'BathHouse.json'))
         self.pair_abi = json.load(open(path + 'BathPair.json'))
         self.bath_abi = json.load(open(path + 'BathToken.json'))
-        self.aide_abi = json.load(open(path + 'MarketAide.json'))
+        self.aid_abi = json.load(open(path + 'MarketAid.json'))
         self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
         # TODO: for now we will hardcode the pool addresses, but in the future we will want to dynamically pull these in a trustless fashion 
@@ -81,7 +81,7 @@ class OptimismGoerli:
         self.house_abi = json.load(open(path + 'BathHouse.json'))
         self.pair_abi = json.load(open(path + 'BathPair.json'))
         self.bath_abi = json.load(open(path + 'BathToken.json'))
-        self.aide_abi = json.load(open(path + 'MarketAide.json'))
+        self.aid_abi = json.load(open(path + 'MarketAid.json'))
         self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
         # set up some common asset addresses that may be used 

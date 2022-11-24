@@ -6,7 +6,6 @@ from web3._utils.events import get_event_data
 
 from rubi.contracts.helper import networks
 
-
 class BathHouse: 
     """this class represents the BathHouse.sol contract and has read functionality for the contract
     

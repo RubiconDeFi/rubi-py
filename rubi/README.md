@@ -1,2 +1,2 @@
-# rubi-py
+# rubi
 Rubicon Python SDK

@@ -1,9 +1,11 @@
 import json
 import logging as log
-import rubi.contracts as contracts
-from rubi.book.book import Book
-import rubi.contracts.helper as helper
+from web3 import Web3
 from attributedict.collections import AttributeDict
+
+import rubi.contracts as contracts
+from rubi.contracts.helper import networks
+from rubi.book import Book
 
 class Rubicon:
     """this class serves as a the main entry point to the repository. it acts as the initialization of multiple contract instances, and give access to the various functions of the contracts. it also provides a few helper functions to make interacting with the contracts easier. more to come soon!
@@ -26,7 +28,8 @@ class Rubicon:
 
         # load required variables
         chain = w3.eth.chain_id
-        network = helper.networks[chain]()
+        # network = helper.networks[chain]()
+        network = networks[chain]()
 
         # set class variables 
         self.w3 = w3

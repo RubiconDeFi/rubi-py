@@ -209,7 +209,7 @@ class MarketAid:
         else:
             chain = w3.eth.chain_id
             network = networks[chain]()
-            self.contract = w3.eth.contract(address=address, abi=network.aide_abi)
+            self.contract = w3.eth.contract(address=address, abi=network.aid_abi)
             self.address = address
 
         # set the class variables

@@ -1,6 +1,7 @@
 import hexbytes
 import logging as log
-from eth_abi import decode, ABICodec
+from eth_abi import decode
+from eth_abi.codec import ABICodec
 from web3._utils.events import get_event_data
 
 from rubi.contracts.helper import networks
