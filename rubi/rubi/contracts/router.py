@@ -73,12 +73,12 @@ class RubiconRouter:
         """
 
         try: 
-            best_offer = self.contract.functions.getBestOffer(asset, quote).call()
+            best_offer = self.contract.functions.getBestOfferAndInfo(asset, quote).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             asset = self.w3.toChecksumAddress(asset)
             quote = self.w3.toChecksumAddress(quote)
-            best_offer = self.contract.functions.getBestOffer(asset, quote).call()
+            best_offer = self.contract.functions.getBestOfferAndInfo(asset, quote).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -245,89 +245,3 @@ class RubiconRouterSigner(RubiconRouter):
             return None
         
         return swap
-
-    # maxBuyAllAmount (buy_gem (address), pay_gem (address), max_fill_amount (uint256))
-    def max_buy_all_amount(self, buy_gem, pay_gem, max_fill_amount, nonce=None, gas=300000, gas_price=None):
-        """this function purchases maximum amount of buy_gem with pay_gem, up to max_fill_amount of pay_gem to be spent
-
-        :param buy_gem: the address of the token to buy
-        :type buy_gem: str
-        :param pay_gem: the address of the token to pay with
-        :type pay_gem: str
-        :param max_fill_amount: the maximum amount of pay_gem to spend
-        :type max_fill_amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the maxBuyAllAmount transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
-
-        try:
-            max_buy_all_amount = self.contract.functions.maxBuyAllAmount(buy_gem, pay_gem, max_fill_amount).build_transaction(txn)
-            max_buy_all_amount = self.w3.eth.account.sign_transaction(max_buy_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(max_buy_all_amount.rawTransaction)
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            max_buy_all_amount = self.contract.functions.maxBuyAllAmount(self.w3.toChecksumAddress(buy_gem), self.w3.toChecksumAddress(pay_gem), max_fill_amount).build_transaction(txn)
-            max_buy_all_amount = self.w3.eth.account.sign_transaction(max_buy_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(max_buy_all_amount.rawTransaction)
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return max_buy_all_amount
-
-    # maxSellAllAmount (pay_gem (address), buy_gem (address), min_fill_amount (uint256))
-    def max_sell_all_amount(self, pay_gem, buy_gem, min_fill_amount, nonce=None, gas=300000, gas_price=None):
-        """this function sells maximum amount of pay_gem for buy_gem, up to min_fill_amount of buy_gem to be received
-
-        :param pay_gem: the address of the token to sell
-        :type pay_gem: str
-        :param buy_gem: the address of the token to buy
-        :type buy_gem: str
-        :param min_fill_amount: the minimum amount of buy_gem to receive
-        :type min_fill_amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the maxSellAllAmount transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
-
-        try:
-            max_sell_all_amount = self.contract.functions.maxSellAllAmount(pay_gem, buy_gem, min_fill_amount).build_transaction(txn)
-            max_sell_all_amount = self.w3.eth.account.sign_transaction(max_sell_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(max_sell_all_amount.rawTransaction)
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            max_sell_all_amount = self.contract.functions.maxSellAllAmount(self.w3.toChecksumAddress(pay_gem), self.w3.toChecksumAddress(buy_gem), min_fill_amount).build_transaction(txn)
-            max_sell_all_amount = self.w3.eth.account.sign_transaction(max_sell_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(max_sell_all_amount.rawTransaction)
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return max_sell_all_amount

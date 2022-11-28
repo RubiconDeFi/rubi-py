@@ -267,30 +267,30 @@ def aid_contract(factory_contract, eth_tester, w3):
 
 # set a fixture that will initialize a Rubicon instance given the contracts above
 @pytest.fixture 
-def rubicon(market_contract, router_contract, aid_contract, add_account, w3):
+def rubicon(market_contract, router_contract, factory_contract, add_account, w3):
 
-    rubicon = Rubicon(w3, add_account['address'], add_account['key'], market_contract, router_contract, aid_contract)
+    rubicon = Rubicon(w3, add_account['address'], add_account['key'], market_contract, router_contract, factory_contract)
     return rubicon
 
 # set a fixture that will initailize a Rubicon instance given the contracts above, for the buyer account
 @pytest.fixture
-def rubicon_buyer(market_contract, router_contract, aid_contract, add_account_buyer, w3):
+def rubicon_buyer(market_contract, router_contract, factory_contract, add_account_buyer, w3):
 
-    rubicon = Rubicon(w3, add_account_buyer['address'], add_account_buyer['key'], market_contract, router_contract, aid_contract)
+    rubicon = Rubicon(w3, add_account_buyer['address'], add_account_buyer['key'], market_contract, router_contract, factory_contract)
     return rubicon
 
 # set a fixture that will populate a RubiconMarket.sol contract with orders
-#@pytest.fixture
-#def populated_market(market_contract, rubicon, erc20s, eth_tester, w3):
+@pytest.fixture
+def populated_market(market_contract, rubicon, erc20s):
 
     # populate the market contract 
-    #rubicon.market.make(erc20s['cow'].address, erc20s['eth'].address, 1000, 1000)
-    #rubicon.market.make(erc20s['cow'].address, erc20s['eth'].address, 2000, 1000)
-    #rubicon.market.make(erc20s['blz'].address, erc20s['eth'].address, 1000, 1000)
-    #rubicon.market.make(erc20s['blz'].address, erc20s['eth'].address, 2000, 1000)
+    rubicon.market.offer(100000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 1
+    rubicon.market.offer(200000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 2
+    rubicon.market.offer(100000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 3
+    rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 4
 
-    #return market_contract
-
+    return market_contract
+'''
 class TestUser:
 
     def test_user(self, market_contract, erc20s, eth_tester, w3):
@@ -447,39 +447,90 @@ class TestMarket():
         # see if there are unsorted offers 
         assert rubicon.market.contract.functions.getFirstUnsortedOffer().call() == 0
 
+        #rubicon.market.offer(100000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 1
+        #rubicon.market.offer(200000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 2
+        #rubicon.market.offer(100000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 3
+        #rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 4
+
 class TestRouter:
         
     # test that the contract was deployed
-    def test_router_deployed(self, router_contract, market_contract, erc20s):
+    def test_router_deployed(self, rubicon, router_contract, populated_market, erc20s, rubicon_buyer):
+
+        # TODO: restructure this to be handled by the erc20 fixture and avoid recursive dependencies in the fixture
+        # set the max approval for the erc20s
+        max_approval = 2**256 - 1
+
+        # approve the router contract to spend the user's tokens
+        #cow.functions.approve(market_contract.address, max_approval).transact({'from': deploy_address})
+        erc20s['cow'].functions.approve(router_contract.address, max_approval).transact({'from': rubicon_buyer.wallet})
+        erc20s['blz'].functions.approve(router_contract.address, max_approval).transact({'from': rubicon_buyer.wallet})
+        erc20s['eth'].functions.approve(router_contract.address, max_approval).transact({'from': rubicon_buyer.wallet})
+
+        # check that the approval was set correctly
+        assert erc20s['cow'].functions.allowance(rubicon_buyer.wallet, router_contract.address).call() == max_approval
+        assert erc20s['blz'].functions.allowance(rubicon_buyer.wallet, router_contract.address).call() == max_approval
+        assert erc20s['eth'].functions.allowance(rubicon_buyer.wallet, router_contract.address).call() == max_approval
 
         # check the contract address
         assert router_contract.address != None
 
         # check that the market address is set
-        assert router_contract.functions.RubiconMarketAddress().call() == market_contract.address
+        assert router_contract.functions.RubiconMarketAddress().call() == populated_market.address
 
         # check that the weth address is the same ass the erc20s['COW'] address
         assert router_contract.functions.wethAddress().call() == erc20s['cow'].address
 
-    # test the contract read functions
-    # def test_router_reads(self, router_contract):
+        # check the function get_best_offer(asset, quote)
+        assert rubicon.router.get_best_offer(erc20s['cow'].address, erc20s['eth'].address) == [2, 200000, erc20s['cow'].address, 100000, erc20s['eth'].address]
+        assert rubicon.router.get_best_offer(erc20s['blz'].address, erc20s['eth'].address) == [4, 200000, erc20s['blz'].address, 100000, erc20s['eth'].address]
 
-    # test the contract write functions
-    # def test_router_writes(self, router_contract):
+        # check the function get_book_from_pair(asset, quote, topNOrders)
+        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon_buyer.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon_buyer.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
 
-    # test the contract events
-    # def test_router_events(self, router_contract):
+        # check the function swap(pay_amt, buy_amt_min, route, expected_market_fee_bps=1, nonce=None, gas=300000, gas_price=None) -> check the user's balance before and after the swap
+        assert erc20s['cow'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) 
+        assert erc20s['blz'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18)
+        assert erc20s['eth'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) 
+
+        rubicon_buyer.router.swap(100, 100, [erc20s['eth'].address, erc20s['cow'].address], 20)
+        rubicon_buyer.router.swap(100, 100, [erc20s['eth'].address, erc20s['blz'].address], 20)
+        
+        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert erc20s['cow'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) + 200
+        assert erc20s['blz'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) + 200
+        assert erc20s['eth'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) - 200
+    
 
 class TestFactory:
 
     # test that the contract was deployed
-    def test_factory_deployed(self, factory_contract, eth_tester):
+    def test_factory_deployed(self, rubicon, factory_contract, aid_contract, eth_tester):
 
         # check that the contract address is set 
         assert factory_contract.address != None
 
         # check that the admin is the deployer
         assert factory_contract.functions.admin().call() == eth_tester.get_accounts()[0]
+
+        # check the function admin()
+        assert rubicon.factory.admin() == eth_tester.get_accounts()[0]
+
+        # check the function get_user_market_aids(user)
+        assert rubicon.factory.get_user_market_aids(eth_tester.get_accounts()[2])[0] == aid_contract.address
+
+        # check the function rubicon_market()
+        assert rubicon.factory.rubicon_market() == rubicon.market.address
+
+        # check the function create_market_aid_instance(nonce=None, gas=300000, gas_price=None)
+        # TODO: it would be nice if we could get the address returned back from the function call to create the aid contract
+        rubicon.factory.create_market_aid_instance()
+        assert rubicon.factory.get_user_market_aids(rubicon.wallet) != None
+'''  
 
 class TestAide:
 
@@ -492,14 +543,40 @@ class TestAide:
         # check to see that the correct admin was set
         assert aid_contract.functions.admin().call() == eth_tester.get_accounts()[2]
 
-    # test the contract read functions in the rubicon package
-    #def test_aid_reads(self, aid_contract, eth_tester):
-        
-        # check that the admin is properly set
+        # check the function admin()
 
+        # check the function approved_strategists()
 
-    # test the contract write functions
-    # def test_aide_writes(self, aid_contract):
+        # check the function get_outstanding_strategist_trades(asset, quote, strategist)
 
-    # test the contract events
-    # def test_aide_events(self, aid_contract):
+        # check the function get_strategist_total_liquidity(asset, quote, strategist)
+
+        # check the function is_approved_strategist(strategist)
+
+        # check the function rubicon_market_address()
+
+        # check the function admin_max_approve_target(target, token, nonce=None, gas=300000, gas_price=None)
+
+        # check the function admin_pull_all_funds(erc20s, nonce=None, gas=300000, gas_price=None)
+
+        # check the function admin_rebalance_funds(asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=300000, gas_price=None)
+
+        # check the function approve_strategist(strategist, nonce=None, gas=300000, gas_price=None)
+
+        # check the function batch_market_making_trades(token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+
+        # check the function batch_requote_all_offers(token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+
+        # check the function batch_requote_offers(ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+
+        # check the function place_market_making_trades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None)
+
+        # check the function remove_strategist(strategist, nonce=None, gas=300000, gas_price=None)
+
+        # check the function requote(id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None)
+
+        # check the function scrub_strategist_trade(id, nonce=None, gas=300000, gas_price=None)
+
+        # check the function scrub_strategist_trades(ids, nonce=None, gas=300000, gas_price=None)
+
+        # check the function strategist_rebalance_funds(asset_to_sell, amount_to_sell, asset_to_target, pool_fee, nonce=None, gas=300000, gas_price=None)

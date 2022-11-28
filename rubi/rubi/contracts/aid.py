@@ -71,22 +71,6 @@ class FactoryAid:
 
         return aids
 
-    # initialized()
-    def initialized(self):
-        """returns the initialized status of the contract
-
-        :return: the initialized status
-        :rtype: bool
-        """
-
-        try: 
-            initialized = self.contract.functions.initialized().call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return initialized
-
     # rubiconMarket()
     def rubicon_market(self):
         """returns the address of the RubiconMarket contract
@@ -145,7 +129,7 @@ class FactoryAidSigner(FactoryAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             create = self.contract.functions.createMarketAidInstance().build_transaction(txn)
@@ -156,46 +140,6 @@ class FactoryAidSigner(FactoryAid):
             return None
         
         return create
-
-    # initialize(market (address))
-    def initialize(self, market, nonce=None, gas=300000, gas_price=None):
-        """this function initializes the contract
-
-        :param market: the address of the RubiconMarket contract
-        :type market: str
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the initialize transaction, None if there is an error
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
-        
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-        
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
-
-        try:
-            initialize = self.contract.functions.initialize(market).build_transaction(txn)
-            initialize = self.w3.eth.account.sign_transaction(initialize, private_key=self.key)
-            self.w3.eth.send_raw_transaction(initialize.rawTransaction)
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            initialize = self.contract.functions.initialize(self.w3.toChecksumAddress(market)).build_transaction(txn)
-            initialize = self.w3.eth.account.sign_transaction(initialize, private_key=self.key)
-            self.w3.eth.send_raw_transaction(initialize.rawTransaction)
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return initialize
-
 
 class MarketAid: 
 
@@ -757,7 +701,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             max_approve = self.contract.functions.adminMaxApproveTarget(target, token).build_transaction(txn)
@@ -796,7 +740,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             pull_all_funds = self.contract.functions.adminPullAllFunds(erc20s).build_transaction(txn)
@@ -832,7 +776,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             rebalance = self.contract.functions.adminRebalanceFunds(asset_to_sell, amount_to_sell, asset_to_target).build_transaction(txn)
@@ -871,7 +815,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             approve = self.contract.functions.approveStrategist(strategist).build_transaction(txn)
@@ -918,7 +862,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             batch = self.contract.functions.batchMarketMakingTrades(token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
@@ -960,7 +904,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             batch = self.contract.functions.batchRequoteAllOffers(token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
@@ -1004,7 +948,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             batch = self.contract.functions.batchRequoteOffers(ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
@@ -1046,7 +990,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try: 
             trade = self.contract.functions.placeMarketMakingTrades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
@@ -1080,7 +1024,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             remove = self.contract.functions.removeStrategist(strategist).build_transaction(txn)
@@ -1129,7 +1073,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             requote = self.contract.functions.requote(id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
@@ -1161,7 +1105,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             scrub = self.contract.functions.scrubStrategistTrade(id).build_transaction(txn)
@@ -1195,7 +1139,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             scrub = self.contract.functions.scrubStrategistTrades(ids).build_transaction(txn)
@@ -1235,7 +1179,7 @@ class MarketAidSigner(MarketAid):
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gas_price': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
             rebalance = self.contract.functions.strategistRebalanceFunds(asset_to_sell, amount_to_sell, asset_to_target, pool_fee).build_transaction(txn)

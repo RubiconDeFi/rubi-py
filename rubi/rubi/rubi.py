@@ -94,6 +94,7 @@ class Rubicon:
         return parsed
     
     # a function to build a book for a given token pair
+    # TODO: this needs to be reworked to deal with the fact that get_book_from_pair returns both sides of the book
     def book(self, token0, token1):
         """a function to build a book for a given token pair
         
@@ -116,6 +117,7 @@ class Rubicon:
         return book 
 
     # a function that will either create a new book or return an existing book based upon the pair 
+    # TODO: this needs to be updated to deal with the fact that get_book_from_pair returns both sides of the book
     def get_book(self, token0, token1): 
         """a function that will either create a new book or return an existing book based upon the pair
         
@@ -139,7 +141,8 @@ class Rubicon:
             book.populate(self.book(token0, token1))
             self.books[key] = book
             return book
-        
+
+    # TODO: this needs to be updated to deal with the fact that get_book_from_pair returns both sides of the book    
     def populate_book(self, token0, token1):
         """a function to populate a book with the latest orders from the market contract
         
