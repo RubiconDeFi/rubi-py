@@ -19,11 +19,12 @@ class BathHouse:
     def __init__(self, w3, contract=None):
         """constructor method"""
 
+        chain = w3.eth.chain_id
+
         if contract:
             self.contract = contract
             self.address = self.contract.address
         else:
-            chain = w3.eth.chain_id
             network = networks[chain]()
             self.contract = w3.eth.contract(address=network.house, abi=network.house_abi)
             self.address = network.house
@@ -48,7 +49,7 @@ class BathHouse:
         try: 
             rubicon_market_address = self.contract.functions.RubiconMarketAddress().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return rubicon_market_address
@@ -64,7 +65,7 @@ class BathHouse:
         try: 
             admin = self.contract.functions.admin().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return admin
@@ -85,7 +86,7 @@ class BathHouse:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             bath_token = self.contract.functions.getBathTokenFromAsset(Web3.toChecksumAddress(asset)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return bath_token
@@ -101,7 +102,7 @@ class BathHouse:
         try: 
             new_bath_token_implementation = self.contract.functions.newBathTokenImplementation().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return new_bath_token_implementation
@@ -146,7 +147,7 @@ class BathHouse:
             return new_bath_token
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     def parse_log_new_bath_token(self, log): 
@@ -169,7 +170,7 @@ class BathHouse:
             return new_bath_token
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
 class BathHouseSigner(BathHouse):
@@ -217,7 +218,7 @@ class BathHouseSigner(BathHouse):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
         
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -230,7 +231,7 @@ class BathHouseSigner(BathHouse):
             bath_token = self.w3.eth.account.sign_transaction(bath_token, self.wallet.privateKey)
             self.w3.eth.send_raw_transaction(bath_token.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return bath_token

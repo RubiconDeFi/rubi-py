@@ -18,11 +18,12 @@ class FactoryAid:
     def __init__(self, w3, contract=None):
         """constructor method"""
 
+        chain = w3.eth.chain_id
+
         if contract:
             self.contract = contract
             self.address = self.contract.address
         else:
-            chain = w3.eth.chain_id
             # TODO: add error handling for unsupported chains
             network = networks[chain]()
             self.contract = w3.eth.contract(address=network.factory, abi=network.factory_abi)
@@ -47,7 +48,7 @@ class FactoryAid:
         try: 
             admin = self.contract.functions.admin().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return admin             
@@ -65,7 +66,7 @@ class FactoryAid:
         except ValueError: 
             aids = self.contract.functions.getUserMarketAids(self.w3.toChecksumAddress(user)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return aids
@@ -81,7 +82,7 @@ class FactoryAid:
         try: 
             initialized = self.contract.functions.initialized().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return initialized
@@ -97,7 +98,7 @@ class FactoryAid:
         try: 
             rubicon_market = self.contract.functions.rubiconMarket().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return rubicon_market
@@ -151,7 +152,7 @@ class FactoryAidSigner(FactoryAid):
             create = self.w3.eth.account.sign_transaction(create, private_key=self.key)
             self.w3.eth.send_raw_transaction(create.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return create
@@ -190,7 +191,7 @@ class FactoryAidSigner(FactoryAid):
             initialize = self.w3.eth.account.sign_transaction(initialize, private_key=self.key)
             self.w3.eth.send_raw_transaction(initialize.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return initialize
@@ -237,7 +238,7 @@ class MarketAid:
         try: 
             rubicon_market_address = self.contract.functions.RubiconMarketAddress().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return rubicon_market_address
@@ -253,7 +254,7 @@ class MarketAid:
         try: 
             admin = self.contract.functions.admin().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return admin
@@ -269,7 +270,7 @@ class MarketAid:
         try: 
             approved_strategists = self.contract.functions.approvedStrategists().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return approved_strategists
@@ -293,7 +294,7 @@ class MarketAid:
         except ValueError: 
             outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(self.w3.toChecksumAddress(asset), self.w3.toChecksumAddress(quote), self.w3.toChecksumAddress(strategist)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return outstanding_strategist_trades
@@ -317,7 +318,7 @@ class MarketAid:
         except ValueError: 
             strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(self.w3.toChecksumAddress(asset), self.w3.toChecksumAddress(quote), self.w3.toChecksumAddress(strategist)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return strategist_total_liquidity
@@ -337,7 +338,7 @@ class MarketAid:
         except ValueError: 
             is_approved_strategist = self.contract.functions.isApprovedStrategist(self.w3.toChecksumAddress(strategist)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return is_approved_strategist
@@ -388,7 +389,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     def parse_log_strategist_trade(self, log): 
@@ -417,7 +418,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     '''
@@ -470,7 +471,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
         
     def parse_log_scrubbed_strat_trade(self, log): 
@@ -497,7 +498,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     '''
@@ -548,7 +549,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
         
     def parse_log_batch_market_making_trades(self, log): 
@@ -568,7 +569,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     '''
@@ -618,7 +619,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
     
     def parse_log_requote(self, log): 
@@ -645,7 +646,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     '''
@@ -684,7 +685,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
     
     def parse_log_batch_requote_offers(self, log): 
@@ -704,7 +705,7 @@ class MarketAid:
             return trade
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
      
 
@@ -768,7 +769,7 @@ class MarketAidSigner(MarketAid):
             max_approve = self.w3.eth.account.sign_transaction(max_approve, private_key=self.key)
             self.w3.eth.send_raw_transaction(max_approve.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return max_approve
@@ -802,7 +803,7 @@ class MarketAidSigner(MarketAid):
             pull_all_funds = self.w3.eth.account.sign_transaction(pull_all_funds, private_key=self.key)
             self.w3.eth.send_raw_transaction(pull_all_funds.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # adminRebalanceFunds(assetToSell (address), amountToSell (uint256), assetToTarget (address))
@@ -843,7 +844,7 @@ class MarketAidSigner(MarketAid):
             rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return rebalance
@@ -882,7 +883,7 @@ class MarketAidSigner(MarketAid):
             approve = self.w3.eth.account.sign_transaction(approve, private_key=self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return approve
@@ -924,7 +925,7 @@ class MarketAidSigner(MarketAid):
             batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return batch
@@ -966,7 +967,7 @@ class MarketAidSigner(MarketAid):
             batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return batch
@@ -1010,7 +1011,7 @@ class MarketAidSigner(MarketAid):
             batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return batch
@@ -1052,7 +1053,7 @@ class MarketAidSigner(MarketAid):
             trade = self.w3.eth.account.sign_transaction(trade, private_key=self.key)
             self.w3.eth.send_raw_transaction(trade.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return trade
@@ -1091,7 +1092,7 @@ class MarketAidSigner(MarketAid):
             remove = self.w3.eth.account.sign_transaction(remove, private_key=self.key)
             self.w3.eth.send_raw_transaction(remove.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return remove
@@ -1135,7 +1136,7 @@ class MarketAidSigner(MarketAid):
             requote = self.w3.eth.account.sign_transaction(requote, private_key=self.key)
             self.w3.eth.send_raw_transaction(requote.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return requote
@@ -1167,7 +1168,7 @@ class MarketAidSigner(MarketAid):
             scrub = self.w3.eth.account.sign_transaction(scrub, private_key=self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return scrub
@@ -1201,7 +1202,7 @@ class MarketAidSigner(MarketAid):
             scrub = self.w3.eth.account.sign_transaction(scrub, private_key=self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return scrub
@@ -1246,7 +1247,7 @@ class MarketAidSigner(MarketAid):
             rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return rebalance

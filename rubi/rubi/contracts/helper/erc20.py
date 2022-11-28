@@ -30,7 +30,7 @@ class ERC20:
                 address = w3.toChecksumAddress(address)
                 contract = w3.eth.contract(address=address, abi=abi)
             except Exception as e:
-                log.error('error message: ', e)
+                log.error(e, exc_info=True)
                 return None
 
             # set the class variables
@@ -67,7 +67,7 @@ class ERC20:
             spender = self.w3.toChecksumAddress(spender)
             allowance = self.contract.functions.allowance(owner, spender).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return allowance
@@ -89,7 +89,7 @@ class ERC20:
             account = self.w3.toChecksumAddress(account)
             balance = self.contract.functions.balanceOf(account).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return balance
@@ -105,7 +105,7 @@ class ERC20:
         try: 
             total_supply = self.contract.functions.totalSupply().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return total_supply
@@ -137,7 +137,7 @@ class ERC20:
         try: 
             name = self.contract.functions.name().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return name
@@ -153,7 +153,7 @@ class ERC20:
         try: 
             symbol = self.contract.functions.symbol().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return symbol
@@ -215,7 +215,7 @@ class ERC20Signer(ERC20):
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return approve
@@ -242,7 +242,7 @@ class ERC20Signer(ERC20):
             nonce = self.w3.eth.getTransactionCount(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -256,7 +256,7 @@ class ERC20Signer(ERC20):
             transfer = self.w3.eth.account.sign_transaction(transfer, self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return transfer
@@ -299,7 +299,7 @@ class ERC20Signer(ERC20):
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return transfer_from
@@ -341,7 +341,7 @@ class ERC20Signer(ERC20):
             increase_allowance = self.w3.eth.account.sign_transaction(increase_allowance, self.key)
             self.w3.eth.send_raw_transaction(increase_allowance.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return increase_allowance
@@ -382,7 +382,7 @@ class ERC20Signer(ERC20):
             decrease_allowance = self.w3.eth.account.sign_transaction(decrease_allowance, self.key)
             self.w3.eth.send_raw_transaction(decrease_allowance.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return decrease_allowance

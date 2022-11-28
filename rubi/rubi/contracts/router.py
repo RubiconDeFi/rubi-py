@@ -19,11 +19,12 @@ class RubiconRouter:
     # init function
     def __init__(self, w3, contract=None):
 
+        chain = w3.eth.chain_id
+
         if contract:
             self.contract = contract
             self.address = self.contract.address
         else:
-            chain = w3.eth.chain_id
             network = networks[chain]()
             self.contract = w3.eth.contract(address=network.router, abi=network.router_abi)
             self.address = network.router
@@ -54,7 +55,7 @@ class RubiconRouter:
         try: 
             claimable = self.contract.functions.checkClaimAllUserBonusTokens(user, targetBathTokens, token).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return claimable
@@ -79,7 +80,7 @@ class RubiconRouter:
             quote = self.w3.toChecksumAddress(quote)
             best_offer = self.contract.functions.getBestOffer(asset, quote).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return best_offer
@@ -150,7 +151,7 @@ class RubiconRouter:
             return swap
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
     
     def parse_log_swap(self, log):
@@ -179,7 +180,7 @@ class RubiconRouter:
             return swap
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
 class RubiconRouterSigner(RubiconRouter):
@@ -240,7 +241,7 @@ class RubiconRouterSigner(RubiconRouter):
             swap = self.w3.eth.account.sign_transaction(swap, self.key)
             self.w3.eth.send_raw_transaction(swap.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return swap
@@ -283,7 +284,7 @@ class RubiconRouterSigner(RubiconRouter):
             max_buy_all_amount = self.w3.eth.account.sign_transaction(max_buy_all_amount, self.key)
             self.w3.eth.send_raw_transaction(max_buy_all_amount.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return max_buy_all_amount
@@ -326,7 +327,7 @@ class RubiconRouterSigner(RubiconRouter):
             max_sell_all_amount = self.w3.eth.account.sign_transaction(max_sell_all_amount, self.key)
             self.w3.eth.send_raw_transaction(max_sell_all_amount.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return max_sell_all_amount

@@ -18,11 +18,12 @@ class RubiconMarket:
     def __init__(self, w3, contract=None):
         """constructor method"""
 
+        chain = w3.eth.chain_id
+
         if contract:
             self.contract = contract
             self.address = self.contract.address
         else:
-            chain = w3.eth.chain_id
             network = networks[chain]()
             self.contract = w3.eth.contract(address=network.market, abi=network.market_abi)
             self.address = network.market
@@ -65,7 +66,7 @@ class RubiconMarket:
                    # and handle this when the function then views the offer
                    # prolly the latter...
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return best_offer
@@ -83,7 +84,7 @@ class RubiconMarket:
         try: 
             better_offer = self.contract.functions.getBetterOffer(id).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return better_offer
@@ -101,7 +102,7 @@ class RubiconMarket:
         try: 
             worse_offer = self.contract.functions.getWorseOffer(id).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return worse_offer
@@ -128,7 +129,7 @@ class RubiconMarket:
             buy_gem = self.w3.toChecksumAddress(buy_gem)
             buy_amount = self.contract.functions.getBuyAmount(buy_gem, pay_gem, pay_amt).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return buy_amount
@@ -144,7 +145,7 @@ class RubiconMarket:
         try: 
             fee_bps = self.contract.functions.getFeeBPS().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return fee_bps
@@ -163,7 +164,7 @@ class RubiconMarket:
         try: 
             offer = self.contract.functions.getOffer(id).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return offer
@@ -188,7 +189,7 @@ class RubiconMarket:
             buy_gem = self.w3.toChecksumAddress(buy_gem)
             offer_count = self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return offer_count
@@ -206,7 +207,7 @@ class RubiconMarket:
         try: 
             owner = self.contract.functions.getOwner(id).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return owner
@@ -231,7 +232,7 @@ class RubiconMarket:
             buy_gem = self.w3.toChecksumAddress(buy_gem)
             pay_amount = self.contract.functions.getPayAmount(pay_gem, buy_gem, buy_amt).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return pay_amount
@@ -247,7 +248,7 @@ class RubiconMarket:
         try: 
             matching_enabled = self.contract.functions.matchingEnabled().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return matching_enabled
@@ -295,7 +296,7 @@ class RubiconMarket:
             return offer
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
     def parse_log_make(self, log): 
@@ -324,7 +325,7 @@ class RubiconMarket:
             return offer
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None 
 
 
@@ -367,7 +368,7 @@ class RubiconMarket:
             return trade
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
     def parse_log_take(self, log):
@@ -396,7 +397,7 @@ class RubiconMarket:
             return trade
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
@@ -437,7 +438,7 @@ class RubiconMarket:
             return kill
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
     
     def parse_log_kill(self, log):
@@ -465,7 +466,7 @@ class RubiconMarket:
             return kill
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
@@ -500,7 +501,7 @@ class RubiconMarket:
             return deleted
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
     
     def parse_offer_deleted(self, log):
@@ -522,7 +523,7 @@ class RubiconMarket:
             return deleted
         
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
 class RubiconMarketSigner(RubiconMarket): 
@@ -579,7 +580,7 @@ class RubiconMarketSigner(RubiconMarket):
             buy = self.w3.eth.account.sign_transaction(buy, self.key)
             self.w3.eth.send_raw_transaction(buy.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return buy  
@@ -629,7 +630,7 @@ class RubiconMarketSigner(RubiconMarket):
             buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
             self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
         except Exception as e: 
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return buy_all_amount
@@ -654,7 +655,7 @@ class RubiconMarketSigner(RubiconMarket):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -663,89 +664,57 @@ class RubiconMarketSigner(RubiconMarket):
             cancel = self.w3.eth.account.sign_transaction(cancel, self.key)
             self.w3.eth.send_raw_transaction(cancel.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return cancel
 
-    # kill(id (uint256))
-    def kill(self, id, nonce=None, gas=300000, gas_price=None):
-        """kill the offer with the id, user can only kill offers they have created
+    # offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address))
+    def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=300000, gas_price=None):
+        """create an offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
-        :param id: id of the offer
-        :type id: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the kill transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
-
-        try:
-            kill = self.contract.functions.kill(id).build_transaction(txn)
-            kill = self.w3.eth.account.sign_transaction(kill, self.key)
-            self.w3.eth.send_raw_transaction(kill.rawTransaction)
-        except Exception as e:
-            log.error('error message: ', e)
-            return None
-        
-        return kill
-
-    # make(pay_gem (address), buy_gem (address), pay_amt (uint256), buy_amt (uint256))
-    def make(self, pay_gem, buy_gem, pay_amt, buy_amt, nonce=None, gas=300000, gas_price=None):
-        """make an offer to pay the pay_amt of the pay_gem token in exchange for the buy_amt of the buy_gem token
-
-        :param pay_gem: address of the token you want to pay with
-        :type pay_gem: str
-        :param buy_gem: address of the token you want to buy
-        :type buy_gem: str
         :param pay_amt: amount of the pay_gem token you want to pay with, in the integer representation of the token
         :type pay_amt: int
+        :param pay_gem: address of the token you want to pay with
+        :type pay_gem: str
         :param buy_amt: amount of the buy_gem token you want to buy, in the integer representation of the token
         :type buy_amt: int
+        :param buy_gem: address of the token you want to buy
+        :type buy_gem: str
+        :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want to insert the offer at
+        :type pos: int, optional
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
         :param gas: gas limit of the transaction, defaults to a value of 300000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
-        :return: the transaction object of the make transaction, returns None if the transaction fails
-        :rtype: dict, None
+        :return: the transaction object of the offer transaction, returns None if the transaction fails
+        :rtype: dict, None    
         """
 
         if nonce is None:
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
         try:
-            make = self.contract.functions.make(pay_gem, buy_gem, pay_amt, buy_amt).build_transaction(txn)
-            make = self.w3.eth.account.sign_transaction(make, self.key)
-            self.w3.eth.send_raw_transaction(make.rawTransaction)
+            offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos).build_transaction(txn)
+            offer = self.w3.eth.account.sign_transaction(offer, self.key)
+            self.w3.eth.send_raw_transaction(offer.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            make = self.contract.functions.make(self.w3.toChecksumAddress(pay_gem), self.w3.toChecksumAddress(buy_gem), pay_amt, buy_amt).build_transaction(txn)
-            make = self.w3.eth.account.sign_transaction(make, self.key)
-            self.w3.eth.send_raw_transaction(make.rawTransaction)
+            offer = self.contract.functions.offer(pay_amt, self.w3.toChecksumAddress(pay_gem), buy_amt, self.w3.toChecksumAddress(buy_gem), pos).build_transaction(txn)
+            offer = self.w3.eth.account.sign_transaction(offer, self.key)
+            self.w3.eth.send_raw_transaction(offer.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
-        
-        return make
+
+        return offer
 
     # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256))
     def sell_all_amount(self, pay_gem, pay_amt, buy_gem, min_fill_amount, nonce=None, gas=300000, gas_price=None):
@@ -773,7 +742,7 @@ class RubiconMarketSigner(RubiconMarket):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -788,7 +757,7 @@ class RubiconMarketSigner(RubiconMarket):
             sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
             self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return sell_all_amount

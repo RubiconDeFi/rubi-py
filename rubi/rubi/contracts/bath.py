@@ -19,11 +19,12 @@ class BathToken:
     def __init__(self, address, w3, contract=None):
         """constructor method"""
 
+        chain = w3.eth.chain_id
+
         if contract:
             self.contract = contract
             self.address = self.contract.address
-        else:
-            chain = w3.eth.chain_id
+        else:  
             network = networks[chain]()
             self.contract = w3.eth.contract(address=address, abi=network.bath_abi)
             self.address = address
@@ -58,7 +59,7 @@ class BathToken:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             allowance = self.contract.functions.allowance(Web3.toChecksumAddress(owner), Web3.toChecksumAddress(spender)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return allowance
@@ -74,7 +75,7 @@ class BathToken:
         try: 
             asset = self.contract.functions.asset().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return asset
@@ -95,7 +96,7 @@ class BathToken:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             balance = self.contract.functions.balanceOf(Web3.toChecksumAddress(account)).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return balance
@@ -114,7 +115,7 @@ class BathToken:
         try: 
             assets = self.contract.functions.convertToAssets(shares).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return assets
@@ -132,7 +133,7 @@ class BathToken:
         try: 
             shares = self.contract.functions.convertToShares(assets).call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return shares
@@ -148,7 +149,7 @@ class BathToken:
         try: 
             decimals = self.contract.functions.decimals().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return decimals
@@ -164,7 +165,7 @@ class BathToken:
         try: 
             feeBPS = self.contract.functions.feeBPS().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return feeBPS
@@ -180,7 +181,7 @@ class BathToken:
         try: 
             feeTo = self.contract.functions.feeTo().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return feeTo
@@ -196,7 +197,7 @@ class BathToken:
         try: 
             initialized = self.contract.functions.initialized().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return initialized
@@ -212,7 +213,7 @@ class BathToken:
         try: 
             outstandingAmount = self.contract.functions.outstandingAmount().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return outstandingAmount
@@ -228,7 +229,7 @@ class BathToken:
         try: 
             underlyingBalance = self.contract.functions.underlyingBalance().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return underlyingBalance
@@ -244,7 +245,7 @@ class BathToken:
         try: 
             totalSupply = self.contract.functions.totalSupply().call()
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return totalSupply
@@ -284,7 +285,7 @@ class BathToken:
             return transfer
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     def parse_log_deposit(self, log): 
@@ -305,7 +306,7 @@ class BathToken:
             return transfer
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
@@ -346,7 +347,7 @@ class BathToken:
             return deposit
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     def parse_log_deposit(self, log): 
@@ -371,7 +372,7 @@ class BathToken:
             return deposit
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
@@ -414,7 +415,7 @@ class BathToken:
             return withdraw
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     def parse_log_withdraw(self, log): 
@@ -441,7 +442,7 @@ class BathToken:
             return withdraw
 
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
 class BathTokenSigner(BathToken):
@@ -491,7 +492,7 @@ class BathTokenSigner(BathToken):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -505,7 +506,7 @@ class BathTokenSigner(BathToken):
             approve = self.w3.eth.account.sign_transaction(approve, private_key=self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return approve
@@ -532,7 +533,7 @@ class BathTokenSigner(BathToken):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -546,7 +547,7 @@ class BathTokenSigner(BathToken):
             transfer = self.w3.eth.account.sign_transaction(transfer, private_key=self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return transfer
@@ -576,7 +577,7 @@ class BathTokenSigner(BathToken):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
     
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -590,7 +591,7 @@ class BathTokenSigner(BathToken):
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, private_key=self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return transfer_from
@@ -615,7 +616,7 @@ class BathTokenSigner(BathToken):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -629,7 +630,7 @@ class BathTokenSigner(BathToken):
             deposit = self.w3.eth.account.sign_transaction(deposit, private_key=self.key)
             self.w3.eth.send_raw_transaction(deposit.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
     # withdraw(shares (uint256))
@@ -652,7 +653,7 @@ class BathTokenSigner(BathToken):
             nonce = self.w3.eth.get_transaction_count(self.wallet)
         
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
         
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
     
@@ -661,7 +662,7 @@ class BathTokenSigner(BathToken):
             withdraw = self.w3.eth.account.sign_transaction(withdraw, private_key=self.key)
             self.w3.eth.send_raw_transaction(withdraw.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return withdraw
@@ -688,7 +689,7 @@ class BathTokenSigner(BathToken):
             gas = 300000
         
         if gas_price is None:
-            gas_price = self.w3.eth.gasPrice
+            gas_price = self.w3.eth.gas_price
         
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
 
@@ -697,7 +698,7 @@ class BathTokenSigner(BathToken):
             get_all_bonus_token_reward = self.w3.eth.account.sign_transaction(get_all_bonus_token_reward, private_key=self.key)
             self.w3.eth.send_raw_transaction(get_all_bonus_token_reward.rawTransaction)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
         
         return get_all_bonus_token_reward

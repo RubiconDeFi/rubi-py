@@ -28,8 +28,11 @@ class Rubicon:
 
         # load required variables
         chain = w3.eth.chain_id
-        # network = helper.networks[chain]()
-        network = networks[chain]()
+
+        try:
+            network = networks[chain]()
+        except:
+            network = 'unknown'
 
         # set class variables 
         self.w3 = w3
@@ -85,7 +88,7 @@ class Rubicon:
         try: 
             parsed = self.market_events[data.params.result.topics[0]](data)
         except Exception as e:
-            log.error('error message: ', e)
+            log.error(e, exc_info=True)
             return None
 
         return parsed
