@@ -76,8 +76,8 @@ class RubiconRouter:
             best_offer = self.contract.functions.getBestOfferAndInfo(asset, quote).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            asset = self.w3.toChecksumAddress(asset)
-            quote = self.w3.toChecksumAddress(quote)
+            asset = self.w3.to_checksum_address(asset)
+            quote = self.w3.to_checksum_address(quote)
             best_offer = self.contract.functions.getBestOfferAndInfo(asset, quote).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -103,8 +103,8 @@ class RubiconRouter:
             book = self.contract.functions.getBookFromPair(asset, quote, topNOrders).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            asset = self.w3.toChecksumAddress(asset)
-            quote = self.w3.toChecksumAddress(quote)
+            asset = self.w3.to_checksum_address(asset)
+            quote = self.w3.to_checksum_address(quote)
             book = self.contract.functions.getBookFromPair(asset, quote, topNOrders).call()
         except Exception as e:
             return None
@@ -207,7 +207,7 @@ class RubiconRouterSigner(RubiconRouter):
     ######################################################################
 
     # swap(pay_amt (uint256), buy_amt_min (uint256), route (address[]), expectedMarketFeeBPS (uint256))
-    def swap(self, pay_amt, buy_amt_min, route, expected_market_fee_bps=1, nonce=None, gas=300000, gas_price=None):
+    def swap(self, pay_amt, buy_amt_min, route, expected_market_fee_bps=1, nonce=None, gas=3000000, gas_price=None):
         """this function swaps the pay_amt of the first token in the route array for at least the buy_amt_min of the last token in the route array
 
         :param pay_amt: the amount of the first token in the route array to swap, as an integer amount of the token's smallest unit
@@ -220,7 +220,7 @@ class RubiconRouterSigner(RubiconRouter):
         :type expected_market_fee_bps: int, optional
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional

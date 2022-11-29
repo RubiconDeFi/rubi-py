@@ -5,7 +5,6 @@ from attributedict.collections import AttributeDict
 
 import rubi.contracts as contracts
 from rubi.contracts.helper import networks
-from rubi.book import Book
 
 class Rubicon:
     """this class serves as a the main entry point to the repository. it acts as the initialization of multiple contract instances, and give access to the various functions of the contracts. it also provides a few helper functions to make interacting with the contracts easier. more to come soon!
@@ -66,9 +65,6 @@ class Rubicon:
             self.log_kill_hash : self.market.stream_log_kill
         }
 
-        # create a dictionary to store the market books that are being tracked 
-        self.books = {}
-
     ######################################################################
     # read calls
     ######################################################################
@@ -92,70 +88,6 @@ class Rubicon:
             return None
 
         return parsed
-    
-    # a function to build a book for a given token pair
-    # TODO: this needs to be reworked to deal with the fact that get_book_from_pair returns both sides of the book
-    def book(self, token0, token1):
-        """a function to build a book for a given token pair
-        
-        :param token0: the address of the first token in the pair
-        :type token0: str
-        :param token1: the address of the second token in the pair
-        :type token1: str
-        :return: a book object
-        :rtype: book.Book
-        """
-
-        # get the number of orders in the book for the given token pair
-        # market: get_offer_count(self, sell_gem, buy_gem):
-        offer_count = self.market.get_offer_count(token0, token1)
-
-        # get the sorted orders in the book for the given token pair
-        # router: def get_book_from_pair(self, asset, quote, topNOrders):
-        book = self.router.get_book_from_pair(token0, token1, offer_count)
-
-        return book 
-
-    # a function that will either create a new book or return an existing book based upon the pair 
-    # TODO: this needs to be updated to deal with the fact that get_book_from_pair returns both sides of the book
-    def get_book(self, token0, token1): 
-        """a function that will either create a new book or return an existing book based upon the pair
-        
-        :param token0: the address of the first token in the pair
-        :type token0: str
-        :param token1: the address of the second token in the pair
-        :type token1: str
-        :return: a book object
-        :rtype: book.Book
-        """
-
-        # create the pair key 
-        # TODO: could be useful to add a checksum here, but its also handled lower down the stack so not sure if its necessary
-        key = str(token0) + '/' + str(token1)
-
-        # check if the book exists
-        if key in self.books:
-            return self.books[key]
-        else:
-            book = Book(token0, token1, self.w3)
-            book.populate(self.book(token0, token1))
-            self.books[key] = book
-            return book
-
-    # TODO: this needs to be updated to deal with the fact that get_book_from_pair returns both sides of the book    
-    def populate_book(self, token0, token1):
-        """a function to populate a book with the latest orders from the market contract
-        
-        :param token0: the address of the first token in the pair
-        :type token0: str   
-        :param token1: the address of the second token in the pair
-        :type token1: str
-        """
-
-        book = self.get_book(token0, token1)
-        book.populate(self.book(token0, token1))
-
-        return book
 
     ######################################################################
     # write calls
@@ -205,9 +137,9 @@ class Rubicon:
         """
 
         if self.wallet and self.key:
-            return contracts.ERC20Signer(self.w3, token_address, self.wallet, self.key, contract=None)
+            return contracts.helper.ERC20Signer(self.w3, token_address, self.wallet, self.key, contract=None)
         else:
-            return contracts.ERC20(self.w3, token_address, contract=None)
+            return contracts.helper.ERC20(self.w3, token_address, contract=None)
 
     # a function to create and pass back a market aid instance
     def aid(self, address, contract=None):

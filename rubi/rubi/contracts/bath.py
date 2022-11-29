@@ -57,7 +57,7 @@ class BathToken:
             allowance = self.contract.functions.allowance(owner, spender).call()
         except ValueError: 
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            allowance = self.contract.functions.allowance(Web3.toChecksumAddress(owner), Web3.toChecksumAddress(spender)).call()
+            allowance = self.contract.functions.allowance(Web3.to_checksum_address(owner), Web3.to_checksum_address(spender)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -94,7 +94,7 @@ class BathToken:
             balance = self.contract.functions.balanceOf(account).call()
         except ValueError:  
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            balance = self.contract.functions.balanceOf(Web3.toChecksumAddress(account)).call()
+            balance = self.contract.functions.balanceOf(Web3.to_checksum_address(account)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -470,7 +470,7 @@ class BathTokenSigner(BathToken):
     ######################################################################
 
     # approve(spender (address), amount (uint256))
-    def approve(self, spender, amount, nonce=None, gas=300000, gas_price=None):
+    def approve(self, spender, amount, nonce=None, gas=3000000, gas_price=None):
         
         """this function approves the spender to spend the amount of tokens on behalf of the signer
 
@@ -480,7 +480,7 @@ class BathTokenSigner(BathToken):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -502,7 +502,7 @@ class BathTokenSigner(BathToken):
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            approve = self.contract.functions.approve(self.w3.toChecksumAddress(spender), amount).buildTransaction(txn)
+            approve = self.contract.functions.approve(self.w3.to_checksum_address(spender), amount).buildTransaction(txn)
             approve = self.w3.eth.account.sign_transaction(approve, private_key=self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
@@ -512,7 +512,7 @@ class BathTokenSigner(BathToken):
         return approve
 
     # transfer(recipient (address), amount (uint256))
-    def transfer(self, recipient, amount, nonce=None, gas=300000, gas_price=None):
+    def transfer(self, recipient, amount, nonce=None, gas=3000000, gas_price=None):
         """a function to transfer tokens from the signer to the recipient
 
         :param recipient: the address of the recipient
@@ -521,7 +521,7 @@ class BathTokenSigner(BathToken):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -543,7 +543,7 @@ class BathTokenSigner(BathToken):
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            transfer = self.contract.functions.transfer(self.w3.toChecksumAddress(recipient), amount).buildTransaction(txn)
+            transfer = self.contract.functions.transfer(self.w3.to_checksum_address(recipient), amount).buildTransaction(txn)
             transfer = self.w3.eth.account.sign_transaction(transfer, private_key=self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except Exception as e:
@@ -553,7 +553,7 @@ class BathTokenSigner(BathToken):
         return transfer
 
     # transferFrom(sender (address), recipient (address), amount (uint256))
-    def transfer_from(self, sender, recipient, amount, nonce=None, gas=300000, gas_price=None):
+    def transfer_from(self, sender, recipient, amount, nonce=None, gas=3000000, gas_price=None):
 
         """a function to transfer tokens from the sender to the recipient on behalf of the signer
 
@@ -565,7 +565,7 @@ class BathTokenSigner(BathToken):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -587,7 +587,7 @@ class BathTokenSigner(BathToken):
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            transfer_from = self.contract.functions.transferFrom(self.w3.toChecksumAddress(sender), self.w3.toChecksumAddress(recipient), amount).buildTransaction(txn)
+            transfer_from = self.contract.functions.transferFrom(self.w3.to_checksum_address(sender), self.w3.to_checksum_address(recipient), amount).buildTransaction(txn)
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, private_key=self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except Exception as e:
@@ -597,7 +597,7 @@ class BathTokenSigner(BathToken):
         return transfer_from
 
     # deposit(assets (uint256), receiver (address))
-    def deposit(self, assets, receiver, nonce=None, gas=300000, gas_price=None):
+    def deposit(self, assets, receiver, nonce=None, gas=3000000, gas_price=None):
         """a function to deposit assets into the bathtoken contract and receive tokens in return
         
         :param assets: the amount of assets to deposit, in the integer representation of the token
@@ -606,7 +606,7 @@ class BathTokenSigner(BathToken):
         :type receiver: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -626,7 +626,7 @@ class BathTokenSigner(BathToken):
             self.w3.eth.send_raw_transaction(deposit.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            deposit = self.contract.functions.deposit(assets, self.w3.toChecksumAddress(receiver)).buildTransaction(txn)
+            deposit = self.contract.functions.deposit(assets, self.w3.to_checksum_address(receiver)).buildTransaction(txn)
             deposit = self.w3.eth.account.sign_transaction(deposit, private_key=self.key)
             self.w3.eth.send_raw_transaction(deposit.rawTransaction)
         except Exception as e:
@@ -634,14 +634,14 @@ class BathTokenSigner(BathToken):
             return None
 
     # withdraw(shares (uint256))
-    def withdraw(self, shares, nonce=None, gas=300000, gas_price=None):
+    def withdraw(self, shares, nonce=None, gas=3000000, gas_price=None):
         """a function to withdraw the underlying asset from the bathtoken contract in exchange for tokens
 
         :param shares: the amount of tokens to burn, in the integer representation of the token
         :type shares: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -668,12 +668,12 @@ class BathTokenSigner(BathToken):
         return withdraw
 
     # getAllBonusTokenReward()
-    def get_all_bonus_token_reward(self, nonce=None, gas=300000, gas_price=None):
+    def get_all_bonus_token_reward(self, nonce=None, gas=3000000, gas_price=None):
         """a function to get all the bonus tokens that have been earned by the user
 
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -686,7 +686,7 @@ class BathTokenSigner(BathToken):
         
         # TODO: figure out a way to dynamically set gas
         if gas is None:
-            gas = 300000
+            gas = 3000000
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price

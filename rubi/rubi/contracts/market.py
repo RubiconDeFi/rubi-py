@@ -56,8 +56,8 @@ class RubiconMarket:
             best_offer = self.contract.functions.getBestOffer(sell_gem, buy_gem).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_gem = self.w3.toChecksumAddress(sell_gem)
-            buy_gem = self.w3.toChecksumAddress(buy_gem)
+            sell_gem = self.w3.to_checksum_address(sell_gem)
+            buy_gem = self.w3.to_checksum_address(buy_gem)
             best_offer = self.contract.functions.getBestOffer(sell_gem, buy_gem).call()
             # TODO: add error handling, local logging, and OT tracing
             # TODO: when you pass in two zero addresses, it returns zero, is this a bug or a feature?
@@ -125,8 +125,8 @@ class RubiconMarket:
             buy_amount = self.contract.functions.getBuyAmount(buy_gem, pay_gem, pay_amt).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            pay_gem = self.w3.toChecksumAddress(pay_gem)
-            buy_gem = self.w3.toChecksumAddress(buy_gem)
+            pay_gem = self.w3.to_checksum_address(pay_gem)
+            buy_gem = self.w3.to_checksum_address(buy_gem)
             buy_amount = self.contract.functions.getBuyAmount(buy_gem, pay_gem, pay_amt).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -185,8 +185,8 @@ class RubiconMarket:
             offer_count = self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_gem = self.w3.toChecksumAddress(sell_gem)
-            buy_gem = self.w3.toChecksumAddress(buy_gem)
+            sell_gem = self.w3.to_checksum_address(sell_gem)
+            buy_gem = self.w3.to_checksum_address(buy_gem)
             offer_count = self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -228,8 +228,8 @@ class RubiconMarket:
             pay_amount = self.contract.functions.getPayAmount(pay_gem, buy_gem, buy_amt).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            pay_gem = self.w3.toChecksumAddress(pay_gem)
-            buy_gem = self.w3.toChecksumAddress(buy_gem)
+            pay_gem = self.w3.to_checksum_address(pay_gem)
+            buy_gem = self.w3.to_checksum_address(buy_gem)
             pay_amount = self.contract.functions.getPayAmount(pay_gem, buy_gem, buy_amt).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -550,7 +550,7 @@ class RubiconMarketSigner(RubiconMarket):
 
     # buy(id (uint256), amount (uint256))
     # the user must put in the amount of pay_gem that they want and will be charged the amount of buy_gem that the offer is asking for
-    def buy(self, id, amount, nonce=None, gas=300000, gas_price=None):
+    def buy(self, id, amount, nonce=None, gas=3000000, gas_price=None):
         """buy the amount of pay_gem from the offer with the id, in exchange for the amount of buy_gem at the price of the offer
 
         :param id: id of the offer
@@ -559,7 +559,7 @@ class RubiconMarketSigner(RubiconMarket):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -591,7 +591,7 @@ class RubiconMarketSigner(RubiconMarket):
         # buy_amt is the amount of the token you want to buy
         # pay_gem is the token you want to pay with
         # max_fill is the maximum amount of the token you want to pay with
-    def buy_all_amount(self, buy_gem, buy_amt, pay_gem, max_fill_amount, nonce=None, gas=300000, gas_price=None):
+    def buy_all_amount(self, buy_gem, buy_amt, pay_gem, max_fill_amount, nonce=None, gas=3000000, gas_price=None):
         """buy the buy_amt of the buy_gem token in exchange for the pay_gem token only if it does not exceed the max_fill_amount of the pay_gem token
         
         :param buy_gem: address of the token you want to buy
@@ -604,7 +604,7 @@ class RubiconMarketSigner(RubiconMarket):
         :type max_fill_amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -626,7 +626,7 @@ class RubiconMarketSigner(RubiconMarket):
             self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
         except ValueError: 
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            buy_all_amount = self.contract.functions.buyAllAmount(self.w3.toChecksumAddress(buy_gem), buy_amt, self.w3.toChecksumAddress(pay_gem), max_fill_amount).build_transaction(txn)
+            buy_all_amount = self.contract.functions.buyAllAmount(self.w3.to_checksum_address(buy_gem), buy_amt, self.w3.to_checksum_address(pay_gem), max_fill_amount).build_transaction(txn)
             buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
             self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
         except Exception as e: 
@@ -636,14 +636,14 @@ class RubiconMarketSigner(RubiconMarket):
         return buy_all_amount
 
     # cancel(id (uint256))
-    def cancel(self, id, nonce=None, gas=300000, gas_price=None):
+    def cancel(self, id, nonce=None, gas=3000000, gas_price=None):
         """cancel the offer with the id, user can only cancel offers they have created
 
         :param id: id of the offer
         :type id: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -670,7 +670,7 @@ class RubiconMarketSigner(RubiconMarket):
         return cancel
 
     # offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address))
-    def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=300000, gas_price=None):
+    def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=3000000, gas_price=None):
         """create an offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
         :param pay_amt: amount of the pay_gem token you want to pay with, in the integer representation of the token
@@ -685,7 +685,7 @@ class RubiconMarketSigner(RubiconMarket):
         :type pos: int, optional
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -707,7 +707,7 @@ class RubiconMarketSigner(RubiconMarket):
             self.w3.eth.send_raw_transaction(offer.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            offer = self.contract.functions.offer(pay_amt, self.w3.toChecksumAddress(pay_gem), buy_amt, self.w3.toChecksumAddress(buy_gem), pos).build_transaction(txn)
+            offer = self.contract.functions.offer(pay_amt, self.w3.to_checksum_address(pay_gem), buy_amt, self.w3.to_checksum_address(buy_gem), pos).build_transaction(txn)
             offer = self.w3.eth.account.sign_transaction(offer, self.key)
             self.w3.eth.send_raw_transaction(offer.rawTransaction)
         except Exception as e:
@@ -717,7 +717,7 @@ class RubiconMarketSigner(RubiconMarket):
         return offer
 
     # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256))
-    def sell_all_amount(self, pay_gem, pay_amt, buy_gem, min_fill_amount, nonce=None, gas=300000, gas_price=None):
+    def sell_all_amount(self, pay_gem, pay_amt, buy_gem, min_fill_amount, nonce=None, gas=3000000, gas_price=None):
         """sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the min_fill_amount of the buy_gem token
 
         :param pay_gem: address of the token you want to pay with
@@ -730,7 +730,7 @@ class RubiconMarketSigner(RubiconMarket):
         :type min_fill_amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -753,7 +753,7 @@ class RubiconMarketSigner(RubiconMarket):
         except ValueError:
             print('most likely a checksum error... retrying with checksummed addresses')
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_all_amount = self.contract.functions.sellAllAmount(self.w3.toChecksumAddress(pay_gem), pay_amt, self.w3.toChecksumAddress(buy_gem), min_fill_amount).build_transaction(txn)
+            sell_all_amount = self.contract.functions.sellAllAmount(self.w3.to_checksum_address(pay_gem), pay_amt, self.w3.to_checksum_address(buy_gem), min_fill_amount).build_transaction(txn)
             sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
             self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
         except Exception as e:

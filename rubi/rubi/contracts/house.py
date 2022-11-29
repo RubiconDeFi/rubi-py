@@ -84,7 +84,7 @@ class BathHouse:
             bath_token = self.contract.functions.getBathTokenFromAsset(asset).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            bath_token = self.contract.functions.getBathTokenFromAsset(Web3.toChecksumAddress(asset)).call()
+            bath_token = self.contract.functions.getBathTokenFromAsset(Web3.to_checksum_address(asset)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -197,7 +197,7 @@ class BathHouseSigner(BathHouse):
     ######################################################################
 
     # createBathToken(underlyingERC20 (address), _feeAdmin (address))
-    def create_bath_token(self, underlying_erc20, fee_admin,  nonce=None, gas=300000, gas_price=None):
+    def create_bath_token(self, underlying_erc20, fee_admin,  nonce=None, gas=3000000, gas_price=None):
         """creates a new bath token
 
         :param underlying_erc20: address of the underlying token
@@ -206,7 +206,7 @@ class BathHouseSigner(BathHouse):
         :type fee_admin: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -227,7 +227,7 @@ class BathHouseSigner(BathHouse):
             bath_token = self.w3.eth.account.sign_transaction(bath_token, self.wallet.privateKey)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            bath_token = self.contract.functions.createBathToken(Web3.toChecksumAddress(underlying_erc20), Web3.toChecksumAddress(fee_admin)).buildTransaction(txn)
+            bath_token = self.contract.functions.createBathToken(Web3.to_checksum_address(underlying_erc20), Web3.to_checksum_address(fee_admin)).buildTransaction(txn)
             bath_token = self.w3.eth.account.sign_transaction(bath_token, self.wallet.privateKey)
             self.w3.eth.send_raw_transaction(bath_token.rawTransaction)
         except Exception as e:

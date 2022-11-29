@@ -27,7 +27,7 @@ class ERC20:
                 contract = w3.eth.contract(address=address, abi=abi)
             except ValueError:
                 log.warning('most likely a checksum error... retrying with checksummed addresses')
-                address = w3.toChecksumAddress(address)
+                address = w3.to_checksum_address(address)
                 contract = w3.eth.contract(address=address, abi=abi)
             except Exception as e:
                 log.error(e, exc_info=True)
@@ -63,8 +63,8 @@ class ERC20:
             allowance = self.contract.functions.allowance(owner, spender).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            owner = self.w3.toChecksumAddress(owner)
-            spender = self.w3.toChecksumAddress(spender)
+            owner = self.w3.to_checksum_address(owner)
+            spender = self.w3.to_checksum_address(spender)
             allowance = self.contract.functions.allowance(owner, spender).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -86,7 +86,7 @@ class ERC20:
             balance = self.contract.functions.balanceOf(account).call()
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            account = self.w3.toChecksumAddress(account)
+            account = self.w3.to_checksum_address(account)
             balance = self.contract.functions.balanceOf(account).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -171,7 +171,7 @@ class ERC20Signer(ERC20):
     :type key: str
     """
 
-    def __init__(self, w3, address, wallet, key):
+    def __init__(self, w3, address, wallet, key, contract=None):
         super().__init__(w3, address)
         self.chain = w3.eth.chain_id
         self.wallet = wallet
@@ -182,7 +182,7 @@ class ERC20Signer(ERC20):
     ######################################################################
 
     # approve(spender (address), amount (uint256))
-    def approve(self, spender, amount, nonce=None, gas=300000, gas_price=None):
+    def approve(self, spender, amount, nonce=None, gas=3000000, gas_price=None):
         """approves the spender to spend the amount of the erc20 token from the signer's wallet
 
         :param spender: address of the spender
@@ -191,7 +191,7 @@ class ERC20Signer(ERC20):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :return: the transaction object of the approve transaction
         :rtype: dict
         """
@@ -211,7 +211,7 @@ class ERC20Signer(ERC20):
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            approve = self.contract.functions.approve(self.w3.toChecksumAddress(spender), amount).build_transaction(txn)
+            approve = self.contract.functions.approve(self.w3.to_checksum_address(spender), amount).build_transaction(txn)
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
@@ -221,7 +221,7 @@ class ERC20Signer(ERC20):
         return approve
 
     # transfer(recipient (address), amount (uint256))
-    def transfer(self, recipient, amount, nonce=None, gas=300000, gas_price=None):
+    def transfer(self, recipient, amount, nonce=None, gas=3000000, gas_price=None):
         """transfers the amount of the erc20 token to the recipient
 
         :param recipient: address of the recipient
@@ -230,7 +230,7 @@ class ERC20Signer(ERC20):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -239,7 +239,7 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.getTransactionCount(self.wallet)
+            nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
@@ -252,7 +252,7 @@ class ERC20Signer(ERC20):
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            transfer = self.contract.functions.transfer(self.w3.toChecksumAddress(recipient), amount).build_transaction(txn)
+            transfer = self.contract.functions.transfer(self.w3.to_checksum_address(recipient), amount).build_transaction(txn)
             transfer = self.w3.eth.account.sign_transaction(transfer, self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
         except Exception as e:
@@ -262,7 +262,7 @@ class ERC20Signer(ERC20):
         return transfer
 
     # transferFrom(sender (address), recipient (address), amount (uint256))
-    def transfer_from(self, sender, recipient, amount, nonce=None, gas=300000, gas_price=None):
+    def transfer_from(self, sender, recipient, amount, nonce=None, gas=3000000, gas_price=None):
         """transfers the amount of the erc20 token from the sender to the recipient
 
         :param sender: address of the sender
@@ -273,7 +273,7 @@ class ERC20Signer(ERC20):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -295,7 +295,7 @@ class ERC20Signer(ERC20):
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            transfer_from = self.contract.functions.transferFrom(self.w3.toChecksumAddress(sender), self.w3.toChecksumAddress(recipient), amount).build_transaction(txn)
+            transfer_from = self.contract.functions.transferFrom(self.w3.to_checksum_address(sender), self.w3.to_checksum_address(recipient), amount).build_transaction(txn)
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
         except Exception as e:
@@ -306,7 +306,7 @@ class ERC20Signer(ERC20):
         
 
     # increaseAllowance(spender (address), addedValue (uint256))
-    def increase_allowance(self, spender, added_value, nonce=None, gas=300000, gas_price=None):
+    def increase_allowance(self, spender, added_value, nonce=None, gas=3000000, gas_price=None):
         """increases the allowance of the spender by the added_value
 
         :param spender: address of the spender
@@ -315,7 +315,7 @@ class ERC20Signer(ERC20):
         :type added_value: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -337,7 +337,7 @@ class ERC20Signer(ERC20):
             self.w3.eth.send_raw_transaction(increase_allowance.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            increase_allowance = self.contract.functions.increaseAllowance(self.w3.toChecksumAddress(spender), added_value).build_transaction(txn)
+            increase_allowance = self.contract.functions.increaseAllowance(self.w3.to_checksum_address(spender), added_value).build_transaction(txn)
             increase_allowance = self.w3.eth.account.sign_transaction(increase_allowance, self.key)
             self.w3.eth.send_raw_transaction(increase_allowance.rawTransaction)
         except Exception as e:
@@ -347,7 +347,7 @@ class ERC20Signer(ERC20):
         return increase_allowance
 
     # decreaseAllowance(spender (address), subtractedValue (uint256))
-    def decrease_allowance(self, spender, subtracted_value, nonce=None, gas=300000, gas_price=None):
+    def decrease_allowance(self, spender, subtracted_value, nonce=None, gas=3000000, gas_price=None):
         """decreases the allowance of the spender by the subtracted_value
 
         :param spender: address of the spender
@@ -356,7 +356,7 @@ class ERC20Signer(ERC20):
         :type subtracted_value: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -378,7 +378,7 @@ class ERC20Signer(ERC20):
             self.w3.eth.send_raw_transaction(decrease_allowance.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            decrease_allowance = self.contract.functions.decreaseAllowance(self.w3.toChecksumAddress(spender), subtracted_value).build_transaction(txn)
+            decrease_allowance = self.contract.functions.decreaseAllowance(self.w3.to_checksum_address(spender), subtracted_value).build_transaction(txn)
             decrease_allowance = self.w3.eth.account.sign_transaction(decrease_allowance, self.key)
             self.w3.eth.send_raw_transaction(decrease_allowance.rawTransaction)
         except Exception as e:

@@ -1,3 +1,5 @@
+import os
+import json 
 import hexbytes
 import logging as log
 from eth_abi import decode
@@ -64,7 +66,7 @@ class FactoryAid:
         try: 
             aids = self.contract.functions.getUserMarketAids(user).call()
         except ValueError: 
-            aids = self.contract.functions.getUserMarketAids(self.w3.toChecksumAddress(user)).call()
+            aids = self.contract.functions.getUserMarketAids(self.w3.to_checksum_address(user)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -110,12 +112,12 @@ class FactoryAidSigner(FactoryAid):
     ######################################################################
 
     # createMarketAidInstance()
-    def create_market_aid_instance(self, nonce=None, gas=300000, gas_price=None):
+    def create_market_aid_instance(self, nonce=None, gas=30000000, gas_price=None):
         """this function creates a new market aid instance
 
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -133,7 +135,7 @@ class FactoryAidSigner(FactoryAid):
 
         try:
             create = self.contract.functions.createMarketAidInstance().build_transaction(txn)
-            create = self.w3.eth.account.sign_transaction(create, private_key=self.key)
+            create = self.w3.eth.account.sign_transaction(create, self.key)
             self.w3.eth.send_raw_transaction(create.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -146,15 +148,22 @@ class MarketAid:
     # init function
     # TODO: possibly allow a chain variable to be passed in
     def __init__(self, w3, address, contract=None):
+
+        # load in the aid abi 
+        path = f"{os.path.dirname(os.path.realpath(__file__))}/helper/abis/MarketAid.json"
+        with open(path) as f:
+            aid_abi = json.load(f)
+        f.close()
     
         # create contract instance or set based upon initiliazation
         if contract:
             self.contract = contract
             self.address = self.contract.address
+            chain = w3.eth.chain_id
         else:
             chain = w3.eth.chain_id
-            network = networks[chain]()
-            self.contract = w3.eth.contract(address=address, abi=network.aid_abi)
+            #network = networks[chain]()
+            self.contract = w3.eth.contract(address=address, abi=aid_abi)
             self.address = address
 
         # set the class variables
@@ -203,8 +212,8 @@ class MarketAid:
         
         return admin
 
-    # approvedStrategits()
-    def approved_strategists(self):
+    # approvedStrategists()
+    def approved_strategists(self, address):
         """this function returns the list of approved strategists
 
         :return: the list of approved strategists
@@ -212,7 +221,7 @@ class MarketAid:
         """
 
         try: 
-            approved_strategists = self.contract.functions.approvedStrategists().call()
+            approved_strategists = self.contract.functions.approvedStrategists(address).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -236,7 +245,7 @@ class MarketAid:
         try: 
             outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(asset, quote, strategist).call()
         except ValueError: 
-            outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(self.w3.toChecksumAddress(asset), self.w3.toChecksumAddress(quote), self.w3.toChecksumAddress(strategist)).call()
+            outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(self.w3.to_checksum_address(asset), self.w3.to_checksum_address(quote), self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -260,7 +269,7 @@ class MarketAid:
         try: 
             strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(asset, quote, strategist).call()
         except ValueError: 
-            strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(self.w3.toChecksumAddress(asset), self.w3.toChecksumAddress(quote), self.w3.toChecksumAddress(strategist)).call()
+            strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(self.w3.to_checksum_address(asset), self.w3.to_checksum_address(quote), self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -280,7 +289,7 @@ class MarketAid:
         try: 
             is_approved_strategist = self.contract.functions.isApprovedStrategist(strategist).call()
         except ValueError: 
-            is_approved_strategist = self.contract.functions.isApprovedStrategist(self.w3.toChecksumAddress(strategist)).call()
+            is_approved_strategist = self.contract.functions.isApprovedStrategist(self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -669,7 +678,7 @@ class MarketAidSigner(MarketAid):
     """
 
     def __init__(self, w3, address, wallet, key, contract=None):
-        super().__init__(w3, contract)
+        super().__init__(w3, address, contract)
         self.wallet = wallet
         self.key = key
 
@@ -678,8 +687,8 @@ class MarketAidSigner(MarketAid):
     ######################################################################
 
     # adminMaxApproveTarget(target (address), token (address))
-    def admin_max_approve_target(self, target, token, nonce=None, gas=300000, gas_price=None):
-        """this function sets the max approval for a target address
+    def admin_max_approve_target(self, target, token, nonce=None, gas=30000000, gas_price=None):
+        """this function sets the max approval for a target address to spend a token on behalf of the contract
         
         :param target: the address of the target
         :type target: str
@@ -687,7 +696,7 @@ class MarketAidSigner(MarketAid):
         :type token: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -705,12 +714,12 @@ class MarketAidSigner(MarketAid):
 
         try:
             max_approve = self.contract.functions.adminMaxApproveTarget(target, token).build_transaction(txn)
-            max_approve = self.w3.eth.account.sign_transaction(max_approve, private_key=self.key)
+            max_approve = self.w3.eth.account.sign_transaction(max_approve, self.key)
             self.w3.eth.send_raw_transaction(max_approve.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            max_approve = self.contract.functions.adminMaxApproveTarget(self.w3.toChecksumAddress(target), self.w3.toChecksumAddress(token)).build_transaction(txn)
-            max_approve = self.w3.eth.account.sign_transaction(max_approve, private_key=self.key)
+            max_approve = self.contract.functions.adminMaxApproveTarget(self.w3.to_checksum_address(target), self.w3.to_checksum_address(token)).build_transaction(txn)
+            max_approve = self.w3.eth.account.sign_transaction(max_approve, self.key)
             self.w3.eth.send_raw_transaction(max_approve.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -719,14 +728,14 @@ class MarketAidSigner(MarketAid):
         return max_approve
 
     # adminPullAllFunds(erc20s address[])
-    def admin_pull_all_funds(self, erc20s, nonce=None, gas=300000, gas_price=None):
+    def admin_pull_all_funds(self, erc20s, nonce=None, gas=30000000, gas_price=None):
         """this function pulls all funds from the contract
         
         :param erc20s: a list of erc20 addresses
         :type erc20s: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -744,14 +753,14 @@ class MarketAidSigner(MarketAid):
 
         try:
             pull_all_funds = self.contract.functions.adminPullAllFunds(erc20s).build_transaction(txn)
-            pull_all_funds = self.w3.eth.account.sign_transaction(pull_all_funds, private_key=self.key)
+            pull_all_funds = self.w3.eth.account.sign_transaction(pull_all_funds, self.key)
             self.w3.eth.send_raw_transaction(pull_all_funds.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
             return None
 
     # adminRebalanceFunds(assetToSell (address), amountToSell (uint256), assetToTarget (address))
-    def admin_rebalance_funds(self, asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=300000, gas_price=None):
+    def admin_rebalance_funds(self, asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=30000000, gas_price=None):
         """this function rebalances funds from one asset to another on the RubiconMarket
 
         :param asset_to_sell: the address of the asset to sell
@@ -762,7 +771,7 @@ class MarketAidSigner(MarketAid):
         :type asset_to_target: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -780,12 +789,12 @@ class MarketAidSigner(MarketAid):
 
         try:
             rebalance = self.contract.functions.adminRebalanceFunds(asset_to_sell, amount_to_sell, asset_to_target).build_transaction(txn)
-            rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
+            rebalance = self.w3.eth.account.sign_transaction(rebalance, self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            rebalance = self.contract.functions.adminRebalanceFunds(self.w3.toChecksumAddress(asset_to_sell), amount_to_sell, self.w3.toChecksumAddress(asset_to_target)).build_transaction(txn)
-            rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
+            rebalance = self.contract.functions.adminRebalanceFunds(self.w3.to_checksum_address(asset_to_sell), amount_to_sell, self.w3.to_checksum_address(asset_to_target)).build_transaction(txn)
+            rebalance = self.w3.eth.account.sign_transaction(rebalance, self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -794,14 +803,14 @@ class MarketAidSigner(MarketAid):
         return rebalance
 
     # approveStrategist(strategist (address))
-    def approve_strategist(self, strategist, nonce=None, gas=300000, gas_price=None):
+    def approve_strategist(self, strategist, nonce=None, gas=30000000, gas_price=None):
         """this function approves a strategist to use the aid contract instance
 
         :param strategist: the address of the strategist to approve
         :type strategist: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -819,12 +828,12 @@ class MarketAidSigner(MarketAid):
 
         try:
             approve = self.contract.functions.approveStrategist(strategist).build_transaction(txn)
-            approve = self.w3.eth.account.sign_transaction(approve, private_key=self.key)
+            approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            approve = self.contract.functions.approveStrategist(self.w3.toChecksumAddress(strategist)).build_transaction(txn)
-            approve = self.w3.eth.account.sign_transaction(approve, private_key=self.key)
+            approve = self.contract.functions.approveStrategist(self.w3.to_checksum_address(strategist)).build_transaction(txn)
+            approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -833,7 +842,7 @@ class MarketAidSigner(MarketAid):
         return approve
 
     # batchMarketMakingTrades(tokenPairs (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_market_making_trades(self, token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None):
+    def batch_market_making_trades(self, token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
         """this function executes a batch of market making trades on the RubiconMarket
 
         :param token_pairs: the token pairs to trade [token0, token1]
@@ -848,7 +857,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -866,7 +875,7 @@ class MarketAidSigner(MarketAid):
 
         try:
             batch = self.contract.functions.batchMarketMakingTrades(token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
-            batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
+            batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -875,7 +884,7 @@ class MarketAidSigner(MarketAid):
         return batch
     
     # batchRequoteAllOffers(tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_requote_all_offers(self, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None):
+    def batch_requote_all_offers(self, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
         """this function executes a batch requote while clearing all offers the strategist has on the RubiconMarket
 
         :param token_pair: the token pair to trade [token0, token1]
@@ -890,7 +899,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -908,7 +917,7 @@ class MarketAidSigner(MarketAid):
 
         try:
             batch = self.contract.functions.batchRequoteAllOffers(token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
-            batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
+            batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -917,7 +926,7 @@ class MarketAidSigner(MarketAid):
         return batch
 
     # batchRequoteOffers(ids (uint256[]), tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_requote_offers(self, ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None):
+    def batch_requote_offers(self, ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
         """this function executes a batch requote of all offers that are provided in the ids array
         
         :param ids: the ids of the offers to requote
@@ -934,7 +943,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -952,7 +961,7 @@ class MarketAidSigner(MarketAid):
 
         try:
             batch = self.contract.functions.batchRequoteOffers(ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
-            batch = self.w3.eth.account.sign_transaction(batch, private_key=self.key)
+            batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -961,22 +970,23 @@ class MarketAidSigner(MarketAid):
         return batch
 
     # placeMarketMakingTrades(tokenPair (address[2]), askNumerator (uint256), askDenominator (uint256), bidNumerator (uint256), bidDenominator (uint256))
-    def place_market_making_trades(self, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None):
+    # aid.batch_market_making_trades([weth.address, usdc.address], [the amount of the asset you will sell], [the amount of the quote you will receive], [the amount of quote you will pay], [the amount of asset you would receive])
+    def place_market_making_trades(self, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=30000000, gas_price=None):
         """this function executes a market making trade on the RubiconMarket
         
         :param token_pair: the token pair to trade [token0, token1]
         :type token_pair: list
-        :param ask_numerator: the numerator of the ask price
+        :param ask_numerator: the numerator of the ask price. this is the amount of the asset you will sell
         :type ask_numerator: int
-        :param ask_denominator: the denominator of the ask price
+        :param ask_denominator: the denominator of the ask price. this is the amount of the quote you will receive
         :type ask_denominator: int
-        :param bid_numerator: the numerator of the bid price
+        :param bid_numerator: the numerator of the bid price. this is the amount of quote you will pay
         :type bid_numerator: int
-        :param bid_denominator: the denominator of the bid price
+        :param bid_denominator: the denominator of the bid price. this is the amount of asset you would receive
         :type bid_denominator: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -994,7 +1004,7 @@ class MarketAidSigner(MarketAid):
 
         try: 
             trade = self.contract.functions.placeMarketMakingTrades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
-            trade = self.w3.eth.account.sign_transaction(trade, private_key=self.key)
+            trade = self.w3.eth.account.sign_transaction(trade, self.key)
             self.w3.eth.send_raw_transaction(trade.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -1003,14 +1013,14 @@ class MarketAidSigner(MarketAid):
         return trade
 
     # removeStrategist(strategist (address))
-    def remove_strategist(self, strategist, nonce=None, gas=300000, gas_price=None):
+    def remove_strategist(self, strategist, nonce=None, gas=30000000, gas_price=None):
         """this function removes a strategist from the approved strategist list on the market aid contract
         
         :param strategist: the address of the strategist to remove
         :type strategist: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1028,12 +1038,12 @@ class MarketAidSigner(MarketAid):
 
         try:
             remove = self.contract.functions.removeStrategist(strategist).build_transaction(txn)
-            remove = self.w3.eth.account.sign_transaction(remove, private_key=self.key)
+            remove = self.w3.eth.account.sign_transaction(remove, self.key)
             self.w3.eth.send_raw_transaction(remove.rawTransaction)
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
-            remove = self.contract.functions.removeStrategist(self.w3.toChecksumAddress(strategist)).build_transaction(txn)
-            remove = self.w3.eth.account.sign_transaction(remove, private_key=self.key)
+            remove = self.contract.functions.removeStrategist(self.w3.to_checksum_address(strategist)).build_transaction(txn)
+            remove = self.w3.eth.account.sign_transaction(remove, self.key)
             self.w3.eth.send_raw_transaction(remove.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -1042,7 +1052,7 @@ class MarketAidSigner(MarketAid):
         return remove
 
     # requote(id (uint256), tokenPair (address[2]), askNumerator (uint256), askDenominator (uint256), bidNumerator (uint256), bidDenominator (uint256))
-    def requote(self, id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None):
+    def requote(self, id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=30000000, gas_price=None):
         """this function requotes an offer on the RubiconMarket
         
         :param id: the id of the offer to requote
@@ -1059,7 +1069,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominator: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1077,7 +1087,7 @@ class MarketAidSigner(MarketAid):
 
         try:
             requote = self.contract.functions.requote(id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
-            requote = self.w3.eth.account.sign_transaction(requote, private_key=self.key)
+            requote = self.w3.eth.account.sign_transaction(requote, self.key)
             self.w3.eth.send_raw_transaction(requote.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -1086,14 +1096,14 @@ class MarketAidSigner(MarketAid):
         return requote
 
     # scrubStrategistTrade(id (uint256))
-    def scrub_strategist_trade(self, id, nonce=None, gas=300000, gas_price=None):
+    def scrub_strategist_trade(self, id, nonce=None, gas=30000000, gas_price=None):
         """this function scrubs a strategist trade from the RubiconMarket contract
 
         :param id: the id of the trade to scrub
         :type id: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1109,7 +1119,7 @@ class MarketAidSigner(MarketAid):
 
         try:
             scrub = self.contract.functions.scrubStrategistTrade(id).build_transaction(txn)
-            scrub = self.w3.eth.account.sign_transaction(scrub, private_key=self.key)
+            scrub = self.w3.eth.account.sign_transaction(scrub, self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
@@ -1118,14 +1128,14 @@ class MarketAidSigner(MarketAid):
         return scrub
 
     # scrubStrategistTrades(ids (uint256[]))
-    def scrub_strategist_trades(self, ids, nonce=None, gas=300000, gas_price=None):
+    def scrub_strategist_trades(self, ids, nonce=None, gas=30000000, gas_price=None):
         """this function scrubs a list of strategist trades from the RubiconMarket contract
 
         :param ids: the ids of the trades to scrub
         :type ids: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
+        :param gas: gas limit of the transaction, defaults to a value of 30000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1143,55 +1153,10 @@ class MarketAidSigner(MarketAid):
 
         try:
             scrub = self.contract.functions.scrubStrategistTrades(ids).build_transaction(txn)
-            scrub = self.w3.eth.account.sign_transaction(scrub, private_key=self.key)
+            scrub = self.w3.eth.account.sign_transaction(scrub, self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
         except Exception as e:
             log.error(e, exc_info=True)
             return None
         
         return scrub
-
-    # strategistRebalanceFunds(assetToSell (address), amountToSell (uint256), assetToTarget (address), poolFee (uint24))
-    def strategist_rebalance_funds(self, asset_to_sell, amount_to_sell, asset_to_target, pool_fee, nonce=None, gas=300000, gas_price=None):
-        """this function rebalances funds from one asset to another using a Uniswap pool
-        
-        :param asset_to_sell: the asset to sell
-        :type asset_to_sell: str
-        :param amount_to_sell: the amount of the asset to sell
-        :type amount_to_sell: int
-        :param asset_to_target: the asset to target
-        :type asset_to_target: str
-        :param pool_fee: choose the fee pool to utilize for the trade
-        :type pool_fee: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 300000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the rebalance funds transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-        
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
-
-        try:
-            rebalance = self.contract.functions.strategistRebalanceFunds(asset_to_sell, amount_to_sell, asset_to_target, pool_fee).build_transaction(txn)
-            rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
-            self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            rebalance = self.contract.functions.strategistRebalanceFunds(self.w3.toChecksumAddress(asset_to_sell), amount_to_sell, self.w3.toChecksumAddress(asset_to_target), pool_fee).build_transaction(txn)
-            rebalance = self.w3.eth.account.sign_transaction(rebalance, private_key=self.key)
-            self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return rebalance

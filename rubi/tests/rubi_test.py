@@ -290,7 +290,7 @@ def populated_market(market_contract, rubicon, erc20s):
     rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 4
 
     return market_contract
-'''
+
 class TestUser:
 
     def test_user(self, market_contract, erc20s, eth_tester, w3):
@@ -447,11 +447,6 @@ class TestMarket():
         # see if there are unsorted offers 
         assert rubicon.market.contract.functions.getFirstUnsortedOffer().call() == 0
 
-        #rubicon.market.offer(100000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 1
-        #rubicon.market.offer(200000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 2
-        #rubicon.market.offer(100000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 3
-        #rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 4
-
 class TestRouter:
         
     # test that the contract was deployed
@@ -529,54 +524,104 @@ class TestFactory:
         # check the function create_market_aid_instance(nonce=None, gas=300000, gas_price=None)
         # TODO: it would be nice if we could get the address returned back from the function call to create the aid contract
         rubicon.factory.create_market_aid_instance()
-        assert rubicon.factory.get_user_market_aids(rubicon.wallet) != None
-'''  
+        assert rubicon.factory.get_user_market_aids(rubicon.wallet) != []
+  
 
 class TestAide:
 
     # test that the contract was deployed
-    def test_aide_deployed(self, aid_contract, eth_tester):    
+    def test_aide_deployed(self, rubicon, erc20s, eth_tester):    
+
+        # create the market aid contract from the factory
+        rubicon.factory.create_market_aid_instance()
+
+        # check the wallet address has a market aid contract associated with it
+        aid_address = rubicon.factory.get_user_market_aids(rubicon.wallet)[0]
+        assert aid_address != []
+
+        # connect to the market aid contract
+        aid = rubicon.aid(aid_address)
 
         # check that the contract address is set
-        assert aid_contract.address != None
-
-        # check to see that the correct admin was set
-        assert aid_contract.functions.admin().call() == eth_tester.get_accounts()[2]
+        assert aid.address == aid_address
 
         # check the function admin()
+        assert aid.admin() == rubicon.wallet
 
         # check the function approved_strategists()
-
-        # check the function get_outstanding_strategist_trades(asset, quote, strategist)
-
-        # check the function get_strategist_total_liquidity(asset, quote, strategist)
+        assert aid.approved_strategists(rubicon.wallet) == True
 
         # check the function is_approved_strategist(strategist)
+        assert aid.is_approved_strategist(rubicon.wallet) == True
 
         # check the function rubicon_market_address()
+        assert aid.rubicon_market_address() == rubicon.market.address
 
-        # check the function admin_max_approve_target(target, token, nonce=None, gas=300000, gas_price=None)
+        ### Populate the market aid contract with some data ###
 
-        # check the function admin_pull_all_funds(erc20s, nonce=None, gas=300000, gas_price=None)
+        # send some tokens to the market aid contract
+        amount = 10 * 10**18
+        erc20s['cow'].functions.transfer(aid.address, amount).transact({'from': rubicon.wallet})
+        erc20s['blz'].functions.transfer(aid.address, amount).transact({'from': rubicon.wallet})
 
-        # check the function admin_rebalance_funds(asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=300000, gas_price=None)
+        # check the function get_strategist_total_liquidity(asset, quote, strategist) -> there should be no outstanding liquidity at this point
+        assert aid.get_strategist_total_liquidity(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [amount, amount, False]     
 
-        # check the function approve_strategist(strategist, nonce=None, gas=300000, gas_price=None)
+        # check the function admin_pull_all_funds(erc20s, nonce=None, gas=300000, gas_price=None) -> pull all the funds from the market aid contract
+        aid.admin_pull_all_funds([erc20s['cow'].address, erc20s['blz'].address])
+        assert aid.get_strategist_total_liquidity(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [0, 0, False]     
+
+        erc20s['cow'].functions.transfer(aid.address, amount).transact({'from': rubicon.wallet})
+        erc20s['blz'].functions.transfer(aid.address, amount).transact({'from': rubicon.wallet})
+        assert aid.get_strategist_total_liquidity(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [amount, amount, False]   
 
         # check the function batch_market_making_trades(token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+        # aid.batch_market_making_trades([weth.address, usdc.address], [the amount of the asset you will sell], [the amount of the quote you will receive], [the amount of quote you will pay], [the amount of asset you would receive])
+        aid.batch_market_making_trades([erc20s['cow'].address, erc20s['blz'].address], [100], [10000], [100], [100])
+
+        # check the function get_outstanding_strategist_trades(asset, quote, strategist)
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [1]
+
+        # check the function admin_max_approve_target(target, token, nonce=None, gas=300000, gas_price=None)
+        target = eth_tester.get_accounts()[1]
+        aid.admin_max_approve_target(target, erc20s['cow'].address)
+        assert erc20s['cow'].functions.allowance(aid.address, target).call() == 2**256 - 1
+
+        # check the function approve_strategist(strategist, nonce=None, gas=300000, gas_price=None)
+        aid.approve_strategist(eth_tester.get_accounts()[1])
+        assert aid.approved_strategists(eth_tester.get_accounts()[1]) == True
 
         # check the function batch_requote_all_offers(token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+        aid.batch_requote_all_offers([erc20s['cow'].address, erc20s['blz'].address], [100], [10000], [100], [100])
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [2]
 
         # check the function batch_requote_offers(ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=300000, gas_price=None)
+        aid.batch_requote_offers([2], [erc20s['cow'].address, erc20s['blz'].address], [100], [10000], [100], [100])
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [3]
 
         # check the function place_market_making_trades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None)
+        aid.place_market_making_trades([erc20s['cow'].address, erc20s['blz'].address], 100, 10000, 100, 100)
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [3, 4]
 
         # check the function remove_strategist(strategist, nonce=None, gas=300000, gas_price=None)
+        aid.remove_strategist(eth_tester.get_accounts()[1])
+        assert aid.approved_strategists(eth_tester.get_accounts()[1]) == False
 
         # check the function requote(id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=300000, gas_price=None)
+        aid.requote(4, [erc20s['cow'].address, erc20s['blz'].address], 101, 10000, 100, 100)
+        assert rubicon.market.get_offer(9) == [101, erc20s['cow'].address, 10000, erc20s['blz'].address]
+        assert rubicon.market.get_offer(10) == [100, erc20s['blz'].address, 100, erc20s['cow'].address]
 
         # check the function scrub_strategist_trade(id, nonce=None, gas=300000, gas_price=None)
+        aid.scrub_strategist_trade(5)
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [3]
 
         # check the function scrub_strategist_trades(ids, nonce=None, gas=300000, gas_price=None)
+        aid.scrub_strategist_trades([3])
+        assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == []
 
-        # check the function strategist_rebalance_funds(asset_to_sell, amount_to_sell, asset_to_target, pool_fee, nonce=None, gas=300000, gas_price=None)
+        aid.place_market_making_trades([erc20s['cow'].address, erc20s['blz'].address], 100, 10000, 100, 100)
+        # check the function admin_rebalance_funds(asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=300000, gas_price=None)
+        assert rubicon.market.get_offer(12) == [100, erc20s['blz'].address, 100, erc20s['cow'].address]
+        aid.admin_rebalance_funds(erc20s['cow'].address, 100, erc20s['blz'].address)
+        assert rubicon.market.get_offer(12) == [0, '0x0000000000000000000000000000000000000000', 0, '0x0000000000000000000000000000000000000000']
