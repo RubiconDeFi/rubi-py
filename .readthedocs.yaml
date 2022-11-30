@@ -17,4 +17,4 @@ build:
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
-   configuration: rubi/docs/conf.py
+   configuration: rubi/docs/source/conf.py
