@@ -13,7 +13,7 @@ build:
 python:
   install:
     - method: pip
-      path: .
+      path: rubi/
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
