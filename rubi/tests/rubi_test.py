@@ -280,14 +280,20 @@ def rubicon_buyer(market_contract, router_contract, factory_contract, add_accoun
     return rubicon
 
 # set a fixture that will populate a RubiconMarket.sol contract with orders
+# TODO: for any future tests we should utilize this populated market instance 
+# def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=3000000, gas_price=None):
 @pytest.fixture
 def populated_market(market_contract, rubicon, erc20s):
 
     # populate the market contract 
     rubicon.market.offer(100000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 1
     rubicon.market.offer(200000, erc20s['cow'].address, 100000, erc20s['eth'].address) # offer id 2
-    rubicon.market.offer(100000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 3
-    rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 4
+    rubicon.market.offer(100000, erc20s['eth'].address, 600000, erc20s['cow'].address) # offer id 3
+    rubicon.market.offer(100000, erc20s['eth'].address, 1000000, erc20s['cow'].address) # offer id 4
+    rubicon.market.offer(100000, erc20s['eth'].address, 1100000, erc20s['cow'].address) # offer id 5
+    
+    rubicon.market.offer(100000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 6
+    rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 7
 
     return market_contract
 
@@ -478,13 +484,13 @@ class TestRouter:
 
         # check the function get_best_offer(asset, quote)
         assert rubicon.router.get_best_offer(erc20s['cow'].address, erc20s['eth'].address) == [2, 200000, erc20s['cow'].address, 100000, erc20s['eth'].address]
-        assert rubicon.router.get_best_offer(erc20s['blz'].address, erc20s['eth'].address) == [4, 200000, erc20s['blz'].address, 100000, erc20s['eth'].address]
+        assert rubicon.router.get_best_offer(erc20s['blz'].address, erc20s['eth'].address) == [7, 200000, erc20s['blz'].address, 100000, erc20s['eth'].address]
 
         # check the function get_book_from_pair(asset, quote, topNOrders)
-        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
-        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
-        assert rubicon_buyer.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
-        assert rubicon_buyer.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]], [[100000, 600000, 3], [100000, 1000000, 4]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 7], [100000, 100000, 6]], [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon_buyer.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 2], [100000, 100000, 1]], [[100000, 600000, 3], [100000, 1000000, 4]], 2]
+        assert rubicon_buyer.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[200000, 100000, 7], [100000, 100000, 6]], [[0, 0, 0], [0, 0, 0]], 2]
 
         # check the function swap(pay_amt, buy_amt_min, route, expected_market_fee_bps=1, nonce=None, gas=300000, gas_price=None) -> check the user's balance before and after the swap
         assert erc20s['cow'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) 
@@ -494,8 +500,8 @@ class TestRouter:
         rubicon_buyer.router.swap(100, 100, [erc20s['eth'].address, erc20s['cow'].address], 20)
         rubicon_buyer.router.swap(100, 100, [erc20s['eth'].address, erc20s['blz'].address], 20)
         
-        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 2], [100000, 100000, 1]] , [[0, 0, 0], [0, 0, 0]], 2]
-        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 4], [100000, 100000, 3]] , [[0, 0, 0], [0, 0, 0]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 2], [100000, 100000, 1]], [[100000, 600000, 3], [100000, 1000000, 4]], 2]
+        assert rubicon.router.get_book_from_pair(erc20s['blz'].address, erc20s['eth'].address, 2) == [[[199800, 99900, 7], [100000, 100000, 6]], [[0, 0, 0], [0, 0, 0]], 2]
         assert erc20s['cow'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) + 200
         assert erc20s['blz'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) + 200
         assert erc20s['eth'].functions.balanceOf(rubicon_buyer.wallet).call() == (100 * 10**18) - 200
@@ -625,3 +631,35 @@ class TestAide:
         assert rubicon.market.get_offer(12) == [100, erc20s['blz'].address, 100, erc20s['cow'].address]
         aid.admin_rebalance_funds(erc20s['cow'].address, 100, erc20s['blz'].address)
         assert rubicon.market.get_offer(12) == [0, '0x0000000000000000000000000000000000000000', 0, '0x0000000000000000000000000000000000000000']
+
+class TestRubi: 
+
+    def test_rubi_functionality(self, rubicon, erc20s, populated_market): 
+
+        # get the number of orders in the book for the given token pair and return the book at that depth
+        offer_count = rubicon.market.get_offer_count(erc20s['cow'].address, erc20s['eth'].address)
+        book = rubicon.router.get_book_from_pair(erc20s['cow'].address, erc20s['eth'].address, offer_count)
+        assert book == [[[200000, 100000, 2], [100000, 100000, 1]], [[100000, 600000, 3], [100000, 1000000, 4]], 2]
+        assert book[0] == [[200000, 100000, 2], [100000, 100000, 1]]
+
+        # now check the other side 
+        offer_count = rubicon.market.get_offer_count(erc20s['eth'].address, erc20s['cow'].address)
+        book = rubicon.router.get_book_from_pair(erc20s['eth'].address, erc20s['cow'].address, offer_count)
+        assert book == [[[100000, 600000, 3], [100000, 1000000, 4], [100000, 1100000, 5]], [[200000, 100000, 2], [100000, 100000, 1], [0, 0, 0]], 3]
+        assert book[0] == [[100000, 600000, 3], [100000, 1000000, 4], [100000, 1100000, 5]]
+
+        # check the book functionality of the class
+        assert rubicon.get_offers(erc20s['cow'].address, erc20s['eth'].address) == [[[200000, 100000, 2], [100000, 100000, 1]], [[100000, 600000, 3], [100000, 1000000, 4]], 2]
+        assert rubicon.get_offers(erc20s['eth'].address, erc20s['cow'].address) == [[[100000, 600000, 3], [100000, 1000000, 4], [100000, 1100000, 5]], [[200000, 100000, 2], [100000, 100000, 1], [0, 0, 0]], 3]
+
+        book_one = rubicon.get_book(erc20s['cow'].address, erc20s['eth'].address)
+        assert book_one.token0 == erc20s['cow'].address
+        assert book_one.token1 == erc20s['eth'].address
+        assert book_one.orders == [2, 1]
+        assert book_one.details == {2 : [200000, 100000], 1 : [100000, 100000]}
+
+        book_two = rubicon.get_book(erc20s['eth'].address, erc20s['cow'].address)
+        assert book_two.token0 == erc20s['eth'].address
+        assert book_two.token1 == erc20s['cow'].address
+        assert book_two.orders == [3, 4, 5]
+        assert book_two.details == {3 : [100000, 600000], 4 : [100000, 1000000], 5 : [100000, 1100000]}

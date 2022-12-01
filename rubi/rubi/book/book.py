@@ -37,7 +37,7 @@ class Book:
         """
 
         # iterate through the list of orders to populate the list and details dictionary
-        for order in book[0]:
+        for order in book:
 
             # add the order id to the list 
             self.orders.append(order[2])

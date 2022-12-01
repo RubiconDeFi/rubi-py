@@ -3,6 +3,7 @@ import logging as log
 from web3 import Web3
 from attributedict.collections import AttributeDict
 
+from rubi.book import Book
 import rubi.contracts as contracts
 from rubi.contracts.helper import networks
 
@@ -65,6 +66,9 @@ class Rubicon:
             self.log_kill_hash : self.market.stream_log_kill
         }
 
+        # create a dictionary to store the market books that are being tracked 
+        self.books = {}
+
     ######################################################################
     # read calls
     ######################################################################
@@ -88,6 +92,39 @@ class Rubicon:
             return None
 
         return parsed
+
+    # a function to return all offers for a given token pair, at the depth of the direction specified
+    def get_offers(self, token0, token1):
+
+        # get the number of orders in the book for the given token pair
+        offer_count = self.market.get_offer_count(token0, token1)
+
+        # get the sorted orders in the book for the given token pair
+        book = self.router.get_book_from_pair(token0, token1, offer_count)
+
+        return book 
+
+    # a function that will either create a new book or return an existing book based upon the pair 
+    def get_book(self, token0, token1): 
+
+        # create the pair key 
+        key = str(token0) + '/' + str(token1)
+
+        # check if the book exists
+        if key in self.books:
+            return self.books[key]
+        else:
+            book = Book(token0, token1)
+            book.populate(self.get_offers(token0, token1)[0])
+            self.books[key] = book
+            return book
+        
+    def populate_book(self, token0, token1):
+
+        book = self.get_book(token0, token1)
+        book.populate(self.get_offers(token0, token1)[0])
+
+        return book
 
     ######################################################################
     # write calls
