@@ -1,5 +1,5 @@
 # rubi
-Rubicon Python SDK
+rubi is a python SDK for the Rubicon Protocol and has a variety of functionality for interacting with the protocol. documentation related to rubi and its functionality can be found [here](https://rubi.readthedocs.io/en/latest/#). 
 
 ## Risk Disclaimers
 

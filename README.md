@@ -2,7 +2,7 @@
 Python for Rubicon
 
 ## Description 
-the [Rubicon](https://rubicon.finance) protocol is a limit order book market on [Optimism](https://www.optimism.io/). this repository is currently home to rubi, a python package for interacting with the Rubicon protocol. going forward, it will contain 
+the [Rubicon](https://rubicon.finance) protocol is a limit order book market on [Optimism](https://www.optimism.io/). this repository is currently home to rubi, a python package for interacting with the Rubicon protocol. documentation for rubi can be found [here](https://rubi.readthedocs.io/en/latest/#). going forward, it will contain 
 useful tooling for interacting with, and developing on, the Rubicon protocol. 
 
 [![Discord chat][discord-badge]][discord-url]

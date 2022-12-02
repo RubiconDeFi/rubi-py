@@ -11,5 +11,7 @@ To use rubi, first install it using pip or poetry:
 .. code-block:: console
 
    (.venv) $ pip install rubi
-   $ 
-   $ poetry add rubi
+
+.. code-block:: console
+
+   (.venv) $ poetry add rubi

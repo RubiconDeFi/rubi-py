@@ -95,6 +95,15 @@ class Rubicon:
 
     # a function to return all offers for a given token pair, at the depth of the direction specified
     def get_offers(self, token0, token1):
+        """a function to return all offers for a given token pair, at the depth of the direction specified
+
+        :param token0: the address of the pay token in the offer pair
+        :type token0: str
+        :param token1: the address of the buy token in the offer pair
+        :type token1: str
+        :return: a double array of offers, the first being the offers for token0 = pay token and token1 = buy token, the second being the offers for token0 = buy token and token1 = pay token. [[[token0_amount, token_1_amount, offer_id]], [[token1_amount, token0_amount, offer_id]], depth]
+        :rtype: list
+        """
 
         # get the number of orders in the book for the given token pair
         offer_count = self.market.get_offer_count(token0, token1)
@@ -106,6 +115,15 @@ class Rubicon:
 
     # a function that will either create a new book or return an existing book based upon the pair 
     def get_book(self, token0, token1): 
+        """a function that will either create a new book or return an existing book that is being tracked for the pair
+        
+        :param token0: the address of the pay token in the offer pair
+        :type token0: str
+        :param token1: the address of the buy token in the offer pair
+        :type token1: str
+        :return: a book object
+        :rtype: Book
+        """
 
         # create the pair key 
         key = str(token0) + '/' + str(token1)
@@ -120,6 +138,13 @@ class Rubicon:
             return book
         
     def populate_book(self, token0, token1):
+        """a function to populate a book with the current offers in the market
+
+        :param token0: the address of the pay token in the offer pair
+        :type token0: str
+        :param token1: the address of the buy token in the offer pair
+        :type token1: str
+        """
 
         book = self.get_book(token0, token1)
         book.populate(self.get_offers(token0, token1)[0])
