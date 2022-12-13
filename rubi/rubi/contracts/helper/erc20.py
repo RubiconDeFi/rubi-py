@@ -41,6 +41,8 @@ class ERC20:
 
         # TODO: i believe decimals is an optional function that may not be implemented, so this may need an error handler
         self.decimal = self.contract.functions.decimals().call()
+        self.token_symbol = self.contract.functions.symbol().call()
+        self.token_name = self.contract.functions.name().call()
 
     ######################################################################
     # read calls
@@ -157,6 +159,21 @@ class ERC20:
             return None
         
         return symbol
+
+    # convert an integer representation of the token to a float representation of the token
+    def to_float(self, integer):
+        """converts an integer representation of the token to a float representation of the token by dividing the integer by 10 to the power of the number of decimals of the token
+        
+        :param integer: the integer representation of the token
+        :type integer: int
+        :return: the float representation of the token
+        :rtype: float
+        """
+
+        if integer == 0:
+            return 0
+        else: 
+            return integer / (10 ** self.decimal)
 
 class ERC20Signer(ERC20): 
     """this class represents a contract that implements the ERC20 standard. it is a super class of the ERC20 class as it has write functionality. it is used to read and write to the contract instance.

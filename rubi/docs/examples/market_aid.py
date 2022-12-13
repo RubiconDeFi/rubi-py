@@ -64,3 +64,14 @@ usdc = rubi.token(usdc)
 # check that the contracts connected match the rolodex addresses
 assert weth.address == rolodex.weth
 assert usdc.address == rolodex.usdc
+
+# check the current balance of the aid contract
+balances = aid.get_strategist_total_liquidity(weth.address, usdc.address, rubi.wallet)
+
+# important to notice that the balances are returned in the order of [weth, usdc, outstanding trades], opposite of the order of the arguments
+weth_balance = balances[1]
+usdc_balance = balances[0]
+oustanding_trades = balances[2]
+
+# print out the current balance of the aid contract
+print("Current balance of aid contract -> ", weth.symbol(), weth_balance, usdc.symbol(), usdc_balance)
