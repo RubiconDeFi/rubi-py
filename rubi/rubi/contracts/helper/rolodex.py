@@ -15,7 +15,6 @@ class OptimismMainnet:
         # set the rubicon contract addresses
         self.market = '0x7a512d3609211e719737E82c7bb7271eC05Da70d'
         self.router = '0x7Af14ADc8Aea70f063c7eA3B2C1AD0D7A59C4bFf'
-        self.house = '0x203328C161D23dCEee3E439DeEB25cA19e2c4984'
         self.pair = '0xF8780E00Ce8ed2e79aeC10908a169900eD1D4AFe'
         self.factory = '0x267D94C6e67e4436EFfE092b08d040cFF36B2DA7'
 
@@ -23,21 +22,9 @@ class OptimismMainnet:
         path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
         self.market_abi = json.load(open(path + 'RubiconMarket.json'))
         self.router_abi = json.load(open(path + 'RubiconRouter.json'))
-        self.house_abi = json.load(open(path + 'BathHouse.json'))
         self.pair_abi = json.load(open(path + 'BathPair.json'))
-        self.bath_abi = json.load(open(path + 'BathToken.json'))
         self.aid_abi = json.load(open(path + 'MarketAid.json'))
         self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
-
-        # TODO: for now we will hardcode the pool addresses, but in the future we will want to dynamically pull these in a trustless fashion 
-            # this can be done through the house contract given the token addresses
-        self.bathETH = '0xB0bE5d911E3BD4Ee2A8706cF1fAc8d767A550497'
-        self.bathWBTC = '0x7571CC9895D8E997853B1e0A1521eBd8481aa186'
-        self.bathUSDC = '0xe0e112e8f33d3f437D1F895cbb1A456836125952'
-        self.bathDAI = '0x60daEC2Fc9d2e0de0577A5C708BcaDBA1458A833'
-        self.bathUSDT = '0xfFBD695bf246c514110f5DAe3Fa88B8c2f42c411'
-        self.bathSNX = '0xeb5F29AfaaA3f44eca8559c3e8173003060e919f'
-        self.bathOP = '0x574a21fE5ea9666DbCA804C9d69d8Caf21d5322b'
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list

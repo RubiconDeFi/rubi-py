@@ -534,7 +534,7 @@ class TestFactory:
         assert rubicon.factory.get_user_market_aids(rubicon.wallet) != []
   
 
-class TestAide:
+class TestAid:
 
     # test that the contract was deployed
     def test_aide_deployed(self, rubicon, erc20s, eth_tester):    
