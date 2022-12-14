@@ -14,7 +14,7 @@ RISK_DISCLAIMERS
    **Protocol Disclaimer**
    Please refer to `this <https://docs.rubicon.finance/docs/protocol/rubicon-pools/risks>`_ for information on the risks associated to the Rubicon Protocol.
 
-Check out the :doc:`usage` section for further information, including how to :ref:`install <installation>` the project.
+Check out the :doc:`example` section for further information, including how to :ref:`install <installation>` the project.
 
 
 Indices and tables
@@ -32,3 +32,4 @@ Contents
 
    rubi
    usage
+   example
