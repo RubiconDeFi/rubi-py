@@ -1,6 +1,6 @@
 basic example of market aid functionality 
 ==========================================================
-this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found [here](https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid).
+this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found `here <https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid)>`_.
 in short, the market aid contract allows a user to allocate funds to a smart contract that can then be used to interact with the RubiconMarket.sol contract on the user's behalf.
 the market aid contract includes a variety of useful higher level functions, such as placing and updating multiple market orders at once, and can be used to approve other EOA's on behalf of the user, track portfolio balances, and emit event data to be indexed. 
 
@@ -10,7 +10,6 @@ setup and instillation
 utilizing either [pip](https://pip.pypa.io/en/stable/) or [poetry](https://python-poetry.org/docs/basic-usage/), install the `rubi`, `web3`, and `python-dotenv` packages with the following command(s):
 
 .. code-block:: bash
-
     (venv) pip install rubi
     (venv) pip install web3
     (venv) pip install python-dotenv
