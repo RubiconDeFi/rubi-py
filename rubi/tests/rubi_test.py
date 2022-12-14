@@ -1,4 +1,5 @@
 import os
+import time
 import json
 import pytest
 import logging as log
@@ -587,6 +588,10 @@ class TestAide:
 
         # check the function get_outstanding_strategist_trades(asset, quote, strategist)
         assert aid.get_outstanding_strategist_trades(erc20s['cow'].address, erc20s['blz'].address, rubicon.wallet) == [1]
+
+        # check the function get_strategist_trade(trade_id)
+        # TODO: improve this test to check the timestamp value returned by the function
+        assert aid.get_strategist_trade(1)[:-1] == [1, 100, erc20s['cow'].address, 2, 100, erc20s['blz'].address, rubicon.wallet]
 
         # check the function admin_max_approve_target(target, token, nonce=None, gas=300000, gas_price=None)
         target = eth_tester.get_accounts()[1]

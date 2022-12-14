@@ -296,6 +296,28 @@ class MarketAid:
         
         return is_approved_strategist
 
+    def get_strategist_trade(self, trade_id):
+        """this function returns a strategist trade
+
+        :param trade_id: the id of the trade
+        :type trade_id: int
+        :return: a an array containing the relevant information for a pair of offers: [ask_id, ask_pay_amt, ask_asset, bid_id, bid_pay_amt, bid_asset, strategist, timestamp]
+        :rtype: dict
+        """
+
+        # check that the trade id is an integer
+        if not isinstance(trade_id, int):
+            log.error("trade id is not an integer")
+            return None
+
+        try: 
+            strategist_trade = self.contract.functions.strategistTrades(trade_id).call()
+        except Exception as e:
+            log.error(e, exc_info=True)
+            return None
+        
+        return strategist_trade
+
     ######################################################################
     # events & helpers
     ######################################################################
@@ -687,7 +709,7 @@ class MarketAidSigner(MarketAid):
     ######################################################################
 
     # adminMaxApproveTarget(target (address), token (address))
-    def admin_max_approve_target(self, target, token, nonce=None, gas=30000000, gas_price=None):
+    def admin_max_approve_target(self, target, token, nonce=None, gas=3000000, gas_price=None):
         """this function sets the max approval for a target address to spend a token on behalf of the contract
         
         :param target: the address of the target
@@ -696,7 +718,7 @@ class MarketAidSigner(MarketAid):
         :type token: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -728,14 +750,14 @@ class MarketAidSigner(MarketAid):
         return max_approve
 
     # adminPullAllFunds(erc20s address[])
-    def admin_pull_all_funds(self, erc20s, nonce=None, gas=30000000, gas_price=None):
+    def admin_pull_all_funds(self, erc20s, nonce=None, gas=3000000, gas_price=None):
         """this function pulls all funds from the contract
         
         :param erc20s: a list of erc20 addresses
         :type erc20s: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -760,7 +782,7 @@ class MarketAidSigner(MarketAid):
             return None
 
     # adminRebalanceFunds(assetToSell (address), amountToSell (uint256), assetToTarget (address))
-    def admin_rebalance_funds(self, asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=30000000, gas_price=None):
+    def admin_rebalance_funds(self, asset_to_sell, amount_to_sell, asset_to_target, nonce=None, gas=3000000, gas_price=None):
         """this function rebalances funds from one asset to another on the RubiconMarket
 
         :param asset_to_sell: the address of the asset to sell
@@ -771,7 +793,7 @@ class MarketAidSigner(MarketAid):
         :type asset_to_target: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -803,14 +825,14 @@ class MarketAidSigner(MarketAid):
         return rebalance
 
     # approveStrategist(strategist (address))
-    def approve_strategist(self, strategist, nonce=None, gas=30000000, gas_price=None):
+    def approve_strategist(self, strategist, nonce=None, gas=3000000, gas_price=None):
         """this function approves a strategist to use the aid contract instance
 
         :param strategist: the address of the strategist to approve
         :type strategist: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -842,7 +864,7 @@ class MarketAidSigner(MarketAid):
         return approve
 
     # batchMarketMakingTrades(tokenPairs (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_market_making_trades(self, token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
+    def batch_market_making_trades(self, token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=3000000, gas_price=None):
         """this function executes a batch of market making trades on the RubiconMarket
 
         :param token_pairs: the token pairs to trade [token0, token1]
@@ -857,7 +879,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -884,7 +906,7 @@ class MarketAidSigner(MarketAid):
         return batch
     
     # batchRequoteAllOffers(tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_requote_all_offers(self, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
+    def batch_requote_all_offers(self, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=3000000, gas_price=None):
         """this function executes a batch requote while clearing all offers the strategist has on the RubiconMarket
 
         :param token_pair: the token pair to trade [token0, token1]
@@ -899,7 +921,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -926,7 +948,7 @@ class MarketAidSigner(MarketAid):
         return batch
 
     # batchRequoteOffers(ids (uint256[]), tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
-    def batch_requote_offers(self, ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=30000000, gas_price=None):
+    def batch_requote_offers(self, ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=3000000, gas_price=None):
         """this function executes a batch requote of all offers that are provided in the ids array
         
         :param ids: the ids of the offers to requote
@@ -943,7 +965,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominators: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -971,7 +993,7 @@ class MarketAidSigner(MarketAid):
 
     # placeMarketMakingTrades(tokenPair (address[2]), askNumerator (uint256), askDenominator (uint256), bidNumerator (uint256), bidDenominator (uint256))
     # aid.batch_market_making_trades([weth.address, usdc.address], [the amount of the asset you will sell], [the amount of the quote you will receive], [the amount of quote you will pay], [the amount of asset you would receive])
-    def place_market_making_trades(self, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=30000000, gas_price=None):
+    def place_market_making_trades(self, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=3000000, gas_price=None):
         """this function executes a market making trade on the RubiconMarket
         
         :param token_pair: the token pair to trade [token0, token1]
@@ -986,7 +1008,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominator: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1013,14 +1035,14 @@ class MarketAidSigner(MarketAid):
         return trade
 
     # removeStrategist(strategist (address))
-    def remove_strategist(self, strategist, nonce=None, gas=30000000, gas_price=None):
+    def remove_strategist(self, strategist, nonce=None, gas=3000000, gas_price=None):
         """this function removes a strategist from the approved strategist list on the market aid contract
         
         :param strategist: the address of the strategist to remove
         :type strategist: str
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1052,7 +1074,7 @@ class MarketAidSigner(MarketAid):
         return remove
 
     # requote(id (uint256), tokenPair (address[2]), askNumerator (uint256), askDenominator (uint256), bidNumerator (uint256), bidDenominator (uint256))
-    def requote(self, id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=30000000, gas_price=None):
+    def requote(self, id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator, nonce=None, gas=3000000, gas_price=None):
         """this function requotes an offer on the RubiconMarket
         
         :param id: the id of the offer to requote
@@ -1069,7 +1091,7 @@ class MarketAidSigner(MarketAid):
         :type bid_denominator: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1096,14 +1118,14 @@ class MarketAidSigner(MarketAid):
         return requote
 
     # scrubStrategistTrade(id (uint256))
-    def scrub_strategist_trade(self, id, nonce=None, gas=30000000, gas_price=None):
+    def scrub_strategist_trade(self, id, nonce=None, gas=3000000, gas_price=None):
         """this function scrubs a strategist trade from the RubiconMarket contract
 
         :param id: the id of the trade to scrub
         :type id: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -1128,14 +1150,14 @@ class MarketAidSigner(MarketAid):
         return scrub
 
     # scrubStrategistTrades(ids (uint256[]))
-    def scrub_strategist_trades(self, ids, nonce=None, gas=30000000, gas_price=None):
+    def scrub_strategist_trades(self, ids, nonce=None, gas=3000000, gas_price=None):
         """this function scrubs a list of strategist trades from the RubiconMarket contract
 
         :param ids: the ids of the trades to scrub
         :type ids: list
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
