@@ -154,38 +154,6 @@ class Rubicon:
     # write calls
     ######################################################################
 
-    # a function to create and pass back a bath house instance
-    def house(self, contract=None):
-        """a function to create and pass back a bath house instance
-        
-        :param contract: a bath house contract instance, defaults to None
-        :type contract: class, optional
-        :return: a bath house instance
-        :rtype: house.House
-        """
-
-        if self.wallet and self.key:
-            return contracts.BathHouseSigner(self.w3, self.wallet, self.key, contract=contract)
-        else:
-            return contracts.BathHouse(self.w3, contract=contract)
-
-    # a function to create and pass back a bath token instance
-    def bath(self, token_address, contract=None):
-        """a function to create and pass back a bath token instance
-
-        :param token_address: the address of the token
-        :type token_address: str
-        :param contract: a bath token contract instance, defaults to None
-        :type contract: class, optional
-        :return: a bath token instance
-        :rtype: bath.Bath
-        """
-
-        if self.wallet and self.key:
-            return contracts.BathTokenSigner(self.w3, token_address, self.wallet, self.key, contract=contract)
-        else:
-            return contracts.BathToken(self.w3, token_address, contract=contract)
-
     # a function to create and pass back an ERC20 token instance
     # TODO: add support for a contract instance
     def token(self, token_address):
