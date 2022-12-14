@@ -1,6 +1,6 @@
 basic example of market aid functionality 
 ==========================================================
-this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found `here <https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid)>`_. 
+this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found `in the protocol docs <https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid)>`_. 
 in short, the market aid contract allows a user to allocate funds to a smart contract that can then be used to interact with the RubiconMarket.sol contract on the user's behalf.
 the market aid contract includes a variety of useful higher level functions, such as placing and updating multiple market orders at once, and can be used to approve other EOA's on behalf of the user, track portfolio balances, and emit event data to be indexed. 
 
@@ -21,8 +21,8 @@ utilizing either `pip <https://pip.pypa.io/en/stable/>`_ or `poetry <https://pyt
     (rubi-py3.10) poetry add web3
     (rubi-py3.10) poetry add python-dotenv
 
-in order to utilize the `rubi` package you will need to first create a `web3 object <https://web3py.readthedocs.io/en/v5/>`_. you will need an optimism node enpoint to do so. you can find more information regarding optimism rpc endpoints `here <https://community.optimism.io/docs/useful-tools/networks/>`_.
-in order to sign transactions the user will need a wallet and private key. more information on wallets can be found `here <https://ethereum.org/en/wallets/>`_.
+in order to utilize the `rubi` package you will need to first create a `web3 object <https://web3py.readthedocs.io/en/v5/>`_. you will need an optimism node enpoint to do so. you can find more information regarding optimism rpc endpoints `in the optimism docs <https://community.optimism.io/docs/useful-tools/networks/>`_.
+in order to sign transactions the user will need a wallet and private key. more information on wallets can be found `in the ethereum docs <https://ethereum.org/en/wallets/>`_.
 you will need to set up a `.env file <https://improveandrepeat.com/2022/01/python-friday-107-working-with-env-files-in-python/#:~:text=env%20file%20is%20a%20great,your%20Python%20code%20as%20well.>`_ in the root directory of the project. this file will contain the private key of the account you wish to use to interact with the market aid contract. the .env file should look like this
 
 .. code-block:: text
@@ -100,7 +100,7 @@ now, we will see if the current wallet has any associated market aid contracts. 
 
 the user is now connected to a market aid contract that it has created from the MarketAidFactory.sol contract. this market aid contract will hold the user's funds and place manage the funds on behalf of the user's EOA. 
 to get started, we will need to first transfer some funds to the market aid contract. one of the benefits of this contract is that it allows the user to transfer funds to the contract without having to first approve the contract to spend the funds. this protects the user's funds from removing the need to allow a contract to spend its funds. 
-we will utilize the `rolodex` class within the `rubi` package to access the `WETH` and `USDC` addresses on Optimism Mainnet. several other useful addresses are stored within this class, check it out `here <https://github.com/RubiconDeFi/rubi-py/blob/master/rubi/rubi/contracts/helper/erc20.py>`_!
+we will utilize the `rolodex` class within the `rubi` package to access the `WETH` and `USDC` addresses on Optimism Mainnet. several other useful addresses are stored within this class, check it out `in the rubi repo <https://github.com/RubiconDeFi/rubi-py/blob/master/rubi/rubi/contracts/helper/erc20.py>`_!
 each function can be utilized without passing in a `nonce <https://ethereum.stackexchange.com/questions/27432/what-is-nonce-in-ethereum-how-does-it-prevent-double-spending>`_, but to allow the transactions to execute in rapid succession we must manually set the nonce in this example. 
 we hope to soon add a `nonce manager <https://github.com/RubiconDeFi/rubi-py/issues/14>`_ to the `rubi` package to allow for more seamless transactions.
 
@@ -154,7 +154,7 @@ lets now check the market aid contract for any outstanding offers and wipe any w
         nonce += 1
 
 
-finally, we will cover some of the higher level functionality of the market aid contract. this example includes the `batch_market_making_trades`, `batch_requote_all_offers`, and the `scrub_strategist_trades` functions. however, there are many other functions that can be utilized to manage the funds of the market aid contract, check them out `here <https://rubi.readthedocs.io/en/latest/rubi.html#rubi.contracts.MarketAidSigner>`_! 
+finally, we will cover some of the higher level functionality of the market aid contract. this example includes the `batch_market_making_trades`, `batch_requote_all_offers`, and the `scrub_strategist_trades` functions. however, there are many other functions that can be utilized to manage the funds of the market aid contract, check them out `in the repo here <https://rubi.readthedocs.io/en/latest/rubi.html#rubi.contracts.MarketAidSigner>`_! 
 we will first place a batch of offers that includes an offer to sell 0.01 ETH for 1000 USDC or an offer to buy 0.01 ETH for 1 USDC
 we will then remove all offers for the set asset / quote pair from the book and replace them with a new batch of offers that includes an offer to sell 0.01 ETH for 10000 USDC or an offer to buy 0.01 ETH for .1 USDC
 then, we will wipe all outstanding offers for the set asset / quote pair from the book before ending the tutorial. 
