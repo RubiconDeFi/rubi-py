@@ -20,18 +20,6 @@ API
 .. autoclass:: RubiconRouterSigner
    :members:
 
-.. autoclass:: BathHouse
-   :members:
-
-.. autoclass:: BathHouseSigner
-   :members:
-
-.. autoclass:: BathToken
-   :members:
-
-.. autoclass:: BathTokenSigner
-   :members:
-
 .. autoclass:: FactoryAid
    :members:
 
