@@ -1,6 +1,6 @@
 basic example of market aid functionality 
 ==========================================================
-this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found `here <https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid)>`_.
+this is a basic example of the market aid functionality in the rubi sdk. more information about the market aid contract can be found `here <https://docs.rubicon.finance/docs/protocol/rubicon-market/market-aid)>`_. 
 in short, the market aid contract allows a user to allocate funds to a smart contract that can then be used to interact with the RubiconMarket.sol contract on the user's behalf.
 the market aid contract includes a variety of useful higher level functions, such as placing and updating multiple market orders at once, and can be used to approve other EOA's on behalf of the user, track portfolio balances, and emit event data to be indexed. 
 
@@ -10,11 +10,13 @@ setup and instillation
 utilizing either `pip <https://pip.pypa.io/en/stable/>`_ or `poetry <https://python-poetry.org/docs/basic-usage/>`_ , install the `rubi`, `web3`, and `python-dotenv` packages with the following command(s)
 
 .. code-block:: bash
+
     (venv) pip install rubi
     (venv) pip install web3
     (venv) pip install python-dotenv
 
 .. code-block:: bash
+
     (rubi-py3.10) poetry add rubi                   
     (rubi-py3.10) poetry add web3
     (rubi-py3.10) poetry add python-dotenv
@@ -24,6 +26,7 @@ in order to sign transactions the user will need a wallet and private key. more 
 you will now need to set up a `.env file <https://improveandrepeat.com/2022/01/python-friday-107-working-with-env-files-in-python/#:~:text=env%20file%20is%20a%20great,your%20Python%20code%20as%20well.>`_ in the root directory of the project. this file will contain the private key of the account you wish to use to interact with the market aid contract. the .env file should look like this
 
 .. code-block:: text
+
     OP_MAINNET_NODE = <an optimism mainnet node endpoint>
     OP_GOERLI_NODE = <only for testing purposes, an optimism goerli node endpoint>
     DEV_KEYS = <the private key of the EOA being used to sign tranactions>
@@ -35,6 +38,7 @@ deploying a market aid contract and placing your first trades
 now that we have our environment variables and packages installed, lets actually deploy a market aid contract and place our first trades. in order to do so, we will need to import the `rubi` package, the `web3` package, and the `dotenv` package. we will also need to import the `os` package in order to access our environment variables.
 
 .. code-block:: python
+
     import os
     import rubi as Rubi
     from web3 import Web3
@@ -55,6 +59,7 @@ now that we have our environment variables and packages installed, lets actually
 in order to interact with the `rubi` package, we will need to create a `web3` object. the `web3` object will be used to interact with the optimism node endpoint, and will be used to sign transactions. `rubi` is mostly a wrapper around the `web3` package, and over time will be expanded to include more functionality. 
 
 .. code-block:: python 
+
     # create a web3 instance
     w3 = Web3(Web3.HTTPProvider(OP_MAINNET_NODE))
 
@@ -100,6 +105,7 @@ each function can be utilized without passing in a `nonce <https://ethereum.stac
 we hope to soon add a `nonce manager <https://github.com/RubiconDeFi/rubi-py/issues/14>`_ to the `rubi` package to allow for more seamless transactions.
 
 .. code-block:: python 
+
     # access the rolodex of helpful addresses based upon the chain id of the node that is being used
     chain = rubi.chain
     rolodex = Rubi.contracts.helper.networks[chain]()
@@ -122,6 +128,7 @@ the market aid contract has a function called `get_strategist_total_liquidity` t
 lets now check the market aid contract for any outstanding offers and wipe any we may find. 
 
 .. code-block:: python 
+
     # check the current balance of the aid contract
     balances = aid.get_strategist_total_liquidity(weth.address, usdc.address, rubi.wallet)
 
@@ -153,6 +160,7 @@ we will then remove all offers for the set asset / quote pair from the book and 
 then, we will wipe all outstanding offers for the set asset / quote pair from the book before ending the tutorial. 
 
 .. code-block:: python 
+
     # place a batch market making trade through the aid contract
     # this trade will create two new market offers, one selling the asset and one buying the asset 
     # this is an offer to sell 0.01 ETH for 1000 USDC or an offer to buy 0.01 ETH for 1 USDC
