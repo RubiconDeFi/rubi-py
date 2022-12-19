@@ -22,7 +22,6 @@ class OptimismMainnet:
         path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
         self.market_abi = json.load(open(path + 'RubiconMarket.json'))
         self.router_abi = json.load(open(path + 'RubiconRouter.json'))
-        self.pair_abi = json.load(open(path + 'BathPair.json'))
         self.aid_abi = json.load(open(path + 'MarketAid.json'))
         self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
@@ -65,9 +64,6 @@ class OptimismGoerli:
         path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
         self.market_abi = json.load(open(path + 'RubiconMarket.json'))
         self.router_abi = json.load(open(path + 'RubiconRouter.json'))
-        self.house_abi = json.load(open(path + 'BathHouse.json'))
-        self.pair_abi = json.load(open(path + 'BathPair.json'))
-        self.bath_abi = json.load(open(path + 'BathToken.json'))
         self.aid_abi = json.load(open(path + 'MarketAid.json'))
         self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
