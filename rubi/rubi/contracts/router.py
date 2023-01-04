@@ -229,17 +229,26 @@ class RubiconRouterSigner(RubiconRouter):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try: 
             swap = self.contract.functions.swap(pay_amt, buy_amt_min, route, expected_market_fee_bps).build_transaction(txn)
             swap = self.w3.eth.account.sign_transaction(swap, self.key)
             self.w3.eth.send_raw_transaction(swap.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None: 
+                if self.w3.eth.wait_for_transaction_receipt(swap.hash)['status'] == 0:
+                    log.error(f'swap transaction {swap.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
