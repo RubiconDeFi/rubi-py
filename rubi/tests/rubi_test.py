@@ -437,9 +437,11 @@ class TestMarket():
         assert erc20s['eth'].functions.balanceOf(add_account_buyer['address']).call() == (100 * 10**18) - 200000 - 100 - fee_one - fee_two
 
         # check the function cancel(id, nonce=None, gas=300000, gas_price=None)
-        rubicon.market.cancel(1)
+        rubicon.market.offer(200000, erc20s['blz'].address, 100000, erc20s['eth'].address) # offer id 5
+        rubicon.market.get_offer(5) == [200000, erc20s['blz'].address, 100000, erc20s['eth'].address]
+        rubicon.market.cancel(5)
         zero_address = "0x0000000000000000000000000000000000000000"
-        rubicon.market.get_offer(1) == [0, zero_address, 0, zero_address]
+        rubicon.market.get_offer(5) == [0, zero_address, 0, zero_address]
 
         # check the function sell_all_amount(pay_gem, pay_amt, buy_gem, min_fill_amount, nonce=None, gas=300000, gas_price=None)
         rubicon_buyer.market.sell_all_amount(erc20s['eth'].address, 100, erc20s['cow'].address, 100)

@@ -112,12 +112,12 @@ class FactoryAidSigner(FactoryAid):
     ######################################################################
 
     # createMarketAidInstance()
-    def create_market_aid_instance(self, nonce=None, gas=30000000, gas_price=None):
+    def create_market_aid_instance(self, nonce=None, gas=3000000, gas_price=None):
         """this function creates a new market aid instance
 
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 30000000
+        :param gas: gas limit of the transaction, defaults to a value of 3000000
         :type gas: int, optional
         :param gas_price: gas price of the transaction, defaults to the gas price of the chain
         :type gas_price: int, optional
@@ -126,17 +126,26 @@ class FactoryAidSigner(FactoryAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             create = self.contract.functions.createMarketAidInstance().build_transaction(txn)
             create = self.w3.eth.account.sign_transaction(create, self.key)
             self.w3.eth.send_raw_transaction(create.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(create.hash)['status'] == 0:
+                    log.error(f"create_market_aid_instance transaction failed: {create.hash.hex()}")
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -727,22 +736,38 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             max_approve = self.contract.functions.adminMaxApproveTarget(target, token).build_transaction(txn)
             max_approve = self.w3.eth.account.sign_transaction(max_approve, self.key)
             self.w3.eth.send_raw_transaction(max_approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(max_approve.hash)['status'] == 0:
+                    log.error(f'admin_max_approve_target transaction {max_approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             max_approve = self.contract.functions.adminMaxApproveTarget(self.w3.to_checksum_address(target), self.w3.to_checksum_address(token)).build_transaction(txn)
             max_approve = self.w3.eth.account.sign_transaction(max_approve, self.key)
             self.w3.eth.send_raw_transaction(max_approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(max_approve.hash)['status'] == 0:
+                    log.error(f'admin_max_approve_target transaction {max_approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -766,17 +791,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             pull_all_funds = self.contract.functions.adminPullAllFunds(erc20s).build_transaction(txn)
             pull_all_funds = self.w3.eth.account.sign_transaction(pull_all_funds, self.key)
             self.w3.eth.send_raw_transaction(pull_all_funds.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(pull_all_funds.hash)['status'] == 0:
+                    log.error(f'admin_pull_all_funds transaction {pull_all_funds.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -802,22 +836,38 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             rebalance = self.contract.functions.adminRebalanceFunds(asset_to_sell, amount_to_sell, asset_to_target).build_transaction(txn)
             rebalance = self.w3.eth.account.sign_transaction(rebalance, self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(rebalance.hash)['status'] == 0:
+                    log.error(f'admin_rebalance_funds transaction {rebalance.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             rebalance = self.contract.functions.adminRebalanceFunds(self.w3.to_checksum_address(asset_to_sell), amount_to_sell, self.w3.to_checksum_address(asset_to_target)).build_transaction(txn)
             rebalance = self.w3.eth.account.sign_transaction(rebalance, self.key)
             self.w3.eth.send_raw_transaction(rebalance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(rebalance.hash)['status'] == 0:
+                    log.error(f'admin_rebalance_funds transaction {rebalance.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -841,22 +891,38 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             approve = self.contract.functions.approveStrategist(strategist).build_transaction(txn)
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(approve.hash)['status'] == 0:
+                    log.error(f'approve_strategist transaction {approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             approve = self.contract.functions.approveStrategist(self.w3.to_checksum_address(strategist)).build_transaction(txn)
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(approve.hash)['status'] == 0:
+                    log.error(f'approve_strategist transaction {approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -888,17 +954,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             batch = self.contract.functions.batchMarketMakingTrades(token_pairs, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
             batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(batch.hash)['status'] == 0:
+                    log.error(f'batch_market_making_trades transaction {batch.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -930,17 +1005,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             batch = self.contract.functions.batchRequoteAllOffers(token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
             batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(batch.hash)['status'] == 0:
+                    log.error(f'batch_requote_all_offers transaction {batch.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -974,17 +1058,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             batch = self.contract.functions.batchRequoteOffers(ids, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators).build_transaction(txn)
             batch = self.w3.eth.account.sign_transaction(batch, self.key)
             self.w3.eth.send_raw_transaction(batch.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(batch.hash)['status'] == 0:
+                    log.error(f'batch_requote_offers transaction {batch.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -1017,17 +1110,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try: 
             trade = self.contract.functions.placeMarketMakingTrades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
             trade = self.w3.eth.account.sign_transaction(trade, self.key)
             self.w3.eth.send_raw_transaction(trade.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(trade.hash)['status'] == 0:
+                    log.error(f'place_market_making_trades transaction {trade.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -1051,22 +1153,38 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             remove = self.contract.functions.removeStrategist(strategist).build_transaction(txn)
             remove = self.w3.eth.account.sign_transaction(remove, self.key)
             self.w3.eth.send_raw_transaction(remove.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(remove.hash)['status'] == 0:
+                    log.error(f'remove_strategist transaction {remove.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             remove = self.contract.functions.removeStrategist(self.w3.to_checksum_address(strategist)).build_transaction(txn)
             remove = self.w3.eth.account.sign_transaction(remove, self.key)
             self.w3.eth.send_raw_transaction(remove.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(remove.hash)['status'] == 0:
+                    log.error(f'remove_strategist transaction {remove.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -1100,17 +1218,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             requote = self.contract.functions.requote(id, token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
             requote = self.w3.eth.account.sign_transaction(requote, self.key)
             self.w3.eth.send_raw_transaction(requote.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(requote.hash)['status'] == 0:
+                    log.error(f'requote transaction {requote.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -1132,17 +1259,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             scrub = self.contract.functions.scrubStrategistTrade(id).build_transaction(txn)
             scrub = self.w3.eth.account.sign_transaction(scrub, self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(scrub.hash)['status'] == 0:
+                    log.error(f'scrub_strategist_trade transaction {scrub.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -1166,17 +1302,26 @@ class MarketAidSigner(MarketAid):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
         
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             scrub = self.contract.functions.scrubStrategistTrades(ids).build_transaction(txn)
             scrub = self.w3.eth.account.sign_transaction(scrub, self.key)
             self.w3.eth.send_raw_transaction(scrub.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(scrub.hash)['status'] == 0:
+                    log.error(f'scrub_strategist_trades transaction {scrub.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None

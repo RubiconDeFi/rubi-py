@@ -175,6 +175,21 @@ class ERC20:
         else: 
             return integer / (10 ** self.decimal)
 
+    # convert a float representation of the token to an integer representation of the token
+    def to_integer(self, float):
+        """converts a float representation of the token to an integer representation of the token by multiplying the float by 10 to the power of the number of decimals of the token
+        
+        :param float: the float representation of the token
+        :type float: float
+        :return: the integer representation of the token
+        :rtype: int
+        """
+
+        if float == 0:
+            return 0
+        else:
+            return int(float * (10 ** self.decimal))
+
 class ERC20Signer(ERC20): 
     """this class represents a contract that implements the ERC20 standard. it is a super class of the ERC20 class as it has write functionality. it is used to read and write to the contract instance.
     
@@ -214,23 +229,39 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             # TODO: issue #7
             approve = self.contract.functions.approve(spender, amount).build_transaction(txn) 
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(approve.hash)['status'] == 0:
+                    log.error(f'approve transaction {approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             approve = self.contract.functions.approve(self.w3.to_checksum_address(spender), amount).build_transaction(txn)
             approve = self.w3.eth.account.sign_transaction(approve, self.key)
             self.w3.eth.send_raw_transaction(approve.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(approve.hash)['status'] == 0:
+                    log.error(f'approve transaction {approve.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -256,22 +287,38 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             transfer = self.contract.functions.transfer(recipient, amount).build_transaction(txn)
             transfer = self.w3.eth.account.sign_transaction(transfer, self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(transfer.hash)['status'] == 0:
+                    log.error(f'transfer transaction {transfer.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             transfer = self.contract.functions.transfer(self.w3.to_checksum_address(recipient), amount).build_transaction(txn)
             transfer = self.w3.eth.account.sign_transaction(transfer, self.key)
             self.w3.eth.send_raw_transaction(transfer.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(transfer.hash)['status'] == 0:
+                    log.error(f'transfer transaction {transfer.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -299,22 +346,38 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             transfer_from = self.contract.functions.transferFrom(sender, recipient, amount).build_transaction(txn)
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(transfer_from.hash)['status'] == 0:
+                    log.error(f'transfer_from transaction {transfer_from.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             transfer_from = self.contract.functions.transferFrom(self.w3.to_checksum_address(sender), self.w3.to_checksum_address(recipient), amount).build_transaction(txn)
             transfer_from = self.w3.eth.account.sign_transaction(transfer_from, self.key)
             self.w3.eth.send_raw_transaction(transfer_from.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(transfer_from.hash)['status'] == 0:
+                    log.error(f'transfer_from transaction {transfer_from.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -341,22 +404,38 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             increase_allowance = self.contract.functions.increaseAllowance(spender, added_value).build_transaction(txn)
             increase_allowance = self.w3.eth.account.sign_transaction(increase_allowance, self.key)
             self.w3.eth.send_raw_transaction(increase_allowance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(increase_allowance.hash)['status'] == 0:
+                    log.error(f'increase_allowance transaction {increase_allowance.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             increase_allowance = self.contract.functions.increaseAllowance(self.w3.to_checksum_address(spender), added_value).build_transaction(txn)
             increase_allowance = self.w3.eth.account.sign_transaction(increase_allowance, self.key)
             self.w3.eth.send_raw_transaction(increase_allowance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(increase_allowance.hash)['status'] == 0:
+                    log.error(f'increase_allowance transaction {increase_allowance.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -382,22 +461,38 @@ class ERC20Signer(ERC20):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
         
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
         
         try:
             decrease_allowance = self.contract.functions.decreaseAllowance(spender, subtracted_value).build_transaction(txn)
             decrease_allowance = self.w3.eth.account.sign_transaction(decrease_allowance, self.key)
             self.w3.eth.send_raw_transaction(decrease_allowance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(decrease_allowance.hash)['status'] == 0:
+                    log.error(f'decrease_allowance transaction {decrease_allowance.hash.hex()} failed')
+                    raise SystemExit()
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             decrease_allowance = self.contract.functions.decreaseAllowance(self.w3.to_checksum_address(spender), subtracted_value).build_transaction(txn)
             decrease_allowance = self.w3.eth.account.sign_transaction(decrease_allowance, self.key)
             self.w3.eth.send_raw_transaction(decrease_allowance.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(decrease_allowance.hash)['status'] == 0:
+                    log.error(f'decrease_allowance transaction {decrease_allowance.hash.hex()} failed')
+                    raise SystemExit()
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None

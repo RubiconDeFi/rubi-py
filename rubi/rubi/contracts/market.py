@@ -568,17 +568,26 @@ class RubiconMarketSigner(RubiconMarket):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
         
         try:
             buy = self.contract.functions.buy(id, amount).build_transaction(txn)
             buy = self.w3.eth.account.sign_transaction(buy, self.key)
             self.w3.eth.send_raw_transaction(buy.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(buy.hash)['status'] == 0:
+                    log.error(f'buy transaction failed: {buy.hash.hex()}')
+                    raise SystemExit
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -613,22 +622,38 @@ class RubiconMarketSigner(RubiconMarket):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try: 
             buy_all_amount = self.contract.functions.buyAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount).build_transaction(txn)
             buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
             self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(buy_all_amount.hash)['status'] == 0:
+                    log.error(f'buy_all_amount transaction {buy_all_amount.hash.hex()} failed')
+                    raise SystemExit
+
         except ValueError: 
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             buy_all_amount = self.contract.functions.buyAllAmount(self.w3.to_checksum_address(buy_gem), buy_amt, self.w3.to_checksum_address(pay_gem), max_fill_amount).build_transaction(txn)
             buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
             self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
+            
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(buy_all_amount.hash)['status'] == 0:
+                    log.error(f'buy_all_amount transaction {buy_all_amount.hash.hex()} failed')
+                    raise SystemExit
+
         except Exception as e: 
             log.error(e, exc_info=True)
             return None
@@ -652,17 +677,26 @@ class RubiconMarketSigner(RubiconMarket):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             cancel = self.contract.functions.cancel(id).build_transaction(txn)
             cancel = self.w3.eth.account.sign_transaction(cancel, self.key)
             self.w3.eth.send_raw_transaction(cancel.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(cancel.hash)['status'] == 0:
+                    log.error(f'cancel transaction {cancel.hash.hex()} failed')
+                    raise SystemExit
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -694,22 +728,38 @@ class RubiconMarketSigner(RubiconMarket):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos).build_transaction(txn)
             offer = self.w3.eth.account.sign_transaction(offer, self.key)
             self.w3.eth.send_raw_transaction(offer.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(offer.hash)['status'] == 0:
+                    log.error(f'offer transaction {offer.hash.hex()} failed')
+                    raise SystemExit
+
         except ValueError:
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             offer = self.contract.functions.offer(pay_amt, self.w3.to_checksum_address(pay_gem), buy_amt, self.w3.to_checksum_address(buy_gem), pos).build_transaction(txn)
             offer = self.w3.eth.account.sign_transaction(offer, self.key)
             self.w3.eth.send_raw_transaction(offer.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(offer.hash)['status'] == 0:
+                    log.error(f'offer transaction {offer.hash.hex()} failed')
+                    raise SystemExit
+        
         except Exception as e:
             log.error(e, exc_info=True)
             return None
@@ -739,23 +789,39 @@ class RubiconMarketSigner(RubiconMarket):
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
+        else:
+            txn_nonce = nonce
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': nonce}
+        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
             sell_all_amount = self.contract.functions.sellAllAmount(pay_gem, pay_amt, buy_gem, min_fill_amount).build_transaction(txn)
             sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
             self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(sell_all_amount.hash)['status'] == 0:
+                    log.error(f'sell_all_amount transaction {sell_all_amount.hash.hex()} failed')
+                    raise SystemExit
+
         except ValueError:
             print('most likely a checksum error... retrying with checksummed addresses')
             log.warning('most likely a checksum error... retrying with checksummed addresses')
             sell_all_amount = self.contract.functions.sellAllAmount(self.w3.to_checksum_address(pay_gem), pay_amt, self.w3.to_checksum_address(buy_gem), min_fill_amount).build_transaction(txn)
             sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
             self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
+
+            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
+            if nonce is None:
+                if self.w3.eth.wait_for_transaction_receipt(sell_all_amount.hash)['status'] == 0:
+                    log.error(f'sell_all_amount transaction {sell_all_amount.hash.hex()} failed')
+                    raise SystemExit
+
         except Exception as e:
             log.error(e, exc_info=True)
             return None
