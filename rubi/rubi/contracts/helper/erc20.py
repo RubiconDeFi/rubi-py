@@ -21,7 +21,11 @@ class ERC20:
             self.address = contract.address
         else:
             path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
-            abi = json.load(open(path + 'ERC20.json'))
+
+            with open(path + 'ERC20.json') as f:
+                abi = json.load(f)
+            f.close()
+            #abi = json.load(open(path + 'ERC20.json'))
 
             try: 
                 contract = w3.eth.contract(address=address, abi=abi)

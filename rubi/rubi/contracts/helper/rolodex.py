@@ -19,11 +19,28 @@ class OptimismMainnet:
         self.factory = '0x267D94C6e67e4436EFfE092b08d040cFF36B2DA7'
 
         # set the rubicon contract abis
+        # TODO: it would be nice to perform this in a cleaner/more dynamic fashion
         path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
-        self.market_abi = json.load(open(path + 'RubiconMarket.json'))
-        self.router_abi = json.load(open(path + 'RubiconRouter.json'))
-        self.aid_abi = json.load(open(path + 'MarketAid.json'))
-        self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
+
+        with open(path + 'RubiconMarket.json') as f:
+            self.market_abi = json.load(f)
+        f.close()
+
+        with open(path + 'RubiconRouter.json') as f:
+            self.router_abi = json.load(f)
+        f.close()
+
+        with open(path +   'MarketAid.json') as f:
+            self.aid_abi = json.load(f)
+        f.close()
+
+        with open(path + 'MarketAidFactory.json') as f:
+            self.factory_abi = json.load(f)
+        f.close()
+        #self.market_abi = json.load(open(path + 'RubiconMarket.json'))
+        #self.router_abi = json.load(open(path + 'RubiconRouter.json'))
+        #self.aid_abi = json.load(open(path + 'MarketAid.json'))
+        #self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list
@@ -62,10 +79,26 @@ class OptimismGoerli:
 
         # set the rubicon contract abis
         path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/"
-        self.market_abi = json.load(open(path + 'RubiconMarket.json'))
-        self.router_abi = json.load(open(path + 'RubiconRouter.json'))
-        self.aid_abi = json.load(open(path + 'MarketAid.json'))
-        self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
+
+        with open(path + 'RubiconMarket.json') as f:
+            self.market_abi = json.load(f)
+        f.close()
+
+        with open(path + 'RubiconRouter.json') as f:
+            self.router_abi = json.load(f)
+        f.close()
+
+        with open(path + 'MarketAid.json') as f:
+            self.aid_abi = json.load(f)
+        f.close()
+
+        with open(path + 'MarketAidFactory.json') as f:
+            self.factory_abi = json.load(f)
+        f.close()
+        #self.market_abi = json.load(open(path + 'RubiconMarket.json'))
+        #self.router_abi = json.load(open(path + 'RubiconRouter.json'))
+        #self.aid_abi = json.load(open(path + 'MarketAid.json'))
+        #self.factory_abi = json.load(open(path + 'MarketAidFactory.json'))
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list

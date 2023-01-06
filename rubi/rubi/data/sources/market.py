@@ -7,19 +7,15 @@ class MarketData:
     """this class acts as an access point to a variety of data from the RubiconMarket.sol contract. it acts as a data processing layer built using the subgrounds library and the subgraphs maintained at the follwing repo: https://github.com/RubiconDeFi/rubi-subgraphs
     """
 
-    def __init__(self):
-        """constructor method"""
-        self.subgrounds = Subgrounds()
-
-class OptimismMarketData: 
-    """this class acts as an access point to a variety of data from the RubiconMarket.sol contract deployed on Optimism. it acts as a data processing layer built using the subgrounds library and the subgraphs maintained at the follwing repo: https://github.com/RubiconDeFi/rubi-subgraphs
-    """
-
-    def __init__(self):
-        """constructor method"""
-        self.network = 'optimism'
-        self.subgrounds = Subgrounds()
-        self.rubicon_market_light = self.subgrounds.load_subgraph('https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmarket-light-optimism')
+    def __init__(self, subgrounds, chain_id):
+        """constructor method
+        
+        :param subgrounds: the subgrounds object
+        :type subgrounds: Subgrounds
+        """
+        network = networks[chain_id]()
+        self.subgrounds = subgrounds
+        self.rubicon_market_light = self.subgrounds.load_subgraph(network.rubicon_market_light)
 
     ######################################################################
     # data collection 

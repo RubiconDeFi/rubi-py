@@ -6,8 +6,18 @@ from attributedict.collections import AttributeDict
 from rubi.book import Book
 import rubi.contracts as contracts
 from rubi.contracts.helper import networks
+from rubi.data import Data
 
-class Rubicon:
+class RubiconData:
+    """this class serves to tie in the various data sources and tooling for the Rubicon protocol that can be collected without a node connection. the Rubicon class inherits the functionality of this data class while adding the ability to interact with the contracts. more to come soon!
+    """
+
+    def __init__(self):
+        """initializes the data class"""
+        self.data = Data()
+
+
+class Rubicon(RubiconData):
     """this class serves as a the main entry point to the repository. it acts as the initialization of multiple contract instances, and give access to the various functions of the contracts. it also provides a few helper functions to make interacting with the contracts easier. more to come soon!
     
     :param w3: a web3 instance
@@ -25,6 +35,9 @@ class Rubicon:
     """
 
     def __init__(self, w3, wallet=None, key=None, market=None, router=None, factory=None):
+        
+        # initialize the data class
+        super().__init__()
 
         # load required variables
         chain = w3.eth.chain_id
