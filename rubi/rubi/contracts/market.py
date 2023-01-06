@@ -703,7 +703,7 @@ class RubiconMarketSigner(RubiconMarket):
 
         return cancel
 
-    # offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address))
+    # offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address), pos (uint256))
     def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=3000000, gas_price=None):
         """create an offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
