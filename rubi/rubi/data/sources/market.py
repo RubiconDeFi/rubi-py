@@ -13,9 +13,9 @@ class MarketData:
         :param subgrounds: the subgrounds object
         :type subgrounds: Subgrounds
         """
-        network = networks[chain_id]()
+        self.network = networks[chain_id]()
         self.subgrounds = subgrounds
-        self.rubicon_market_light = self.subgrounds.load_subgraph(network.rubicon_market_light)
+        self.rubicon_market_light = self.subgrounds.load_subgraph(self.network.rubicon_market_light)
 
     ######################################################################
     # data collection 
@@ -54,11 +54,15 @@ class MarketData:
         Offer.bought_amt_formatted = Offer.bought_amt / 10 ** Offer.buy_gem.decimals
 
         # for each of the filters, add the filter to the where clause
+        # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
         where = []
         if maker is not None:
+            maker = maker.lower()
             where.append(Offer.maker == maker)
         # TODO: this should be modified to return all offers for a given pair, not just the given direction
         if pair is not None:
+            pair[0] = pair[0].lower()
+            pair[1] = pair[1].lower()
             where.append(Offer.pay_gem == pair[0])
             where.append(Offer.buy_gem == pair[1])
         if filled is not None:
@@ -68,8 +72,10 @@ class MarketData:
         if live is not None:
             where.append(Offer.live == live)
         if pay_gem is not None:
+            pay_gem = pay_gem.lower()
             where.append(Offer.pay_gem == pay_gem)
         if buy_gem is not None:
+            buy_gem = buy_gem.lower()
             where.append(Offer.buy_gem == buy_gem)
         if start_time is not None:
             where.append(Offer.timestamp >= start_time)
@@ -141,16 +147,22 @@ class MarketData:
         # for each of the filters, add the filter to the where clause
         where = []
         if taker is not None:
+            taker = taker.lower()
             where.append(Take.taker == taker)
         if maker is not None:
+            maker = maker.lower()
             where.append(Take.maker == maker)
         # TODO: this should be modified to return all offers for a given pair, not just the given direction
         if pair is not None:
+            pair[0] = pair[0].lower()
+            pair[1] = pair[1].lower()
             where.append(Take.pay_gem == pair[0])
             where.append(Take.buy_gem == pair[1])
         if pay_gem is not None:
+            pay_gem = pay_gem.lower()
             where.append(Take.pay_gem == pay_gem)
         if buy_gem is not None:
+            buy_gem = buy_gem.lower()
             where.append(Take.buy_gem == buy_gem)
         if start_time is not None:
             where.append(Take.timestamp >= start_time)
