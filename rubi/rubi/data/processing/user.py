@@ -48,8 +48,10 @@ class User:
         op_offers = self.market_optimism.get_offers(maker = user, pair = pair, filled = filled, cancelled = cancelled, live = live, pay_gem = pay_gem, buy_gem = buy_gem, start_time = start_time, end_time = end_time, first = first)
         op_trades = self.market_optimism.get_trades(taker = user, pair = pair, pay_gem = pay_gem, buy_gem = buy_gem, start_time = start_time, end_time = end_time, first = first)
 
-        if op_offers.empty or op_trades.empty:
-            raise SystemExit('No data found for the specified user')
+        if op_offers.empty: 
+            op_offers = pd.DataFrame(columns=['offers_maker_id', 'offers_transaction_id', 'offers_transaction_timestamp'])
+        if op_trades.empty:
+            op_trades = pd.DataFrame(columns=['takes_taker_id', 'takes_transaction_id', 'takes_transaction_timestamp'])
 
         # transform the dataframe column names so they can be merged
         #df.rename(columns={'A': 'a', 'B': 'b', 'C': 'c'}, inplace=True)
