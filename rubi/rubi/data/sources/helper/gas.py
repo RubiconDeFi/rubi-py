@@ -22,7 +22,7 @@ class Gas:
         :rtype: dict
         """
 
-        # TODO: Issue #18: multicall
+        # TODO: Issue #18: multicall -> also there is better logic we can use to pull the eth_price data for a single timestamp to avoid repeat calls
         txn_object = self.w3.eth.get_transaction(txn)
         txn_receipt = self.w3.eth.get_transaction_receipt(txn)
 
@@ -54,9 +54,9 @@ class Gas:
             
             # calculate the usd value of the fees
             txn_data['eth_price'] = eth_price['amount']
-            txn_data['l1_fee_usd'] = txn_data['l1_fee'] * txn_data['eth_price']
-            txn_data['l2_fee_usd'] = txn_data['l2_fee'] * txn_data['eth_price']
-            txn_data['total_fee_usd'] = txn_data['total_fee'] * txn_data['eth_price']
+            txn_data['l1_fee_usd'] = txn_data['l1_fee_eth'] * txn_data['eth_price']
+            txn_data['l2_fee_usd'] = txn_data['l2_fee_eth'] * txn_data['eth_price']
+            txn_data['total_fee_usd'] = txn_data['total_fee_eth'] * txn_data['eth_price']
 
         return txn_data
 

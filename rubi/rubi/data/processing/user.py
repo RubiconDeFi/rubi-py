@@ -77,6 +77,7 @@ class User:
 
         # merge the offers and trades dataframes
         df = pd.concat([op_offers, op_trades])
+        # TODO: reset the index
         df.drop_duplicates(inplace=True)
 
         return df
