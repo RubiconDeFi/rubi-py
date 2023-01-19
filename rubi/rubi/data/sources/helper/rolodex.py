@@ -37,10 +37,31 @@ class OptimismMainnet:
         self.rubicon_market_light = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmarket-light-optimism'
         # self.rubicon_metrics = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmetricsoptimism'
         self.boiler_plate = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/boilerplateoptimism'
+
+        # create a dictionary of token addresses and symbols to be mapped to a coinbase usd base ticker
+        self.coinbase_tickers = {
+            '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000': 'ETH-USD',
+            '0x68f180fcCe6836688e9084f035309E29Bf0A2095': 'BTC-USD',
+            '0x7F5c764cBc14f9669B88837ca1490cCa17c31607': 'USDC-USD',
+            '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1': 'DAI-USD',
+            '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58': 'USDT-USD',
+            '0x8700dAec35aF8Ff88c16BdF0418774CB3D7599B4': 'SNX-USD',
+            '0x4200000000000000000000000000000000000042': 'OP-USD', 
+            'ETH': 'ETH-USD',
+            'WETH': 'ETH-USD',
+            'WBTC': 'BTC-USD',
+            'USDC': 'USDC-USD',
+            'DAI': 'DAI-USD',
+            'USDT': 'USDT-USD',
+            'SNX': 'SNX-USD',
+            'OP': 'OP-USD'
+        }
         
     ######################################################################
     # sure there is plenty of helpful things we can do here in the future ;)
     ######################################################################
+
+    # create some type of token list dictionary that can be used to dynamically pull in token addresses and information
 
 class OptimismGoerli:
     """this class represents a rolodex of relevant informatino regarding the Optimism Goerli network, such as contract addresses, token addresses, and abis."""

@@ -166,6 +166,6 @@ class SuperUser(User):
         df = self.get_user_trading_transactions(user, pair = pair, filled = filled, cancelled = cancelled, live = live, pay_gem = pay_gem, buy_gem = buy_gem, start_time = start_time, end_time = end_time, first = first)
 
         # update the dataframe to contain the relevant gas data
-        df = self.gas.txn_dataframe_update(df, 'transaction_hash', total_fee_eth = total_fee_eth, total_fee_usd = total_fee_usd, l2_gas_price = l2_gas_price, l2_gas_used = l2_gas_used, l1_gas_used = l1_gas_used, l1_gas_price = l1_gas_price, l1_fee_scalar = l1_fee_scalar, l1_fee = l1_fee, l2_fee = l2_fee, total_fee = total_fee, l1_fee_eth = l1_fee_eth, l2_fee_eth = l2_fee_eth, eth_price = eth_price, l1_fee_usd = l1_fee_usd, l2_fee_usd = l2_fee_usd)
+        df = self.gas.txn_dataframe_update(df, 'transaction_hash', 'transaction_timestamp', total_fee_eth = total_fee_eth, total_fee_usd = total_fee_usd, l2_gas_price = l2_gas_price, l2_gas_used = l2_gas_used, l1_gas_used = l1_gas_used, l1_gas_price = l1_gas_price, l1_fee_scalar = l1_fee_scalar, l1_fee = l1_fee, l2_fee = l2_fee, total_fee = total_fee, l1_fee_eth = l1_fee_eth, l2_fee_eth = l2_fee_eth, eth_price = eth_price, l1_fee_usd = l1_fee_usd, l2_fee_usd = l2_fee_usd)
 
         return df

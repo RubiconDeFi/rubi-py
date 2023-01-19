@@ -61,7 +61,33 @@ class Gas:
 
         return txn_data
 
-    def txn_dataframe_update(self, txn_dataframe, txn_column, total_fee_eth = True, total_fee_usd = True, l2_gas_price = False, l2_gas_used = False, l1_gas_used = False, l1_gas_price = False, l1_fee_scalar = False, l1_fee = False, l2_fee = False, total_fee = False, l1_fee_eth = False, l2_fee_eth = False, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
+    async def get_optimism_txns_gas_data(self, txns):
+        
+        try: 
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        tasks = [loop.run_in_executor(None, self.get_optimism_txn_gas_data, txn, False) for txn in txns]
+        results = await asyncio.gather(*tasks)
+        return results
+
+    def retrieve_optimism_txns_gas_data(self, txns):
+
+        try: 
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        txns_data = loop.run_until_complete(self.get_optimism_txns_gas_data(txns))
+        #loop.close()
+
+        txns_data = dict(zip(txns, txns_data))
+        return txns_data
+
+    def txn_dataframe_update(self, txn_dataframe, txn_column, timestamp_column, total_fee_eth = True, total_fee_usd = True, l2_gas_price = False, l2_gas_used = False, l1_gas_used = False, l1_gas_price = False, l1_fee_scalar = False, l1_fee = False, l2_fee = False, total_fee = False, l1_fee_eth = False, l2_fee_eth = False, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
         """this function takes a dataframe of transactions and adds gas data to it. by default, it only adds the total gas fee in eth and usd to the dataframe. if any of the other parameters are set to true, it will add those values to the dataframe as well
         
         :param txn_dataframe: a dataframe of transactions
@@ -105,16 +131,27 @@ class Gas:
         # get the unique transaction hashes from the dataframe
         txn_hashes = list(txn_dataframe[txn_column].unique())
 
-        # iterate through the transaction hashes and create a dictionary that maps the transaction the associated gas data
-        txn_gas_data = {}
-        for txn in txn_hashes:
-            txn_gas_data[txn] = self.get_optimism_txn_gas_data(txn)
+        # from the transaction hashes and create a dictionary that maps the transaction the associated gas data
+        txn_gas_data = self.retrieve_optimism_txns_gas_data(txn_hashes)
+
+        # get the unique timestamps from the dataframe
+        timestamps = list(txn_dataframe[timestamp_column].unique())
+
+        # create an array of "ETH-USD" strings that represent the pair, the array is the same length as the timestamps array
+        pairs = ['ETH-USD'] * len(timestamps)
+        granularities = [60] * len(timestamps)
+
+        # from the timestamps and create a dictionary that maps the timestamp to the associated eth price
+        eth_prices = self.price.retrieve_prices(pairs, granularities, timestamps)
+        eth_price_data = dict(zip(timestamps, eth_prices))
+
+        print(txn_dataframe.columns)
 
         # now add all columns that we are interested in to the dataframe
         if total_fee_eth:
             txn_dataframe['total_fee_eth'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['total_fee_eth'])
         if total_fee_usd: 
-            txn_dataframe['total_fee_usd'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['total_fee_usd'])
+            txn_dataframe['total_fee_usd'] = txn_dataframe.apply(lambda x: txn_gas_data[x[txn_column]]['total_fee_eth'] * eth_price_data[x[timestamp_column]], axis=1)
         if l2_gas_price:
             txn_dataframe['l2_gas_price'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['l2_gas_price'])
         if l2_gas_used:
@@ -136,37 +173,10 @@ class Gas:
         if l2_fee_eth:
             txn_dataframe['l2_fee_eth'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['l2_fee_eth'])
         if eth_price:
-            txn_dataframe['eth_price'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['eth_price'])
+            txn_dataframe['eth_price'] = txn_dataframe.map(lambda x: eth_price_data[x[timestamp_column]])
         if l1_fee_usd:
-            txn_dataframe['l1_fee_usd'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['l1_fee_usd'])
+            txn_dataframe['l1_fee_usd'] = txn_dataframe.map(lambda x: txn_gas_data[x[txn_column]]['l1_fee_eth'] * eth_price_data[x[timestamp_column]])
         if l2_fee_usd:
-            txn_dataframe['l2_fee_usd'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['l2_fee_usd'])
+            txn_dataframe['l2_fee_usd'] = txn_dataframe.map(lambda x: txn_gas_data[x[txn_column]]['l2_fee_eth'] * eth_price_data[x[timestamp_column]])
         
         return txn_dataframe
-
-    
-    async def get_optimism_txns_gas_data(self, txns):
-        
-        try: 
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-        tasks = [loop.run_in_executor(None, self.get_optimism_txn_gas_data, txn, False) for txn in txns]
-        results = await asyncio.gather(*tasks)
-        return results
-
-    def retrieve_optimism_txns_gas_data(self, txns):
-
-        try: 
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        txns_data = loop.run_until_complete(self.get_optimism_txns_gas_data(txns))
-        loop.close()
-
-        txns_data = dict(zip(txns, txns_data))
-        return txns_data

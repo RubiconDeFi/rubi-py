@@ -76,7 +76,7 @@ class Price:
         #    return None
         #else: 
         return {'base': response['symbol'], 'currency': 'USD', 'amount': response['price'], 'time': response['timestamp']}
-
+    '''
     async def get_price(self, pair, granularity, start, end, price_type='open'):
         """the get_price function will take in a pair, granularity, and timestamp and return a price for the pair at the specified timestamp. this is done by gathering historical data from coinbase's OHLC historical data api
 
@@ -104,6 +104,8 @@ class Price:
 
                     # TODO: we will want to enable retry logic here where the time range is incrementally stepped out until we get a response
                     # we will need to determine what the maximum amount of retries is and ensure we do not exceed that
+                    if len(data) == 0:
+                        raise Exception("Failed to retrieve data")
 
                     if price_type == 'open':
                         price = data[0][3]
@@ -147,6 +149,55 @@ class Price:
             raise Exception(f"Failed to retrieve prices due to error: {e}")
 
         return prices
+    '''
+    async def get_prices(self, pairs, granularities, starts, ends, price_type='open'):
+
+        async with aiohttp.ClientSession() as session:
+            rate_limit = 2
+            last_request_time = time.time()
+
+            async def get_price(pair, granularity, start, end):
+                nonlocal last_request_time
+                if time.time() - last_request_time < 1 / rate_limit:
+                    await asyncio.sleep(1 / rate_limit) # - (time.time() - last_request_time))
+                
+                url = f"https://api.pro.coinbase.com/products/{pair}/candles?granularity={granularity}&start={start}&end={end}"
+                try:
+                    async with session.get(url) as resp: 
+                        #print(time.time())
+                        data = await resp.json()
+                
+                except aiohttp.ClientError as e:
+                    raise Exception(f"Failed to retrieve data due to client error: {e}")
+                except Exception as e:
+                    raise Exception(f"Failed to retrieve data due to error: {e}. parameters {pair}, {granularity}, {start}, {end}")
+                
+                last_request_time = time.time()
+                
+                if len(data) == 0:
+                    return 0
+                    #raise Exception("Failed to retrieve data")
+                #print(data)
+                if price_type == 'open':
+                    price = data[0][3]
+                elif price_type == 'high':
+                    price = data[0][2]
+                elif price_type == 'low':
+                    price = data[0][1]
+                elif price_type == 'close':
+                    price = data[0][4]
+                
+                return price
+            
+            tasks = [get_price(pair, granularity, start, end) for pair, granularity, start, end in zip(pairs, granularities, starts, ends)]
+            
+            try:
+                prices = await asyncio.gather(*tasks)
+            except Exception as e:
+                raise Exception(f"Failed to retrieve prices due to error: {e}")
+
+            return prices
+
 
     def retrieve_prices(self, pairs, granularities, timestamps, price_type='open'):
         """the retrieve_prices function will take in a list of pairs, granularities, and timestamps and return a list of prices for each pair at the specified timestamp. this is done by gathering historical data from coinbase's OHLC historical data api
@@ -199,4 +250,35 @@ class Price:
             return prices
         except Exception as e:
             raise Exception(f"Failed to retrieve prices due to error: {e}")
-        
+
+    def txn_dataframe_priced(self, txn_dataframe, timestamp_column, total_fee_usd = True, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
+        """the txn_dataframe_priced function will take in a transaction dataframe and return a dataframe with the total fee in usd, the eth price at the time of the transaction, and the l1 and l2 fees in usd
+
+        :param txn_dataframe: a dataframe containing the transactions to price
+        :type txn_dataframe: pandas.DataFrame
+        :param timestamp_column: the name of the column containing the timestamp of the transaction
+        :type timestamp_column: str
+        :param total_fee_usd: whether or not to include the total fee in usd, defaults to True
+        :type total_fee_usd: bool, optional
+        :param eth_price: whether or not to include the eth price at the time of the transaction, defaults to False
+        :type eth_price: bool, optional
+        :param l1_fee_usd: whether or not to include the l1 fee in usd, defaults to False
+        :type l1_fee_usd: bool, optional
+        :param l2_fee_usd: whether or not to include the l2 fee in usd, defaults to False
+        :type l2_fee_usd: bool, optional
+        :return: a dataframe containing the transaction data with the total fee in usd, the eth price at the time of the transaction, and the l1 and l2 fees in usd
+        :rtype: pandas.DataFrame
+        """
+
+        # get the unique timestamps from the dataframe
+        timestamps = list(txn_dataframe[timestamp_column].unique())
+
+        # create an array of "ETH-USD" strings that represent the pair, the array is the same length as the timestamps array
+        pairs = ['ETH-USD'] * len(timestamps)
+        granularities = [60] * len(timestamps)
+
+        # from the timestamps and create a dictionary that maps the timestamp to the associated eth price
+        eth_prices = self.retrieve_prices(pairs, granularities, timestamps)
+        eth_price_data = dict(zip(timestamps, eth_prices))
+
+        return eth_price_data
