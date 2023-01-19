@@ -36,6 +36,7 @@ class OptimismMainnet:
         # of the subgraph, and only querying, and paying, for the most recent data. 
         self.rubicon_market_light = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmarket-light-optimism'
         # self.rubicon_metrics = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmetricsoptimism'
+        self.boiler_plate = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/boilerplateoptimism'
         
     ######################################################################
     # sure there is plenty of helpful things we can do here in the future ;)

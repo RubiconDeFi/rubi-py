@@ -1,3 +1,4 @@
+import asyncio
 import requests 
 from .price import Price
 
@@ -142,3 +143,30 @@ class Gas:
             txn_dataframe['l2_fee_usd'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['l2_fee_usd'])
         
         return txn_dataframe
+
+    
+    async def get_optimism_txns_gas_data(self, txns):
+        
+        try: 
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        tasks = [loop.run_in_executor(None, self.get_optimism_txn_gas_data, txn, False) for txn in txns]
+        results = await asyncio.gather(*tasks)
+        return results
+
+    def retrieve_optimism_txns_gas_data(self, txns):
+
+        try: 
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        txns_data = loop.run_until_complete(self.get_optimism_txns_gas_data(txns))
+        loop.close()
+
+        txns_data = dict(zip(txns, txns_data))
+        return txns_data
