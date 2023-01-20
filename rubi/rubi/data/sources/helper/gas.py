@@ -145,8 +145,6 @@ class Gas:
         eth_prices = self.price.retrieve_prices(pairs, granularities, timestamps)
         eth_price_data = dict(zip(timestamps, eth_prices))
 
-        print(txn_dataframe.columns)
-
         # now add all columns that we are interested in to the dataframe
         if total_fee_eth:
             txn_dataframe['total_fee_eth'] = txn_dataframe[txn_column].map(lambda x: txn_gas_data[x]['total_fee_eth'])
