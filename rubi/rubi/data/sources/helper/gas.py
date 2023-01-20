@@ -87,13 +87,17 @@ class Gas:
         txns_data = dict(zip(txns, txns_data))
         return txns_data
 
-    def txn_dataframe_update(self, txn_dataframe, txn_column, timestamp_column, total_fee_eth = True, total_fee_usd = True, l2_gas_price = False, l2_gas_used = False, l1_gas_used = False, l1_gas_price = False, l1_fee_scalar = False, l1_fee = False, l2_fee = False, total_fee = False, l1_fee_eth = False, l2_fee_eth = False, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
+    def txn_dataframe_update(self, txn_dataframe, txn_column, timestamp_column, price_query='range', total_fee_eth = True, total_fee_usd = True, l2_gas_price = False, l2_gas_used = False, l1_gas_used = False, l1_gas_price = False, l1_fee_scalar = False, l1_fee = False, l2_fee = False, total_fee = False, l1_fee_eth = False, l2_fee_eth = False, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
         """this function takes a dataframe of transactions and adds gas data to it. by default, it only adds the total gas fee in eth and usd to the dataframe. if any of the other parameters are set to true, it will add those values to the dataframe as well
         
         :param txn_dataframe: a dataframe of transactions
         :type txn_dataframe: pandas dataframe
         :param txn_column: the name of the column that contains the transaction hashes
         :type txn_column: str
+        :param timestamp_column: the name of the column that contains the timestamp of the transaction
+        :type timestamp_column: str
+        :param price_query: the method to use to query the price of eth. can be 'range' or 'single'
+        :type price_query: str
         :param total_fee_eth: whether or not to add the total fee in eth to the dataframe
         :type total_fee_eth: bool
         :param total_fee_usd: whether or not to add the total fee in usd to the dataframe
@@ -134,16 +138,29 @@ class Gas:
         # from the transaction hashes and create a dictionary that maps the transaction the associated gas data
         txn_gas_data = self.retrieve_optimism_txns_gas_data(txn_hashes)
 
-        # get the unique timestamps from the dataframe
-        timestamps = list(txn_dataframe[timestamp_column].unique())
+        if price_query == 'range':
+            start_timestamp = txn_dataframe[timestamp_column].min()
+            end_timestamp = txn_dataframe[timestamp_column].max()
+            eth_prices = self.price.get_price_in_range(start_timestamp, end_timestamp)
 
-        # create an array of "ETH-USD" strings that represent the pair, the array is the same length as the timestamps array
-        pairs = ['ETH-USD'] * len(timestamps)
-        granularities = [60] * len(timestamps)
+            # create a dictionary that maps the timestamp to the associated eth price
+            timestamps = list(txn_dataframe[timestamp_column].unique())
+            eth_price_data = {}
+            
+            for timestamp in timestamps:
+                eth_price_data[timestamp] = eth_prices[(timestamp // 60) * 60]
 
-        # from the timestamps and create a dictionary that maps the timestamp to the associated eth price
-        eth_prices = self.price.retrieve_prices(pairs, granularities, timestamps)
-        eth_price_data = dict(zip(timestamps, eth_prices))
+        else:
+            # get the unique timestamps from the dataframe
+            timestamps = list(txn_dataframe[timestamp_column].unique())
+
+            # create an array of "ETH-USD" strings that represent the pair, the array is the same length as the timestamps array
+            pairs = ['ETH-USD'] * len(timestamps)
+            granularities = [60] * len(timestamps)
+
+            # from the timestamps and create a dictionary that maps the timestamp to the associated eth price
+            eth_prices = self.price.retrieve_prices(pairs, granularities, timestamps)
+            eth_price_data = dict(zip(timestamps, eth_prices))
 
         # now add all columns that we are interested in to the dataframe
         if total_fee_eth:
