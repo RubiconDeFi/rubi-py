@@ -56,13 +56,9 @@ print("market aid address: ", aid.address, "\n")
 chain = rubi.chain
 rolodex = Rubi.contracts.helper.networks[chain]()
 
-# get the weth and usdc addresses
-weth = rolodex.weth
-usdc = rolodex.usdc
-
-# connect to the weth and usdc contracts
-weth = rubi.token(weth)
-usdc = rubi.token(usdc)
+# connect to the weth and usdc contracts - rolodex stores the address of some of the most popular tokens
+weth = rubi.token(rolodex.weth)
+usdc = rubi.token(rolodex.usdc)
 
 # check that the contracts connected match the rolodex addresses
 assert weth.address == rolodex.weth
