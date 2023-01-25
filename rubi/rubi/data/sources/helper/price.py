@@ -257,6 +257,15 @@ class Price:
         :return: a dictionary of prices with the timestamp as the key and the price as the value
         :rtype: dict
         """
+
+        # TODO: there is probably a better way to do this, but for now we need to cover the scenario where a user requests USDC-USD data as coinbase just assumes USDC is USD... i hope they are right
+        if pair == 'USDC-USD':
+            start = ((start // granularity) * granularity) - (granularity * 300)
+            end = ((end // granularity) * granularity) + (granularity * 300)
+            while start <= end:
+                price_data[start] = 1
+                start += granularity
+            return price_data
         
         try: 
             try: 

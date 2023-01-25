@@ -99,6 +99,15 @@ class OptimismGoerli:
             '0xD70734Ba8101Ec28b38AB15e30Dc9b60E3c6f433': 'USDT-USD',
             '0xCeE7148028Ff1B08163343794E85883174a61393': 'OP-USD', 
             '0x45FA7d7b6C954d17141586e1BD63d2e35d3e26De': 'MKR-USD',
+
+            # add in the lower case versions of the tokens
+            '0x54e63385c13ecbe3b859991eedad539d9fda1167': 'ETH-USD',
+            '0xe432f229521ee954f80c83257485405e3d848d17': 'USDC-USD',
+            '0xd70734ba8101ec28b38ab15e30dc9b60e3c6f433': 'USDT-USD',
+            '0xcee7148028ff1b08163343794e85883174a61393': 'OP-USD', 
+            '0x45fa7d7b6c954d17141586e1bd63d2e35d3e26de': 'MKR-USD',
+            
+            # add in the symbols to ticker mappings
             'ETH': 'ETH-USD',
             'WETH': 'ETH-USD',
             'WBTC': 'BTC-USD',
