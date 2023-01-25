@@ -20,7 +20,6 @@ class OptimismMainnet:
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list
-        self.eth = '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000'
         self.weth = '0x4200000000000000000000000000000000000006'
         self.wbtc = '0x68f180fcCe6836688e9084f035309E29Bf0A2095'
         self.usdc = '0x7F5c764cBc14f9669B88837ca1490cCa17c31607'
@@ -40,7 +39,7 @@ class OptimismMainnet:
 
         # create a dictionary of token addresses and symbols to be mapped to a coinbase usd base ticker
         self.coinbase_tickers = {
-            '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000': 'ETH-USD',
+            '0x4200000000000000000000000000000000000006': 'ETH-USD',
             '0x68f180fcCe6836688e9084f035309E29Bf0A2095': 'BTC-USD',
             '0x7F5c764cBc14f9669B88837ca1490cCa17c31607': 'USDC-USD',
             '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1': 'DAI-USD',
@@ -88,11 +87,29 @@ class OptimismGoerli:
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list
-        self.eth = '0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000'
-        self.weth = '0x4200000000000000000000000000000000000006'
+        self.weth = '0x54e63385c13ECbE3B859991eEdad539d9fDa1167'
         self.op = '0xCeE7148028Ff1B08163343794E85883174a61393'
-        self.usdc = '0x708394f89acd3E0644f774EA6c876BFACE70e600'
+        self.usdc = '0xe432f229521eE954f80C83257485405E3d848d17'
+        self.usdt = '0xD70734Ba8101Ec28b38AB15e30Dc9b60E3c6f433'
+        self.forrest_coin = '0x45FA7d7b6C954d17141586e1BD63d2e35d3e26De'
 
+        self.coinbase_tickers = {
+            '0x54e63385c13ECbE3B859991eEdad539d9fDa1167': 'ETH-USD',
+            '0xe432f229521eE954f80C83257485405E3d848d17': 'USDC-USD',
+            '0xD70734Ba8101Ec28b38AB15e30Dc9b60E3c6f433': 'USDT-USD',
+            '0xCeE7148028Ff1B08163343794E85883174a61393': 'OP-USD', 
+            '0x45FA7d7b6C954d17141586e1BD63d2e35d3e26De': 'MKR-USD',
+            'ETH': 'ETH-USD',
+            'WETH': 'ETH-USD',
+            'WBTC': 'BTC-USD',
+            'USDC': 'USDC-USD',
+            'DAI': 'DAI-USD',
+            'USDT': 'USDT-USD',
+            'SNX': 'SNX-USD',
+            'OP': 'OP-USD',
+            'F': 'MKR-USD'
+        }
+        
         ######################################################################
         # sure there is plenty of helpful things we can do here in the future ;)
         ######################################################################
