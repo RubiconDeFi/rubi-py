@@ -260,6 +260,7 @@ class Price:
 
         # TODO: there is probably a better way to do this, but for now we need to cover the scenario where a user requests USDC-USD data as coinbase just assumes USDC is USD... i hope they are right
         if pair == 'USDC-USD':
+            price_data = {}
             start = ((start // granularity) * granularity) - (granularity * 300)
             end = ((end // granularity) * granularity) + (granularity * 300)
             while start <= end:
