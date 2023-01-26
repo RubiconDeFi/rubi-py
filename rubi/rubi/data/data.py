@@ -1,4 +1,5 @@
 from subgrounds import Subgrounds
+from rubi.data.sources.aid import AidData
 from rubi.data.sources.market import MarketData
 from rubi.data.sources.helper import Gas, Price, networks 
 from rubi.data.processing.user import User, SuperUser
@@ -19,6 +20,9 @@ class Data:
 
         # initialize the data sources
         self.market_optimism = MarketData(self.subgrounds, 10)
+        self.market_aid_optimism = AidData(self.subgrounds, 10) 
+        self.market_optimism_goerli = MarketData(self.subgrounds, 420)
+        self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
 
         # initialize the data processing if the data object is not a super data object
         if not super:

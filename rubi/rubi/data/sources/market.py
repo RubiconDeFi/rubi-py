@@ -12,6 +12,8 @@ class MarketData:
         
         :param subgrounds: the subgrounds object
         :type subgrounds: Subgrounds
+        :param chain_id: the chain id of the network that is of interest
+        :type chain_id: int
         """
         self.network = networks[chain_id]()
         self.subgrounds = subgrounds
@@ -57,30 +59,30 @@ class MarketData:
         # for each of the filters, add the filter to the where clause
         # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
         where = []
-        if maker is not None:
+        if maker:
             maker = maker.lower()
             where.append(Offer.maker == maker)
         # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if pair is not None:
+        if pair:
             pair[0] = pair[0].lower()
             pair[1] = pair[1].lower()
             where.append(Offer.pay_gem == pair[0])
             where.append(Offer.buy_gem == pair[1])
-        if filled is not None:
+        if filled:
             where.append(Offer.filled == filled)
-        if cancelled is not None:
+        if cancelled:
             where.append(Offer.cancelled == cancelled)
-        if live is not None:
+        if live:
             where.append(Offer.live == live)
-        if pay_gem is not None:
+        if pay_gem:
             pay_gem = pay_gem.lower()
             where.append(Offer.pay_gem == pay_gem)
-        if buy_gem is not None:
+        if buy_gem:
             buy_gem = buy_gem.lower()
             where.append(Offer.buy_gem == buy_gem)
-        if start_time is not None:
+        if start_time:
             where.append(Offer.timestamp >= start_time)
-        if end_time is not None:
+        if end_time:
             where.append(Offer.timestamp <= end_time)
 
         # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided
@@ -154,33 +156,33 @@ class MarketData:
         # for each of the filters, add the filter to the where clause
         # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
         where = []
-        if maker is not None:
+        if maker:
             maker = maker.lower()
             where.append(Offer.maker == maker)
         # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if taker is not None: 
+        if taker: 
             taker = taker.lower()
             where.append(Offer.takes.taker.id == taker)
-        if pair is not None:
+        if pair:
             pair[0] = pair[0].lower()
             pair[1] = pair[1].lower()
             where.append(Offer.pay_gem == pair[0])
             where.append(Offer.buy_gem == pair[1])
-        if filled is not None:
+        if filled:
             where.append(Offer.filled == filled)
-        if cancelled is not None:
+        if cancelled:
             where.append(Offer.cancelled == cancelled)
-        if live is not None:
+        if live:
             where.append(Offer.live == live)
-        if pay_gem is not None:
+        if pay_gem:
             pay_gem = pay_gem.lower()
             where.append(Offer.pay_gem == pay_gem)
-        if buy_gem is not None:
+        if buy_gem:
             buy_gem = buy_gem.lower()
             where.append(Offer.buy_gem == buy_gem)
-        if start_time is not None:
+        if start_time:
             where.append(Offer.timestamp >= start_time)
-        if end_time is not None:
+        if end_time:
             where.append(Offer.timestamp <= end_time)
 
         if where == []:
@@ -258,27 +260,27 @@ class MarketData:
 
         # for each of the filters, add the filter to the where clause
         where = []
-        if taker is not None:
+        if taker:
             taker = taker.lower()
             where.append(Take.taker == taker)
-        if maker is not None:
+        if maker:
             maker = maker.lower()
             where.append(Take.maker == maker)
         # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if pair is not None:
+        if pair:
             pair[0] = pair[0].lower()
             pair[1] = pair[1].lower()
             where.append(Take.pay_gem == pair[0])
             where.append(Take.buy_gem == pair[1])
-        if pay_gem is not None:
+        if pay_gem:
             pay_gem = pay_gem.lower()
             where.append(Take.pay_gem == pay_gem)
-        if buy_gem is not None:
+        if buy_gem:
             buy_gem = buy_gem.lower()
             where.append(Take.buy_gem == buy_gem)
-        if start_time is not None:
+        if start_time:
             where.append(Take.timestamp >= start_time)
-        if end_time is not None:
+        if end_time:
             where.append(Take.timestamp <= end_time)
 
         # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided
@@ -338,30 +340,30 @@ class MarketData:
             # for each of the filters, add the filter to the where clause
             # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
             where = []
-            if maker is not None:
+            if maker:
                 maker = maker.lower()
                 where.append(Offer.maker == maker)
             # TODO: this should be modified to return all offers for a given pair, not just the given direction
-            if pair is not None:
+            if pair:
                 pair[0] = pair[0].lower()
                 pair[1] = pair[1].lower()
                 where.append(Offer.pay_gem == pair[0])
                 where.append(Offer.buy_gem == pair[1])
-            if filled is not None:
+            if filled:
                 where.append(Offer.filled == filled)
-            if cancelled is not None:
+            if cancelled:
                 where.append(Offer.cancelled == cancelled)
-            if live is not None:
+            if live:
                 where.append(Offer.live == live)
-            if pay_gem is not None:
+            if pay_gem:
                 pay_gem = pay_gem.lower()
                 where.append(Offer.pay_gem == pay_gem)
-            if buy_gem is not None:
+            if buy_gem:
                 buy_gem = buy_gem.lower()
                 where.append(Offer.buy_gem == buy_gem)
-            if start_time is not None:
+            if start_time:
                 where.append(Offer.timestamp >= start_time)
-            if end_time is not None:
+            if end_time:
                 where.append(Offer.timestamp <= end_time)
 
             if where == []:
@@ -429,27 +431,27 @@ class MarketData:
 
             # for each of the filters, add the filter to the where clause
             where = []
-            if taker is not None:
+            if taker:
                 taker = taker.lower()
                 where.append(Take.taker == taker)
-            if maker is not None:
+            if maker:
                 maker = maker.lower()
                 where.append(Take.maker == maker)
             # TODO: this should be modified to return all offers for a given pair, not just the given direction
-            if pair is not None:
+            if pair:
                 pair[0] = pair[0].lower()
                 pair[1] = pair[1].lower()
                 where.append(Take.pay_gem == pair[0])
                 where.append(Take.buy_gem == pair[1])
-            if pay_gem is not None:
+            if pay_gem:
                 pay_gem = pay_gem.lower()
                 where.append(Take.pay_gem == pay_gem)
-            if buy_gem is not None:
+            if buy_gem:
                 buy_gem = buy_gem.lower()
                 where.append(Take.buy_gem == buy_gem)
-            if start_time is not None:
+            if start_time:
                 where.append(Take.timestamp >= start_time)
-            if end_time is not None:
+            if end_time:
                 where.append(Take.timestamp <= end_time)
 
             # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided

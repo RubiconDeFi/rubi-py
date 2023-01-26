@@ -36,6 +36,7 @@ class OptimismMainnet:
         self.rubicon_market_light = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmarket-light-optimism'
         # self.rubicon_metrics = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmetricsoptimism'
         self.boiler_plate = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/boilerplateoptimism'
+        self.market_aid = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/optimismmarketaid'
 
         # create a dictionary of token addresses and symbols to be mapped to a coinbase usd base ticker
         self.coinbase_tickers = {
@@ -84,6 +85,9 @@ class OptimismGoerli:
 
         # set the subgraph query endpoints
         self.rubicon_market_light = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconmarket-light-op-goerli'
+        # TODO: this is pointing towards the mainnet subgraph, need to decide whether to keep the detailed subgraph or not, its a lot of data to store... thanks for the compute graph
+        self.boiler_plate = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/boilerplateoptimism'
+        self.market_aid = 'https://api.thegraph.com/subgraphs/name/denverbaumgartner/optimismgoerlimarketaid'
 
         # set up some common asset addresses that may be used 
         # TODO: it would be nice to be able to dynamically pull in a token list in a trustless fashion and populate this list
