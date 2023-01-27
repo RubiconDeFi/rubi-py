@@ -1,5 +1,5 @@
 from subgrounds import Subgrounds
-from rubi.data.sources.aid import AidData
+from rubi.data.sources.aid import AidData, SuperAidData
 from rubi.data.sources.market import MarketData
 from rubi.data.sources.helper import Gas, Price, networks 
 from rubi.data.processing.user import User, SuperUser
@@ -20,13 +20,13 @@ class Data:
 
         # initialize the data sources
         self.market_optimism = MarketData(self.subgrounds, 10)
-        self.market_aid_optimism = AidData(self.subgrounds, 10) 
         self.market_optimism_goerli = MarketData(self.subgrounds, 420)
-        self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
-
+        
         # initialize the data processing if the data object is not a super data object
         if not super:
             self.user = User(self.subgrounds, self.market_optimism)
+            self.market_aid_optimism = AidData(self.subgrounds, 10) 
+            self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
 
 class SuperData(Data):
     """this class acts as an extension of the data class with additional functionality that is enabled by being connected to a node. 
@@ -45,3 +45,6 @@ class SuperData(Data):
 
         # initialize the data processing
         self.user = SuperUser(self.w3, self.subgrounds, self.market_optimism)
+        # TODO: THIS NEEDS SOME TYPE OF SPLIT TO LIMIT USERS FROM TRYING TO PULL GOERLI DATA WHILE USING A MAINNET NODE
+        self.market_aid_optimism = SuperAidData(self.w3, self.subgrounds, 10) 
+        self.market_aid_optimism_goerli = SuperAidData(self.w3, self.subgrounds, 420)
