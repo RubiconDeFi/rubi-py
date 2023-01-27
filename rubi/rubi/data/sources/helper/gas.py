@@ -12,6 +12,7 @@ class Gas:
         :type w3: Web3 object
         """
         self.w3 = w3
+        self.chain_id = w3.eth.chain_id
         self.price = Price()
 
     def get_optimism_txn_gas_data(self, txn, priced=True): 
@@ -23,7 +24,7 @@ class Gas:
         :rtype: dict
         """
 
-        # TODO: Issue #18: multicall -> also there is better logic we can use to pull the eth_price data for a single timestamp to avoid repeat calls
+        # TODO: Issue #18: multicall
         txn_object = self.w3.eth.get_transaction(txn)
         txn_receipt = self.w3.eth.get_transaction_receipt(txn)
 
@@ -33,13 +34,19 @@ class Gas:
         txn_data['l1_gas_used'] = int(txn_receipt['l1GasUsed'], 0)
         txn_data['l1_gas_price'] = int(txn_receipt['l1GasPrice'], 0)
         txn_data['l1_fee_scalar'] = float(txn_receipt['l1FeeScalar'])
-        txn_data['timestamp'] = int(txn_object['l1Timestamp'], 0)
         txn_data['l1_fee'] = int(txn_data['l1_gas_used'] * txn_data['l1_gas_price'] * txn_data['l1_fee_scalar'])
         txn_data['l2_fee'] = txn_data['l2_gas_used'] * txn_data['l2_gas_price']
         txn_data['total_fee'] = txn_data['l1_fee'] + txn_data['l2_fee']
         txn_data['l1_fee_eth'] = txn_data['l1_fee'] / 10**18
         txn_data['l2_fee_eth'] = txn_data['l2_fee'] / 10**18
         txn_data['total_fee_eth'] = txn_data['total_fee'] / 10**18
+
+        # this is intended to handle optimism mainnet transactions, pre-bedrock
+        if self.chain_id == 10:
+            txn_data['timestamp'] = int(txn_object['l1Timestamp'], 0)
+        if self.chain_id == 420:
+            txn_block = self.w3.eth.get_block(txn_object['blockNumber'])
+            txn_data['timestamp'] = txn_block['timestamp']
 
         # if priced, get the price of eth at the time of the transaction
         if priced: 

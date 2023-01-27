@@ -45,6 +45,13 @@ class SuperData(Data):
 
         # initialize the data processing
         self.user = SuperUser(self.w3, self.subgrounds, self.market_optimism)
-        # TODO: THIS NEEDS SOME TYPE OF SPLIT TO LIMIT USERS FROM TRYING TO PULL GOERLI DATA WHILE USING A MAINNET NODE
-        self.market_aid_optimism = SuperAidData(self.w3, self.subgrounds, 10) 
-        self.market_aid_optimism_goerli = SuperAidData(self.w3, self.subgrounds, 420)
+        
+        # TODO: see if there is a more ellegant want to do this, we are going to split these based upon which network we are on 
+        chain = w3.eth.chain_id
+
+        if chain == 10:
+            self.market_aid_optimism = SuperAidData(self.w3, self.subgrounds, 10) 
+            self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
+        elif chain == 420:
+            self.market_aid_optimism = AidData(self.subgrounds, 10) 
+            self.market_aid_optimism_goerli = SuperAidData(self.w3, self.subgrounds, 420)
