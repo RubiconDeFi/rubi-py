@@ -114,3 +114,26 @@ class SuperAidData(AidData):
         df = self.gas.txn_dataframe_update(txns, 'transactions_id', 'transactions_timestamp', total_fee_eth = total_fee_eth, total_fee_usd = total_fee_usd, l2_gas_price = l2_gas_price, l2_gas_used = l2_gas_used, l1_gas_used = l1_gas_used, l1_gas_price = l1_gas_price, l1_fee_scalar = l1_fee_scalar, l1_fee = l1_fee, l2_fee = l2_fee, total_fee = total_fee, l1_fee_eth = l1_fee_eth, l2_fee_eth = l2_fee_eth, eth_price = eth_price, l1_fee_usd = l1_fee_usd, l2_fee_usd = l2_fee_usd)
 
         return df 
+
+    def get_aid_gas_spend_binned(self, aid=None, start_time=None, end_time=None, granularity=60, type = 'USD', total_fee_eth=True, total_fee_usd=True, l2_gas_price=None, l2_gas_used=None, l1_gas_used=None, 
+        l1_gas_price=None, l1_fee_scalar=None, l1_fee=None, l2_fee=None, total_fee=None, l1_fee_eth=None, l2_fee_eth=None, eth_price=None, l1_fee_usd=None, l2_fee_usd=None, first=1000000000):
+        """this function takes in a market aid address, start time, end time, and granularity in order to return a dictionary of the gas spend dictionary that is binned by the granularity.
+        this dictionary is a key-pair mapping of the time bin (start of a minute, hour, day, etc) to the gas spend of the contract during that period.
+        """
+
+        gas_spend = self.get_aid_txns_gas_data(aid, start_time, end_time, total_fee_eth, total_fee_usd, l2_gas_price, l2_gas_used, l1_gas_used, l1_gas_price, l1_fee_scalar, l1_fee, l2_fee, total_fee, l1_fee_eth, l2_fee_eth, eth_price, l1_fee_usd, l2_fee_usd, first)
+
+        # bin the data
+        gas_spend['time_bin'] = gas_spend['transactions_timestamp'].apply(lambda x: (x // granularity) * granularity)
+
+        # group by time_bin and get the aggregate gas spend during the period represented as a dictionary with time_bin as the key and the gas spend as the value
+        grouped = gas_spend.groupby(['time_bin'])
+
+        if type == 'USD':
+            gas_spend = grouped['total_fee_usd'].sum().to_dict()
+
+        if type == 'ETH':
+            gas_spend = grouped['total_fee_eth'].sum().to_dict()
+
+        return gas_spend
+
