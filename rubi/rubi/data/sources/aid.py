@@ -128,6 +128,11 @@ class SuperAidData(AidData):
         this dictionary is a key-pair mapping of the time bin (start of a minute, hour, day, etc) to the gas spend of the contract during that period.
         """
 
+        if start_time: 
+            start_time = int(start_time)
+        if end_time:
+            end_time = int(end_time)
+
         gas_spend = self.get_aid_txns_gas_data(aid, start_time, end_time, total_fee_eth, total_fee_usd, l2_gas_price, l2_gas_used, l1_gas_used, l1_gas_price, l1_fee_scalar, l1_fee, l2_fee, total_fee, l1_fee_eth, l2_fee_eth, eth_price, l1_fee_usd, l2_fee_usd, first)
 
         # bin the data

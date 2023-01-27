@@ -3,6 +3,7 @@ from rubi.data.sources.aid import AidData, SuperAidData
 from rubi.data.sources.market import MarketData
 from rubi.data.sources.helper import Gas, Price, networks 
 from rubi.data.processing.user import User, SuperUser
+from rubi.data.processing.aid import AidProcessing
 
 class Data: 
     """this class acts as the main access point to a variety of data and data tooling for the Rubicon protocol. it acts as a data processing layer built using the subgrounds library and the subgraphs maintained at the follwing repo: https://github.com/RubiconDeFi/rubi-subgraphs
@@ -21,6 +22,10 @@ class Data:
         # initialize the data sources
         self.market_optimism = MarketData(self.subgrounds, 10)
         self.market_optimism_goerli = MarketData(self.subgrounds, 420)
+
+        # initialize the data processing 
+        self.market_aid_optimism_processing = AidProcessing(self.subgrounds, 10)
+        self.market_aid_optimism_goerli_processing = AidProcessing(self.subgrounds, 420)
         
         # initialize the data processing if the data object is not a super data object
         if not super:
