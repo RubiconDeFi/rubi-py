@@ -22,16 +22,19 @@ class Data:
         # initialize the data sources
         self.market_optimism = MarketData(self.subgrounds, 10)
         self.market_optimism_goerli = MarketData(self.subgrounds, 420)
-
-        # initialize the data processing 
-        self.market_aid_optimism_processing = AidProcessing(self.subgrounds, 10)
-        self.market_aid_optimism_goerli_processing = AidProcessing(self.subgrounds, 420)
         
         # initialize the data processing if the data object is not a super data object
         if not super:
             self.user = User(self.subgrounds, self.market_optimism)
             self.market_aid_optimism = AidData(self.subgrounds, 10) 
             self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
+
+            # TODO: we most likely want to rearrange this so that the processing class uses the AidData class as a parent class
+            # this issue here is that we are using a parent/child relationship already to distinguish between a web3 enabled data object and a non web3 enabled data object
+            # we should probably simplify this to just use a conditional statement to determine whether or not we are using a web3 enabled data object
+            # if anyone has a lot of thoughts here please feel free to open an issue on the repo :)
+            self.market_aid_optimism_processing = AidProcessing(self.subgrounds, 10, self.market_aid_optimism)
+            self.market_aid_optimism_goerli_processing = AidProcessing(self.subgrounds, 420, self.market_aid_optimism_goerli)
 
 class SuperData(Data):
     """this class acts as an extension of the data class with additional functionality that is enabled by being connected to a node. 
@@ -57,6 +60,12 @@ class SuperData(Data):
         if chain == 10:
             self.market_aid_optimism = SuperAidData(self.w3, self.subgrounds, 10) 
             self.market_aid_optimism_goerli = AidData(self.subgrounds, 420)
+
+            self.market_aid_optimism_processing = AidProcessing(self.subgrounds, 10, self.market_aid_optimism)
+            self.market_aid_optimism_goerli_processing = AidProcessing(self.subgrounds, 420, self.market_aid_optimism_goerli)
         elif chain == 420:
             self.market_aid_optimism = AidData(self.subgrounds, 10) 
             self.market_aid_optimism_goerli = SuperAidData(self.w3, self.subgrounds, 420)
+
+            self.market_aid_optimism_processing = AidProcessing(self.subgrounds, 10, self.market_aid_optimism)
+            self.market_aid_optimism_goerli_processing = AidProcessing(self.subgrounds, 420, self.market_aid_optimism_goerli)

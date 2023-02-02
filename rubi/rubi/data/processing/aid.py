@@ -6,13 +6,13 @@ from ..sources.helper import Gas, Price, networks
 class AidProcessing: 
     """this class is used to process the data from the aid datasource"""
 
-    def __init__(self, subgrounds, chain_id):
+    def __init__(self, subgrounds, chain_id, AidData):
         """constructor method to initialize the data source class"""
 
         self.price = Price()
         self.process = Process()
         self.network = networks[chain_id]()
-        self.market_aid = AidData(subgrounds, chain_id)
+        self.market_aid = AidData #AidData(subgrounds, chain_id)
         
     # TODO: clean this function and make it more efficient
     def build_aid_history(self, aid, bin_size=60):
