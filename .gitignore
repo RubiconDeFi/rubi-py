@@ -133,3 +133,6 @@ dmypy.json
 
 # for the real ones
 brom.py
+
+# ignore csv files
+.csv

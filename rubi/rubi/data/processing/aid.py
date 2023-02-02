@@ -62,14 +62,15 @@ class AidProcessing:
         # now go through the tokens and add the price data and balance changes to the dataframe
         for symbol in tokens: 
             if symbol == longest_key:
-                price_df[f'{symbol}_balance_change'] = price_df.apply(lambda x: asset_changes[symbol].get(x['timestamp']),  axis=1)
+                price_df[f'{symbol}_balance_change'] = price_df.apply(lambda x: asset_changes[symbol].get(x['timestamp'], 0),  axis=1)
                 continue
             price_df[f'{symbol}_price'] = price_df.apply(lambda x: self.process.get_closest_timestamp_value(price_data[symbol], x['timestamp']), axis=1) 
             price_df[f'{symbol}'] = symbol
-            price_df[f'{symbol}_balance_change'] = price_df.apply(lambda x: asset_changes[symbol].get(x['timestamp']),  axis=1)
+            price_df[f'{symbol}_balance_change'] = price_df.apply(lambda x: asset_changes[symbol].get(x['timestamp'], 0),  axis=1)
 
-        # fill in any zeros that did not have values
-        price_df = price_df.fillna(0)
+        # sort the dataframe to be in ascending order by timestamp and reset the index
+        price_df.sort_values(by=['timestamp'], inplace=True)
+        price_df.reset_index(inplace=True, drop=True)
 
         # now forwad fill the price data, token change data, and compute running balances for each token
         for symbol in tokens: 

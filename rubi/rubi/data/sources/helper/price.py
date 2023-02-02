@@ -185,8 +185,8 @@ class Price:
     async def get_candles_in_range(self, pair, granularity, start, end, price_type='open'):
 
         # add a buffer to start and end time to make sure we get all the candles we need
-        start = ((start // granularity) * granularity) - (granularity * 300)
-        end = ((end // granularity) * granularity) + (granularity * 300)
+        start = ((start // granularity) * granularity) - (granularity * 10)
+        end = ((end // granularity) * granularity) + (granularity * 10)
 
         price_types = {'open' : 3, 'high' : 2, 'low' : 1, 'close' : 4}
         price_format = price_types[price_type]
@@ -261,8 +261,10 @@ class Price:
         # TODO: there is probably a better way to do this, but for now we need to cover the scenario where a user requests USDC-USD data as coinbase just assumes USDC is USD... i hope they are right
         if pair == 'USDC-USD':
             price_data = {}
-            start = ((start // granularity) * granularity) - (granularity * 300)
-            end = ((end // granularity) * granularity) + (granularity * 300)
+            #start = ((start // granularity) * granularity) - (granularity * 300)
+            #end = ((end // granularity) * granularity) + (granularity * 300)
+            start = ((start // granularity) * granularity) - (granularity * 10)
+            end = ((end // granularity) * granularity) + (granularity * 10)
             while start <= end:
                 price_data[start] = 1
                 start += granularity
