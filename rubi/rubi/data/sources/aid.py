@@ -24,7 +24,7 @@ class AidData:
         self.market_aid = self.subgrounds.load_subgraph(self.network.market_aid)
     
     # TODO: improvement outlined in issue #19
-    def get_aid_history(self, aid=None, bin_size=None, first=1000000000):
+    def get_aid_history(self, aid=None, bin_size=60, first=1000000000):
 
         Aid = self.market_aid.Aid
         AidToken = self.market_aid.AidToken
@@ -33,10 +33,7 @@ class AidData:
         AidToken.balance_formatted = AidToken.balance / 10 ** AidToken.token.decimals
         AidTokenHistory.balance_formatted = AidTokenHistory.balance / 10 ** AidTokenHistory.aid_token.token.decimals
         AidTokenHistory.balance_change_formatted = AidTokenHistory.balance_change / 10 ** AidTokenHistory.aid_token.token.decimals
-
-        # if the user wants to bin the data, create the bin field
-        if bin_size:
-            AidTokenHistory.time_bin = ((AidTokenHistory.timestamp // bin_size) * bin_size)
+        AidTokenHistory.time_bin = ((AidTokenHistory.timestamp // bin_size) * bin_size)
 
         where = []
         if aid:
@@ -52,13 +49,11 @@ class AidData:
             aids.balances.token.id,
             aids.balances.token.symbol,
             aids.balances.history.timestamp,
+            aids.balances.history.time_bin,
             aids.balances.history.balance_formatted,
             aids.balances.history.balance_change_formatted,
             aids.balances.history.balance_change
         ]
-
-        if bin_size:
-            field_paths.append(aids.balances.history.time_bin)
 
         df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
         
