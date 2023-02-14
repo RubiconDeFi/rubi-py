@@ -23,6 +23,31 @@ class AidData:
         self.subgrounds = subgrounds
         self.market_aid = self.subgrounds.load_subgraph(self.network.market_aid)
     
+    def get_aid_history(self, aid, bin_size=60, first=1000000000):
+        # TODO: we are going to need to extned the information we collect from the subgraph, and possibly modify the subgraph itself, in order to make sure we can account for deposits / withdrawals in any pnl calculation
+
+        AidToken = self.market_aid.AidToken
+        AidTokenHistory = self.market_aid.AidTokenHistory
+
+        AidTokenHistory.time_bin = (AidTokenHistory.timestamp // bin_size) * bin_size
+        AidTokenHistory.balance_formatted = AidTokenHistory.balance / 10 ** AidTokenHistory.aid_token.token.decimals
+        AidTokenHistory.balance_change_formatted = AidTokenHistory.balance_change / 10 ** AidTokenHistory.aid_token.token.decimals
+
+        histories = self.market_aid.Query.aidTokenHistories(first = first, where = [AidToken.aid == aid.lower()])
+
+        field_paths = [
+            histories.timestamp,
+            histories.time_bin,
+            histories.aid_token.token.symbol,
+            histories.balance_formatted,
+            histories.balance_change_formatted,
+            histories.transaction.id
+        ]
+
+        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
+
+        return df
+    """
     # TODO: improvement outlined in issue #19
     def get_aid_history(self, aid=None, bin_size=60, first=1000000000):
 
@@ -58,7 +83,7 @@ class AidData:
         df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
         
         return df
-
+        """
     def get_aid_txns(self, aid=None, start_time=None, end_time=None, first=1000000000): 
 
         Transaction = self.market_aid.Transaction
