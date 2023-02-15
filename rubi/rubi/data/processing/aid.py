@@ -74,6 +74,47 @@ class AidProcessing:
             history[f'{token}_balance_usd_relative'] = history[f'{token}_balance_usd'] / history['total_balance_usd']
 
         return {'data' : history, 'tokens' : tokens, 'tickers' : tickers}
+    
+    def aid_performance_evaluation(self, data, tokens, asset_mix = None):
+        """this function is intended to take a dataframe with a set of tokens and determine the performance of the aid over the given time period. it does this in two ways: 
+            1. hodl strat comp: compare the performance of aid activity over the period to the performance of simply holding the assets (in the same proportions) as the beginning of the period
+            2. asset mix comp: compare the performance of the aid activity to the performance of the holding the assets at a set proprtion (asset mix) as determined by the beginning of the period
+        """
+
+        # sanity check and ensure the data is timestamp sorted in ascending order
+        data = data.sort_values('timestamp', ascending=True)
+        data.reset_index(inplace=True)
+
+        # get the initial asset balances at the beginning of the period
+        initial_asset_balances = {}
+        data['total_balance_initial_usd'] = 0
+        for token in tokens:
+            initial_asset_balances[token] = data[f'{token}_balance'].iloc[0]
+            data[f'{token}_balance_initial'] = initial_asset_balances[token]
+            data[f'{token}_balance_initial_usd'] = data[f'{token}_balance_initial'] * data[f'{token}_price']
+            data['total_balance_initial_usd'] += data[f'{token}_balance_initial_usd']
+        
+        # compute the hodl strat performance delta 
+        data['hodl_strat_performance_delta'] = data['total_balance_usd'] - data['total_balance_initial_usd']
+
+        # if there is an asset mix, get the initial prices as well and compute the specific asset mix
+        if asset_mix: 
+            initial_usd_balance = data['total_balance_usd'].iloc[0]
+            initial_asset_prices = {}
+            ideal_asset_balances = {}
+            data['total_balance_ideal_usd'] = 0
+            for token in tokens:
+                initial_asset_prices[token] = data[f'{token}_price'].iloc[0]
+                ideal_asset_balances[token] = (initial_usd_balance) * asset_mix[token] / initial_asset_prices[token]
+                data[f'{token}_balance_ideal'] = ideal_asset_balances[token]
+                data[f'{token}_balance_ideal_usd'] = data[f'{token}_balance_ideal'] * data[f'{token}_price']
+                data['total_balance_ideal_usd'] += data[f'{token}_balance_ideal_usd']
+            
+            # compute the asset mix strat performance delta
+            data['asset_mix_strat_performance_delta'] = data['total_balance_usd'] - data['total_balance_ideal_usd']
+
+        return data
+
     '''
     # TODO: clean this function and make it more efficient
     def build_aid_history(self, aid, bin_size=60):
