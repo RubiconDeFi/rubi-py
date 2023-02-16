@@ -94,6 +94,60 @@ class Gas:
         txns_data = dict(zip(txns, txns_data))
         return txns_data
 
+    def get_closest_timestamp_value(self, values, timestamp, granularity=60, n=10): 
+        # TODO: this is actually a function that is also included in data/processing/helper/processing.py and we should find a good way to consolidate these functions
+        """this function takes a dictionary of values (assumes the keys are timestamps) and a timestamp and returns the value of the dictionary that is closest to the timestamp.
+
+        :param values: a dictionary of values with the keys being timestamps
+        :type values: dict
+        :param timestamp: the timestamp that is of interest
+        :type timestamp: int
+        :param granularity: the granularity of the timestamps of interest, defaults to 60
+        :type granularity: int, optional
+        :param n: the optimized search default based upon granularity of which to search , defaults to 10
+        :type n: int, optional
+        :return: the value of the dictionary that is closest to the timestamp key pair that matches
+        :rtype: value
+        """
+
+        # based on the granularity of the time perids, get the starting period value 
+        timestamp = (timestamp // granularity) * granularity
+
+        # get the keys of the dictionary 
+        keys = list(values.keys())
+
+        try: 
+            value = values[timestamp]
+            return value
+        except:
+            pass
+        
+        attempt = 1
+        while attempt < n: 
+            try: 
+                value = values[timestamp + granularity * attempt]
+                return value
+            except:
+                pass
+
+            try:
+                value = values[timestamp - granularity * attempt]
+                return value
+            except:
+                pass
+
+            attempt += 1
+        
+        # if this still doesn't work, search the entire list of keys
+        min = abs(keys[0] - timestamp)
+        value = values[keys[0]]
+        for key in keys[1:]:
+            if abs(key - timestamp) < min:
+                min = abs(key - timestamp)
+                value = values[key]
+
+        return value
+
     def txn_dataframe_update(self, txn_dataframe, txn_column, timestamp_column, price_query='range', total_fee_eth = True, total_fee_usd = True, l2_gas_price = False, l2_gas_used = False, l1_gas_used = False, l1_gas_price = False, l1_fee_scalar = False, l1_fee = False, l2_fee = False, total_fee = False, l1_fee_eth = False, l2_fee_eth = False, eth_price = False, l1_fee_usd = False, l2_fee_usd = False): 
         """this function takes a dataframe of transactions and adds gas data to it. by default, it only adds the total gas fee in eth and usd to the dataframe. if any of the other parameters are set to true, it will add those values to the dataframe as well
         
@@ -155,7 +209,7 @@ class Gas:
             eth_price_data = {}
             
             for timestamp in timestamps:
-                eth_price_data[timestamp] = eth_prices[(timestamp // 60) * 60]
+                eth_price_data[timestamp] = self.get_closest_timestamp_value(eth_prices, timestamp)
 
         else:
             # get the unique timestamps from the dataframe

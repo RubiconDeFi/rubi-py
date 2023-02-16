@@ -146,6 +146,8 @@ def fill_tracking(aid, asset, quote, bin_size=None):
     fill['bought_amount_usd'] = fill['bought_amount'] * fill['price']
 
     # parse the dataset by time_bin
+    trailing_one_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=1)).timestamp())]
+    trailing_three_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=3)).timestamp())]
     trailing_six_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=6)).timestamp())]
     trailing_twelve_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=12)).timestamp())]
     trailing_day_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(days=1)).timestamp())]
@@ -155,6 +157,8 @@ def fill_tracking(aid, asset, quote, bin_size=None):
 
     # convert the time_bin to datetime objects
     fill['time_bin'] = fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_one_hour_fill['time_bin'] = trailing_one_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_three_hour_fill['time_bin'] = trailing_three_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
     trailing_six_hour_fill['time_bin'] = trailing_six_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
     trailing_twelve_hour_fill['time_bin'] = trailing_twelve_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
     trailing_day_fill['time_bin'] = trailing_day_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
@@ -165,6 +169,8 @@ def fill_tracking(aid, asset, quote, bin_size=None):
     # create the fill tracking data dictionary
     fill_tracking_data = {
         'full_history_fill_tracking': fill,
+        'trailing_one_hour_fill_tracking': trailing_one_hour_fill,
+        'trailing_three_hour_fill_tracking': trailing_three_hour_fill,
         'trailing_six_hour_fill_tracking': trailing_six_hour_fill,
         'trailing_twelve_hour_fill_tracking': trailing_twelve_hour_fill,
         'trailing_day_fill_tracking': trailing_day_fill,
@@ -264,6 +270,8 @@ app.layout = html.Div(style = dark_style, children = [
     dcc.Dropdown(
         id = 'fill-timeframe-dropdown',
         options = [
+            {'label': 'Trailing One Hour', 'value': 'trailing_one_hour_fill_tracking'},
+            {'label': 'Trailing Three Hour', 'value': 'trailing_three_hour_fill_tracking'},
             {'label': 'Trailing Six Hour', 'value': 'trailing_six_hour_fill_tracking'},
             {'label': 'Trailing Twelve Hour', 'value': 'trailing_twelve_hour_fill_tracking'},
             {'label': 'Trailing Day', 'value': 'trailing_day_fill_tracking'},
@@ -407,11 +415,11 @@ def update_fill_graph(asset, quote, timeframe, n_intervals):
 
     # add a stacked bar chart that shows the fill tracking data and the asset price as a line chart on the secondary y axis
     return {
-        'data' : [         
-            {'x': df['time_bin'], 'y': df['buy_amount'], 'type': 'bar', 'name': 'Buy Amount'},
-            {'x': df['time_bin'], 'y': df['bought_amount'], 'type': 'bar', 'name': 'Bought Amount'},   
-            {'x': df['time_bin'], 'y': df['sell_amount'], 'type': 'bar', 'name': 'Sell Amount'},
-            {'x': df['time_bin'], 'y': df['sold_amount'], 'type': 'bar', 'name': 'Sold Amount'},
+        'data' : [        
+            {'x': df['time_bin'], 'y': df['buy_amount'], 'type': 'bar', 'name': 'Buy Amount', 'base': 0},
+            {'x': df['time_bin'], 'y': df['bought_amount'], 'type': 'bar', 'name': 'Bought Amount', 'base': 0},    
+            {'x': df['time_bin'], 'y': df['sell_amount'], 'type': 'bar', 'name': 'Sell Amount', 'base': df['sell_amount'].max()},
+            {'x': df['time_bin'], 'y': df['sold_amount'], 'type': 'bar', 'name': 'Sold Amount', 'base': df['sold_amount'].max()},
             {'x': df['time_bin'], 'y': df['price'], 'type': 'line', 'name': 'Asset Price', 'yaxis': 'y2'}
         ],
         'layout' : {
