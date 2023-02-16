@@ -58,6 +58,7 @@ def data_pull(aid, bin_size):
     op_aid_history = rubi_op.data.market_aid_optimism_processing.build_aid_history(aid = aid, bin_size = bin_size)
     full_data = op_aid_history['data']
     tokens = op_aid_history['tokens']
+    tickers = op_aid_history['tickers']
 
     # parse the aid history by timestamp 
     trailing_six_hour_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(hours=6)).timestamp())]
@@ -93,18 +94,104 @@ def data_pull(aid, bin_size):
         'trailing_three_day_performance': trailing_three_day_performance,
         'trailing_week_performance': trailing_week_performance,
         'trailing_two_week_performance': trailing_two_week_performance,
-        'full_history_performance': full_history_performance
+        'full_history_performance': full_history_performance,
+        'tokens': tokens,
+        'tickers': tickers
     }
 
     return performance_data
 
+def fill_tracking(aid, asset, quote, bin_size=None):
+    # TODO: add in the ability to both bin_size and start_time/end_time 
+
+    # get the fill tracking history for the aid
+    fill = rubi_op.data.market_aid_optimism_processing.aid_fill_tracking(aid = aid, asset = asset, quote = quote)
+
+    # to create the bar chart we want, convert the ask data to be negative, indicating the asset is being sold
+    fill['sell_amount'] = fill.apply(lambda x: -x['offers_pay_amt_formatted'] if x['direction'] == 'ask' else 0, axis = 1)
+    fill['sold_amount'] = fill.apply(lambda x: -x['offers_paid_amt_formatted'] if x['direction'] == 'ask' else 0, axis = 1)
+    fill['buy_amount'] = fill.apply(lambda x: x['offers_buy_amt_formatted'] if x['direction'] == 'bid' else 0, axis = 1)
+    fill['bought_amount'] = fill.apply(lambda x: x['offers_bought_amt_formatted'] if x['direction'] == 'bid' else 0, axis = 1)
+
+    # group the data by time_bin and sum the relevant numberical columns
+    fill = fill.groupby('time_bin').sum(numeric_only = True)
+
+    # reset the index to a column called time_bin
+    fill = fill.reset_index()#.rename(columns={'index': 'time_bin'})
+
+    # now drop and keep only the relevant columns
+    fill = fill[['time_bin', 'sell_amount', 'sold_amount', 'buy_amount', 'bought_amount', 'offers_live']]
+
+    # get the min and max time_bin values
+    min_time_bin = int(fill['time_bin'].min())
+    max_time_bin = int(fill['time_bin'].max())
+
+    # get the relenvant price data for the asset 
+    try:
+        ticker = rubi_op.data.market_aid_optimism_processing.network.coinbase_tickers[asset]
+        price_data = rubi_op.data.market_aid_optimism_processing.price.get_price_in_range(start = min_time_bin, end = max_time_bin, pair = ticker)
+    except:
+        ticker = rubi_op.data.market_aid_optimism_processing.network.coinbase_tickers['WETH']
+        price_data = rubi_op.data.market_aid_optimism_processing.price.get_price_in_range(start = min_time_bin, end = max_time_bin, pair = ticker)
+
+    # add a column for the price data
+    fill['price'] = fill['time_bin'].apply(lambda x: price_data.get(x))
+    fill['price'] = fill['price'].ffill()
+    fill['price'] = fill['price'].bfill()
+
+    # add a column for asset values as usd
+    fill['sell_amount_usd'] = fill['sell_amount'] * fill['price']
+    fill['sold_amount_usd'] = fill['sold_amount'] * fill['price']
+    fill['buy_amount_usd'] = fill['buy_amount'] * fill['price']
+    fill['bought_amount_usd'] = fill['bought_amount'] * fill['price']
+
+    # parse the dataset by time_bin
+    trailing_six_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=6)).timestamp())]
+    trailing_twelve_hour_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(hours=12)).timestamp())]
+    trailing_day_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(days=1)).timestamp())]
+    trailing_three_day_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(days=3)).timestamp())]
+    trailing_week_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(days=7)).timestamp())]
+    trailing_two_week_fill = fill[fill['time_bin'] > int((datetime.now() - timedelta(days=14)).timestamp())]
+
+    # convert the time_bin to datetime objects
+    fill['time_bin'] = fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_six_hour_fill['time_bin'] = trailing_six_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_twelve_hour_fill['time_bin'] = trailing_twelve_hour_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_day_fill['time_bin'] = trailing_day_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_three_day_fill['time_bin'] = trailing_three_day_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_week_fill['time_bin'] = trailing_week_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+    trailing_two_week_fill['time_bin'] = trailing_two_week_fill['time_bin'].apply(lambda x: datetime.fromtimestamp(x))
+
+    # create the fill tracking data dictionary
+    fill_tracking_data = {
+        'full_history_fill_tracking': fill,
+        'trailing_six_hour_fill_tracking': trailing_six_hour_fill,
+        'trailing_twelve_hour_fill_tracking': trailing_twelve_hour_fill,
+        'trailing_day_fill_tracking': trailing_day_fill,
+        'trailing_three_day_fill_tracking': trailing_three_day_fill,
+        'trailing_week_fill_tracking': trailing_week_fill,
+        'trailing_two_week_fill_tracking': trailing_two_week_fill
+    }
+
+    # return the fill tracking data
+    return fill_tracking_data
+
 # get the performance data
 performance_data = data_pull(aid = aid_op, bin_size = bin_size)
+
+# get the fill tracking data
+# TODO: we need some type of error handling here and the ability to load in from the token list
+asset = 'WETH'
+quote = 'USDC'
+fill_tracking_data = fill_tracking(aid = aid_op, asset = asset, quote = quote)
 
 # get the available columns to use as secondary y axis
 secondary_y = list(performance_data['full_history_performance'].columns)
 secondary_y.remove('timestamp')
 secondary_y.remove('index')
+
+# get the available assets
+tokens = performance_data['tokens']
 
 # print the performance data
 print(performance_data['full_history_performance'].head())
@@ -123,6 +210,8 @@ dark_style = {
 
 # dash layout
 app.layout = html.Div(style = dark_style, children = [
+
+    # drop down menus for over all performance data
     dcc.Dropdown(
         id = 'secondary_y',
         options = [{'label': i, 'value': i} for i in secondary_y],
@@ -152,8 +241,42 @@ app.layout = html.Div(style = dark_style, children = [
     # track the performance vs asset mix benchmark
     dcc.Graph(id = 'aid_performance_vs_asset_mix'),
 
-    # set the interval to 1 minute
-    dcc.Interval(id = 'update-interval', interval = 15 * 60 * 1000, n_intervals = 0)
+    # set the interval to 15 minute
+    dcc.Interval(id = 'update-interval', interval = 15 * 60 * 1000, n_intervals = 0),
+
+    # set an interval to 5 minutes for the fill tracking
+    dcc.Interval(id = 'fill-tracking-interval', interval = 5 * 60 * 1000, n_intervals = 0),
+
+    # add drop down menu to select the asset and quote for fill tracking
+    dcc.Dropdown(
+        id = 'asset-dropdown',
+        options = [{'label': i, 'value': i} for i in tokens],
+        value = tokens[0]
+    ),
+
+    dcc.Dropdown(
+        id = 'quote-dropdown',
+        options = [{'label': i, 'value': i} for i in tokens],
+        value = tokens[1]
+    ),
+
+    # add a dropdown menu to select the time frame for fill tracking
+    dcc.Dropdown(
+        id = 'fill-timeframe-dropdown',
+        options = [
+            {'label': 'Trailing Six Hour', 'value': 'trailing_six_hour_fill_tracking'},
+            {'label': 'Trailing Twelve Hour', 'value': 'trailing_twelve_hour_fill_tracking'},
+            {'label': 'Trailing Day', 'value': 'trailing_day_fill_tracking'},
+            {'label': 'Trailing Three Day', 'value': 'trailing_three_day_fill_tracking'},
+            {'label': 'Trailing Week', 'value': 'trailing_week_fill_tracking'},
+            {'label': 'Trailing Two Week', 'value': 'trailing_two_week_fill_tracking'},
+            {'label': 'Full History', 'value': 'full_history_fill_tracking'},
+        ],
+        value = 'full_history_fill_tracking'
+    ),
+
+    # add a graph to track the fill tracking data
+    dcc.Graph(id = 'fill_tracking'),
 ])
 
 @app.callback(
@@ -251,6 +374,53 @@ def update_graph(selected_df, secondary_y, n_intervals):
             "yaxis": {"title": "Performance Delta USD", "side": "left"},
             "yaxis2": {"title": secondary_y, "side": "right", "overlaying": "y"},
         },
+    }
+
+@app.callback(
+    dash.dependencies.Output('fill_tracking', 'figure'),
+    [dash.dependencies.Input('asset-dropdown', 'value'),
+    dash.dependencies.Input('quote-dropdown', 'value'),
+    dash.dependencies.Input('fill-timeframe-dropdown', 'value'),
+    dash.dependencies.Input('fill-tracking-interval', 'n_intervals')]
+)
+def update_fill_graph(asset, quote, timeframe, n_intervals):
+
+    # get the fill tracking data for the selected timeframe
+    global fill_tracking_data
+
+    # see which callback was triggered
+    ctx = dash.callback_context
+
+    if ctx.triggered:
+        trigger = ctx.triggered[0]['prop_id']
+        if trigger == 'fill-tracking-interval.n_intervals':
+            print('routine fill update')
+            fill_tracking_data = fill_tracking(aid = aid_op, asset = asset, quote = quote)
+        elif trigger == 'asset-dropdown.value':
+            print('asset change')
+            fill_tracking_data = fill_tracking(aid = aid_op, asset = asset, quote = quote)
+        elif trigger == 'quote-dropdown.value':
+            print('quote change')
+            fill_tracking_data = fill_tracking(aid = aid_op, asset = asset, quote = quote)
+        
+    df = fill_tracking_data[timeframe]
+
+    # add a stacked bar chart that shows the fill tracking data and the asset price as a line chart on the secondary y axis
+    return {
+        'data' : [         
+            {'x': df['time_bin'], 'y': df['buy_amount'], 'type': 'bar', 'name': 'Buy Amount'},
+            {'x': df['time_bin'], 'y': df['bought_amount'], 'type': 'bar', 'name': 'Bought Amount'},   
+            {'x': df['time_bin'], 'y': df['sell_amount'], 'type': 'bar', 'name': 'Sell Amount'},
+            {'x': df['time_bin'], 'y': df['sold_amount'], 'type': 'bar', 'name': 'Sold Amount'},
+            {'x': df['time_bin'], 'y': df['price'], 'type': 'line', 'name': 'Asset Price', 'yaxis': 'y2'}
+        ],
+        'layout' : {
+            'title' : 'Fill Tracking over ' + timeframe,
+            'barmode': 'stack',
+            'xaxis' : {'title' : 'Time Bin'},
+            'yaxis' : {'title' : 'Amounts'},
+            'yaxis2' : {'title' : asset + ' Price', 'overlaying': 'y', 'side': 'right'}
+        }
     }
 
 if __name__ == "__main__":

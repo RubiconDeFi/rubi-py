@@ -2264,14 +2264,14 @@ tox = ">=3.0.0"
 
 [[package]]
 name = "rubi"
-version = "1.2.15"
+version = "1.2.16"
 description = "a python SDK for the Rubicon Protocol"
 category = "main"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "rubi-1.2.15-py3-none-any.whl", hash = "sha256:c18e12b3444ded71eaf06962280de0b8d73ffb781f8ff0a42ddc27a7902e8580"},
-    {file = "rubi-1.2.15.tar.gz", hash = "sha256:934518b1be87c3071cd2f6345f0e4c754465d48d863967fa5e0bc0689dd51250"},
+    {file = "rubi-1.2.16-py3-none-any.whl", hash = "sha256:73dcac06df682cbb274485e024ac918392c6db3be9aca7359071f751888bacee"},
+    {file = "rubi-1.2.16.tar.gz", hash = "sha256:5199498672da154bf79ca3278f882e950e55100806114587f1bc4c167ae628d1"},
 ]
 
 [package.dependencies]
@@ -2740,4 +2740,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "862e786a748525886f19db56364344d4c5d7ed97f665bb443ab962f41376c397"
+content-hash = "f64bdb96581f4bdc0e1830504222ff725e98cf8e9f103c10792ecde950ba83d6"
