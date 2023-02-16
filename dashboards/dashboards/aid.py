@@ -53,6 +53,9 @@ op_asset_mix = {
 
 # TODO: there is a lot that can be done to improve the performance of this function, mainly in the form of caching and only querying for new data and then updating the existing data
 def data_pull(aid, bin_size):
+
+    # get the aid gas spend data
+    gas = rubi_op.data.market_aid_optimism.get_aid_gas_spend_binned(aid = aid_op)
     
     # get the aid history
     op_aid_history = rubi_op.data.market_aid_optimism_processing.build_aid_history(aid = aid, bin_size = bin_size)
@@ -76,6 +79,40 @@ def data_pull(aid, bin_size):
     trailing_week_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_week_data, tokens, asset_mix = op_asset_mix)
     trailing_two_week_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_two_week_data, tokens, asset_mix = op_asset_mix)
     full_history_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(full_data, tokens, asset_mix = op_asset_mix)
+
+    # add the gas spend data to each dataframe and then cumsum to do the gas spend calcs
+    trailing_six_hour_performance['gas_spend_usd'] = trailing_six_hour_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    trailing_twelve_hour_performance['gas_spend_usd'] = trailing_twelve_hour_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    trailing_day_performance['gas_spend_usd'] = trailing_day_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    trailing_three_day_performance['gas_spend_usd'] = trailing_three_day_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    trailing_week_performance['gas_spend_usd'] = trailing_week_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    trailing_two_week_performance['gas_spend_usd'] = trailing_two_week_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+    full_history_performance['gas_spend_usd'] = full_history_performance['timestamp'].apply(lambda x: gas.get(x, 0))
+
+    trailing_six_hour_performance['total_gas_spend_usd'] = trailing_six_hour_performance['gas_spend_usd'].cumsum()
+    trailing_twelve_hour_performance['total_gas_spend_usd'] = trailing_twelve_hour_performance['gas_spend_usd'].cumsum()
+    trailing_day_performance['total_gas_spend_usd'] = trailing_day_performance['gas_spend_usd'].cumsum()
+    trailing_three_day_performance['total_gas_spend_usd'] = trailing_three_day_performance['gas_spend_usd'].cumsum()
+    trailing_week_performance['total_gas_spend_usd'] = trailing_week_performance['gas_spend_usd'].cumsum()
+    trailing_two_week_performance['total_gas_spend_usd'] = trailing_two_week_performance['gas_spend_usd'].cumsum()
+    full_history_performance['total_gas_spend_usd'] = full_history_performance['gas_spend_usd'].cumsum()
+
+    # add gas spend data to delta calcs
+    trailing_six_hour_performance['hodl_strat_performance_delta_net_gas'] = trailing_six_hour_performance['hodl_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_twelve_hour_performance['hodl_strat_performance_delta_net_gas'] = trailing_twelve_hour_performance['hodl_strat_performance_delta'] - trailing_twelve_hour_performance['total_gas_spend_usd']
+    trailing_day_performance['hodl_strat_performance_delta_net_gas'] = trailing_day_performance['hodl_strat_performance_delta'] - trailing_day_performance['total_gas_spend_usd']
+    trailing_three_day_performance['hodl_strat_performance_delta_net_gas'] = trailing_three_day_performance['hodl_strat_performance_delta'] - trailing_three_day_performance['total_gas_spend_usd']
+    trailing_week_performance['hodl_strat_performance_delta_net_gas'] = trailing_week_performance['hodl_strat_performance_delta'] - trailing_week_performance['total_gas_spend_usd']
+    trailing_two_week_performance['hodl_strat_performance_delta_net_gas'] = trailing_two_week_performance['hodl_strat_performance_delta'] - trailing_two_week_performance['total_gas_spend_usd']
+    full_history_performance['hodl_strat_performance_delta_net_gas'] = full_history_performance['hodl_strat_performance_delta'] - full_history_performance['total_gas_spend_usd']
+
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
+    full_history_performance['asset_mix_strat_performance_delta_net_gas'] = full_history_performance['asset_mix_strat_performance_delta'] - full_history_performance['total_gas_spend_usd']
 
     # convert the unix timestamps to datetime objects
     trailing_six_hour_performance['timestamp'] = trailing_six_hour_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
