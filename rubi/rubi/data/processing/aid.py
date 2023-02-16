@@ -114,3 +114,66 @@ class AidProcessing:
             data['asset_mix_strat_performance_delta'] = data['total_balance_usd'] - data['total_balance_ideal_usd']
 
         return data
+
+    def aid_fill_tracking(self, aid, asset, quote, start_time=None, end_time=None, bin_size=60, first=1000000000):
+        """this function is intended to track the fills of an aid contract over time. specifically, it takes the offers for a set pair and tracks the fill the occurred within
+        a series of "time bins" (this can be as granular as a second and arbitrarily large (seconds)) for a set pair. this is denominated by an asset and quote, with the 
+        denomination deciding the direction of trades
+         
+        :param aid: the aid contract to track
+        :type aid: str
+        :param asset: the asset to track
+        :type asset: str
+        :param quote: the quote to track 
+        :type quote: str
+        :param start_time: the start time of the tracking period
+        :type start_time: int
+        :param end_time: the end time of the tracking period
+        :type end_time: int
+        :param bin_size: the size of the time bins
+        :type bin_size: int
+        :param first: the amount of offers to get from the contract
+        """
+
+        # get the offers from the contract
+        # TODO: this needs to be updated to add additional filtering as soon as its supported in the low level api
+        offers = self.market_aid.get_aid_offers(aid.lower())
+
+        # filter the offers for the desired asset quote pair, the offers_pay_gem_id and offers_buy_gem_id can be either the asset or the quote, so we need to check both
+        if len(quote) < 6:
+            asks = offers[(offers['offers_pay_gem_symbol'] == asset.upper()) & (offers['offers_buy_gem_symbol'] == quote.upper())]
+            bids = offers[(offers['offers_pay_gem_symbol'] == quote.upper()) & (offers['offers_buy_gem_symbol'] == asset.upper())]
+        else:
+            asks = offers[(offers['offers_pay_gem_id'] == asset.lower()) & (offers['offers_buy_gem_id'] == quote.lower())]
+            bids = offers[(offers['offers_pay_gem_id'] == quote.lower()) & (offers['offers_buy_gem_id'] == asset.lower())]
+
+        # group the offers by the time bin they occurred in
+        asks['time_bin'] = asks['offers_transaction_timestamp'].apply(lambda x: int((x // bin_size) * bin_size))
+        bids['time_bin'] = bids['offers_transaction_timestamp'].apply(lambda x: int((x // bin_size) * bin_size))
+
+        # group the offers by the time bin they occurred in
+        asks = asks.groupby('time_bin').sum(numeric_only=True)
+        bids = bids.groupby('time_bin').sum(numeric_only=True)
+
+        # add a direction column 
+        asks['direction'] = 'ask' # selling the asset
+        bids['direction'] = 'bid' # buying the asset
+
+        # transform the index into a column
+        asks = asks.reset_index().rename(columns={'index': 'time_bin'})
+        bids = bids.reset_index().rename(columns={'index': 'time_bin'})
+
+        # calculate the ask and bid prices 
+        asks['price'] =  asks['offers_buy_amt_formatted'] / asks['offers_pay_amt_formatted'] # price to buy the asset from the seller
+        bids['price'] =  bids['offers_pay_amt_formatted'] / bids['offers_buy_amt_formatted'] # price to sell the asset to the buyer
+        
+        # subset the data to the relevant information
+        asks = asks[['time_bin', 'direction', 'offers_pay_amt_formatted', 'offers_paid_amt_formatted', 'offers_buy_amt_formatted', 'offers_bought_amt_formatted', 'price', 'offers_live']]
+        bids = bids[['time_bin', 'direction', 'offers_pay_amt_formatted', 'offers_paid_amt_formatted', 'offers_buy_amt_formatted', 'offers_bought_amt_formatted', 'price', 'offers_live']]
+        
+        df = pd.concat([asks, bids]).sort_values('time_bin', ascending=True)
+        df.reset_index(inplace=True)
+        
+        return df
+
+        
