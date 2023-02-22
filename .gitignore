@@ -136,3 +136,6 @@ brom.py
 
 # ignore csv files
 .csv
+
+# ignore the rdb files
+.rdb
