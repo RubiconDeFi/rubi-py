@@ -1,4 +1,5 @@
 #from helper import Gas
+import pandas as pd
 from .helper import Gas
 from subgrounds import Subgrounds
 from subgrounds.pagination import ShallowStrategy
@@ -23,7 +24,7 @@ class AidData:
         self.subgrounds = subgrounds
         self.market_aid = self.subgrounds.load_subgraph(self.network.market_aid)
     
-    def get_aid_history(self, aid, bin_size=60, first=1000000000):
+    def get_aid_history(self, aid=None, asset=None, start_time=None, end_time=None, bin_size=60, first=1000000000):
         """this method is used to get all of the asset history for a given aid. it tracks any change in asset balance on the market aid due to a transaction. currently, this is all supported through the event emittals on the market aid contract. any activity not recorded by a covered event will be missed...
         
         :param aid: the address of the market aid that is of interest
@@ -42,6 +43,16 @@ class AidData:
         AidTokenHistory.balance_formatted = AidTokenHistory.balance / 10 ** AidTokenHistory.aid_token.token.decimals
         AidTokenHistory.balance_change_formatted = AidTokenHistory.balance_change / 10 ** AidTokenHistory.aid_token.token.decimals
 
+        where = {}
+        if aid: 
+            where['aid'] = aid.lower()
+        if asset:
+            where['aid_token_'] = {'token' : asset.lower()}
+        if start_time:
+            where['timestamp_gte'] = start_time
+        if end_time:
+            where['timestamp_lte'] = end_time
+
         histories = self.market_aid.Query.aidTokenHistories(first = first, where = [AidToken.aid == aid.lower()])
 
         field_paths = [
@@ -50,12 +61,46 @@ class AidData:
             histories.aid_token.token.symbol,
             histories.balance_formatted,
             histories.balance_change_formatted,
-            histories.transaction.id
+            histories.transaction.id,
+            histories.transaction.block,
+            histories.transaction.index,
+            histories.index,
+            histories.balance,
+            histories.balance_change,
+            histories.book_update
         ]
 
         df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
 
-        return df
+        # rename the columns if the dataframe is not empty, else return an empty dataframe with the correct columns
+        column_name_mapping = {
+            'aidTokenHistories_timestamp' : 'timestamp',
+            'aidTokenHistories_time_bin' : 'time_bin',
+            'aidTokenHistories_aid_token_token_symbol' : 'asset',
+            'aidTokenHistories_balance_formatted' : 'balance',
+            'aidTokenHistories_balance_change_formatted' : 'balance_change',
+            'aidTokenHistories_transaction_id' : 'txn',
+            'aidTokenHistories_transaction_block' : 'block',
+            'aidTokenHistories_transaction_index' : 'block_index',
+            'aidTokenHistories_index' : 'index',
+            'aidTokenHistories_balance' : 'balance_raw',
+            'aidTokenHistories_balance_change' : 'balance_change_raw',
+            'aidTokenHistories_book_update' : 'book_update'
+        }
+
+        if df.empty:
+            return pd.DataFrame(columns=column_name_mapping.values())
+        else:
+            df = df.rename(columns=column_name_mapping)
+            df = df.sort_values(['block', 'index']).reset_index(drop=True)
+
+            #TODO: this should most likely be moved to a synthetic field going forward 
+            df['credits_debits'] = 0
+            df['credits_debits_raw'] = 0
+            mask = df['book_update'] == True
+            df.loc[mask, 'credits_debits'] = df.loc[mask, 'balance_change']
+            df.loc[mask, 'credits_debits_raw'] = df.loc[mask, 'balance_change_raw']
+            return df
 
     # TODO: issue #19 dealing with filtering nested entities, that or modify the subgraph so that we can filter by timestamp
     def get_aid_offers(self, aid=None, pair=None, pay_gem=None, buy_gem=None, start_time=None, end_time=None, first=1000000000):
@@ -86,20 +131,18 @@ class AidData:
         Offer.buy_amt_formatted = Offer.buy_amt / 10 ** Offer.buy_gem.decimals
         Offer.paid_amt_formatted = Offer.paid_amt / 10 ** Offer.pay_gem.decimals
         Offer.bought_amt_formatted = Offer.bought_amt / 10 ** Offer.buy_gem.decimals
-
-        where = []
+    
+        where = {}
         if aid:
-            where.append(Offer.maker == aid.lower())
-        #if pair:
-        #    where.append(Offer.pair == pair.lower())
-        #if pay_gem:
-        #    where.append(Offer.pay_gem == pay_gem.lower())
-        #if buy_gem:
-        #    where.append(Offer.buy_gem == buy_gem.lower())
-        #if start_time:
-        #    where.append(Offer.timestamp >= start_time)
-        #if end_time:
-        #    where.append(Offer.timestamp <= end_time)
+            where['maker'] = aid.lower()
+        if pay_gem:
+            where['pay_gem'] = pay_gem.lower()
+        if buy_gem:
+            where['buy_gem'] = buy_gem.lower()
+        if start_time:
+            where['transaction'] = {'timestamp_gte': start_time}
+        if end_time:
+            where['transaction'] = {'timestamp_lte': end_time}
 
         if where:
             offers = self.market_aid.Query.offers(first = first, where = where)
@@ -162,6 +205,195 @@ class AidData:
         df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
 
         return df
+
+    def get_book_updates(self, aid=None, asset=None, start_time=None, end_time=None, first=1000000000):
+        """this method is used to get all of the book updates for a given aid that have been tracked through the market aid subgraph.
+        
+        :param aid: the address of the market aid that is of interest, defaults to None
+        :type aid: str, optional
+        :param asset: the address of the asset that is of interest, defaults to None
+        :type asset: str, optional
+        :param start_time: the start time of the time range that is of interest, defaults to None
+        :type start_time: int, optional
+        :param end_time: the end time of the time range that is of interest, defaults to None
+        :type end_time: int, optional
+        :param first: the number of book updates to return, defaults to 1000000000
+        :type first: int, optional
+        :return: a dataframe containing the book updates
+        :rtype: pandas.DataFrame
+        """
+
+        BookUpdate = self.market_aid.BookUpdate
+        BookUpdate.amount_formatted = BookUpdate.amount / 10 ** BookUpdate.aid_token.token.decimals
+
+        where = []
+        if aid:
+            where.append(BookUpdate.aid == aid.lower())
+        #if asset:
+        #    where.append(BookUpdate.asset == asset)
+        if start_time:
+            where.append(BookUpdate.timestamp >= start_time)
+        if end_time:
+            where.append(BookUpdate.timestamp <= end_time)
+
+        if where == []:
+            book_updates = self.market_aid.Query.bookUpdates(first=first)
+        else:
+            book_updates = self.market_aid.Query.bookUpdates(first=first, where=where)
+
+        field_paths = [
+            book_updates.timestamp,
+            book_updates.aid.id,
+            book_updates.aid_token.token.symbol,
+            book_updates.amount,
+            book_updates.amount_formatted,
+            book_updates.transaction.id,
+            book_updates.transaction.block,
+            book_updates.transaction.index,
+            book_updates.index
+        ]
+
+        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
+
+        # rename the columns: timestamp, aid, asset, txn, amount, amount_formatted
+        column_name_mapping = {
+            'bookUpdates_timestamp': 'timestamp',
+            'bookUpdates_aid_id': 'aid',
+            'bookUpdates_aid_token_token_symbol': 'asset',
+            'bookUpdates_amount': 'amount',
+            'bookUpdates_amount_formatted': 'amount_formatted',
+            'bookUpdates_transaction_id': 'txn',
+            'bookUpdates_transaction_block': 'block',
+            'bookUpdates_transaction_index': 'block_index',
+            'bookUpdates_index': 'index'
+        }
+
+        if df.empty:
+            df = pd.DataFrame(columns=column_name_mapping.values())
+        else:
+            df = df.rename(columns=column_name_mapping)
+            df = df.sort_values(by=['timestamp', 'index']).reset_index(drop=True)
+
+        return df
+
+    def get_aid_balances(self, aid=None, asset=None, first=1000000000):
+        """ a function to query the subgraph and get the most recent balances for a given aid and the tokens it trades with. 
+        
+        :param aid: the address of the market aid that is of interest, defaults to None
+        :type aid: str, optional
+        :param first: the number of balances to return, defaults to 1000000000
+        :type first: int, optional
+        :return: a dataframe containing the balances
+        :rtype: pandas.DataFrame
+        """
+
+        aidToken = self.market_aid.AidToken
+        aidToken.balance_formatted = aidToken.balance / 10 ** aidToken.token.decimals
+
+        where = []
+        if aid:
+            where.append(aidToken.aid == aid.lower())
+        #if asset:
+        #    where.append(aidToken.token == asset)
+
+        if where == []:
+            aid_tokens = self.market_aid.Query.aidTokens(first=first)
+        else:
+            aid_tokens = self.market_aid.Query.aidTokens(first=first, where=where)
+        
+        field_paths = [
+            aid_tokens.token.symbol,
+            aid_tokens.balance,
+            aid_tokens.balance_formatted,
+        ]
+
+        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
+
+        # rename the columns: asset, balance, balance_formatted
+        column_name_mapping = {
+            'aidTokens_token_symbol': 'asset',
+            'aidTokens_balance': 'balance',
+            'aidTokens_balance_formatted': 'balance_formatted'
+        }
+
+        df = df.rename(columns=column_name_mapping)
+
+        return df
+    
+    def get_aid_arbs(self, aid=None, asset=None, quote=None, start_time=None, end_time=None, first=1000000000):
+        """ this method is intended to query arbitrage trades that occured on the market aid subgraph 
+        
+        :param aid: the address of the market aid that is of interest, defaults to None
+        :type aid: str, optional
+        :param asset: the address of the asset that is of interest, defaults to None
+        :type asset: str, optional
+        :param quote: the address of the quote asset that is of interest, defaults to None
+        :type quote: str, optional
+        :param start_time: the start time of the time range that is of interest, defaults to None
+        :type start_time: int, optional
+        :param end_time: the end time of the time range that is of interest, defaults to None
+        :type end_time: int, optional
+        :param first: the number of arbs to return, defaults to 1000000000
+        :type first: int, optional
+        :return: a dataframe containing the arbs
+        :rtype: pandas.DataFrame
+        
+        """
+
+        Arb = self.market_aid.Arb
+        #Arb.amount_formatted = Arb.amount / 10 ** Arb.asset.decimals
+        Arb.profit_formatted = Arb.profit / 10 ** Arb.asset.decimals
+
+        where = []
+        if aid:
+            where.append(Arb.aid == aid.lower())
+        if asset:
+            where.append(Arb.asset == asset.lower())
+        if quote:
+            where.append(Arb.quote == quote.lower())
+        if start_time:
+            where.append(Arb.timestamp >= start_time)
+        if end_time:
+            where.append(Arb.timestamp <= end_time)
+
+        if where == []:
+            arbs = self.market_aid.Query.arbs(first=first)
+        else:
+            arbs = self.market_aid.Query.arbs(first=first, where=where)
+
+        field_paths = [
+            arbs.timestamp,
+            arbs.aid.id,
+            arbs.asset.symbol,
+            arbs.quote.symbol,
+            arbs.amount,
+            arbs.profit,
+            arbs.profit_formatted
+        ]
+
+        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy)
+
+        # if the dataframe is empty, return an empty dataframe with the correct column names
+        if df.empty:
+            df = pd.DataFrame(columns=['timestamp', 'aid', 'asset', 'quote', 'amount', 'profit', 'profit_formatted'])
+            return df
+
+        # rename the columns: timestamp, aid, asset, quote, amount, profit, profit_formatted
+        column_name_mapping = {
+            'arbs_timestamp': 'timestamp',
+            'arbs_aid_id': 'aid',
+            'arbs_asset_symbol': 'asset',
+            'arbs_quote_symbol': 'quote',
+            'arbs_amount': 'amount',
+            'arbs_profit': 'profit',
+            'arbs_profit_formatted': 'profit_formatted'
+        }
+
+        df = df.rename(columns=column_name_mapping)
+
+        return df
+
+    #def get_external_swaps()
 
 class SuperAidData(AidData): 
     """this class acts as an extension of the AidData class and has some additional functionality that is enabled by a node connection. 
