@@ -124,6 +124,35 @@ class AidProcessing:
         history['total_delta_usd'] = history[[f'{asset}_delta_usd' for asset in assets]].sum(axis=1)
         
         return {'data' : history, 'tokens' : assets, 'tickers' : tickers}
+    
+    def idealized_mix_analysis(self, data, tokens, asset_mix, rebalance_interval = 60):
+        """this function is intended so simulate the performance of a market aid instance against its "idealized mix", that is, a portfolio holding the same assets in a pre-defined proportion. the rebalancing of the idealized mix is done on an interval basis 
+
+        :param data: the dataframe containing the data to analyze. pulled from the analyze_aid_history function
+        :type data: pd.DataFrame
+        :param tokens: the assets that the aid held during the period
+        :type tokens: list
+        :param asset_mix: the idealized mix of the assets held by the aid, a dictionary with the asset as the key and the proportion as the value (i.e. {'eth' : 0.5, 'usdc' : 0.5})
+        :type asset_mix: dict
+        """
+
+        # sanity check and ensure the data is timestamp sorted in ascending order
+        data = data.sort_values('timestamp', ascending=True)
+        data.reset_index(inplace=True)
+
+        # iterate through the data and compute the idealized mix at every interval
+        for index, row in data.iterrows():
+
+            if index == 0:
+                usd_balance = row['total_balance_usd']
+
+                # set the initial idealized mix 
+                for token in tokens: 
+                    return 'TODO'
+        #for token in tokens: 
+        #    data[f'{token}_idealized_mix_balance_usd'] = data[f'{token}_balance_usd'] * asset_mix[token]
+
+        #return TODO
 
     def aid_performance_evaluation(self, data, tokens, asset_mix = None):
         """this function is intended to take a dataframe with a set of tokens and determine the performance of the aid over the given time period. it does this in two ways: 
