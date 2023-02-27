@@ -19,6 +19,8 @@ import dash_bootstrap_components as dbc
 from subgrounds.dash_wrappers import Graph
 from subgrounds.plotly_wrappers import Figure, Scatter, Indicator
 
+from tools import get_aid_data
+
 print("hello, DeFi Cowboy!")
 
 load_dotenv()
@@ -45,98 +47,6 @@ asset_mix = {
     'USDC' : .25,
     'USDT' : .25
 }
-
-op_asset_mix = {
-    'WETH' : .5,
-    'USDC' : .5
-}
-
-# TODO: there is a lot that can be done to improve the performance of this function, mainly in the form of caching and only querying for new data and then updating the existing data
-def data_pull(aid, bin_size):
-
-    # get the aid gas spend data
-    gas = rubi_op.data.market_aid_optimism.get_aid_gas_spend_binned(aid = aid_op)
-    
-    # get the aid history
-    op_aid_history = rubi_op.data.market_aid_optimism_processing.build_aid_history(aid = aid, bin_size = bin_size)
-    full_data = op_aid_history['data']
-    tokens = op_aid_history['tokens']
-    tickers = op_aid_history['tickers']
-
-    # parse the aid history by timestamp 
-    trailing_six_hour_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(hours=6)).timestamp())]
-    trailing_twelve_hour_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(hours=12)).timestamp())]
-    trailing_day_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(days=1)).timestamp())]
-    trailing_three_day_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(days=3)).timestamp())]
-    trailing_week_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(days=7)).timestamp())]
-    trailing_two_week_data = full_data[full_data['timestamp'] > int((datetime.now() - timedelta(days=14)).timestamp())]
-
-    # evaluate the performance of the aid over the trailing time periods
-    trailing_six_hour_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_six_hour_data, tokens, asset_mix = op_asset_mix)
-    trailing_twelve_hour_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_twelve_hour_data, tokens, asset_mix = op_asset_mix)
-    trailing_day_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_day_data, tokens, asset_mix = op_asset_mix)
-    trailing_three_day_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_three_day_data, tokens, asset_mix = op_asset_mix)
-    trailing_week_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_week_data, tokens, asset_mix = op_asset_mix)
-    trailing_two_week_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(trailing_two_week_data, tokens, asset_mix = op_asset_mix)
-    full_history_performance = rubi_op.data.market_aid_optimism_processing.aid_performance_evaluation(full_data, tokens, asset_mix = op_asset_mix)
-
-    # add the gas spend data to each dataframe and then cumsum to do the gas spend calcs
-    trailing_six_hour_performance['gas_spend_usd'] = trailing_six_hour_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    trailing_twelve_hour_performance['gas_spend_usd'] = trailing_twelve_hour_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    trailing_day_performance['gas_spend_usd'] = trailing_day_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    trailing_three_day_performance['gas_spend_usd'] = trailing_three_day_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    trailing_week_performance['gas_spend_usd'] = trailing_week_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    trailing_two_week_performance['gas_spend_usd'] = trailing_two_week_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-    full_history_performance['gas_spend_usd'] = full_history_performance['timestamp'].apply(lambda x: gas.get(x, 0))
-
-    trailing_six_hour_performance['total_gas_spend_usd'] = trailing_six_hour_performance['gas_spend_usd'].cumsum()
-    trailing_twelve_hour_performance['total_gas_spend_usd'] = trailing_twelve_hour_performance['gas_spend_usd'].cumsum()
-    trailing_day_performance['total_gas_spend_usd'] = trailing_day_performance['gas_spend_usd'].cumsum()
-    trailing_three_day_performance['total_gas_spend_usd'] = trailing_three_day_performance['gas_spend_usd'].cumsum()
-    trailing_week_performance['total_gas_spend_usd'] = trailing_week_performance['gas_spend_usd'].cumsum()
-    trailing_two_week_performance['total_gas_spend_usd'] = trailing_two_week_performance['gas_spend_usd'].cumsum()
-    full_history_performance['total_gas_spend_usd'] = full_history_performance['gas_spend_usd'].cumsum()
-
-    # add gas spend data to delta calcs
-    trailing_six_hour_performance['hodl_strat_performance_delta_net_gas'] = trailing_six_hour_performance['hodl_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_twelve_hour_performance['hodl_strat_performance_delta_net_gas'] = trailing_twelve_hour_performance['hodl_strat_performance_delta'] - trailing_twelve_hour_performance['total_gas_spend_usd']
-    trailing_day_performance['hodl_strat_performance_delta_net_gas'] = trailing_day_performance['hodl_strat_performance_delta'] - trailing_day_performance['total_gas_spend_usd']
-    trailing_three_day_performance['hodl_strat_performance_delta_net_gas'] = trailing_three_day_performance['hodl_strat_performance_delta'] - trailing_three_day_performance['total_gas_spend_usd']
-    trailing_week_performance['hodl_strat_performance_delta_net_gas'] = trailing_week_performance['hodl_strat_performance_delta'] - trailing_week_performance['total_gas_spend_usd']
-    trailing_two_week_performance['hodl_strat_performance_delta_net_gas'] = trailing_two_week_performance['hodl_strat_performance_delta'] - trailing_two_week_performance['total_gas_spend_usd']
-    full_history_performance['hodl_strat_performance_delta_net_gas'] = full_history_performance['hodl_strat_performance_delta'] - full_history_performance['total_gas_spend_usd']
-
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    trailing_six_hour_performance['asset_mix_strat_performance_delta_net_gas'] = trailing_six_hour_performance['asset_mix_strat_performance_delta'] - trailing_six_hour_performance['total_gas_spend_usd']
-    full_history_performance['asset_mix_strat_performance_delta_net_gas'] = full_history_performance['asset_mix_strat_performance_delta'] - full_history_performance['total_gas_spend_usd']
-
-    # convert the unix timestamps to datetime objects
-    trailing_six_hour_performance['timestamp'] = trailing_six_hour_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    trailing_twelve_hour_performance['timestamp'] = trailing_twelve_hour_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    trailing_day_performance['timestamp'] = trailing_day_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    trailing_three_day_performance['timestamp'] = trailing_three_day_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    trailing_week_performance['timestamp'] = trailing_week_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    trailing_two_week_performance['timestamp'] = trailing_two_week_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-    full_history_performance['timestamp'] = full_history_performance['timestamp'].apply(lambda x: datetime.fromtimestamp(x))
-
-    # save the performance data to a dictionary
-    performance_data = {
-        'trailing_six_hour_performance': trailing_six_hour_performance,
-        'trailing_twelve_hour_performance': trailing_twelve_hour_performance,
-        'trailing_day_performance': trailing_day_performance,
-        'trailing_three_day_performance': trailing_three_day_performance,
-        'trailing_week_performance': trailing_week_performance,
-        'trailing_two_week_performance': trailing_two_week_performance,
-        'full_history_performance': full_history_performance,
-        'tokens': tokens,
-        'tickers': tickers
-    }
-
-    return performance_data
 
 def fill_tracking(aid, asset, quote, bin_size=None):
     # TODO: add in the ability to both bin_size and start_time/end_time 
@@ -220,7 +130,7 @@ def fill_tracking(aid, asset, quote, bin_size=None):
     return fill_tracking_data
 
 # get the performance data
-performance_data = data_pull(aid = aid_op, bin_size = bin_size)
+performance_data = get_aid_data(rubi = rubi_op, aid = aid_op, bin_size = bin_size)
 
 # get the fill tracking data
 # TODO: we need some type of error handling here and the ability to load in from the token list
@@ -229,15 +139,14 @@ quote = 'USDC'
 fill_tracking_data = fill_tracking(aid = aid_op, asset = asset, quote = quote)
 
 # get the available columns to use as secondary y axis
-secondary_y = list(performance_data['full_history_performance'].columns)
+secondary_y = list(performance_data['data'].columns)
 secondary_y.remove('timestamp')
-secondary_y.remove('index')
 
 # get the available assets
 tokens = performance_data['tokens']
 
 # print the performance data
-print(performance_data['full_history_performance'].head())
+print(performance_data['data'].head())
 
 # dash app 
 app = dash.Dash(__name__)
@@ -281,9 +190,6 @@ app.layout = html.Div(style = dark_style, children = [
     # track the performance vs hodl benchmark
     dcc.Graph(id = 'aid_performance_vs_hodl'),
 
-    # track the performance vs asset mix benchmark
-    dcc.Graph(id = 'aid_performance_vs_asset_mix'),
-
     # set the interval to 15 minute
     dcc.Interval(id = 'update-interval', interval = 15 * 60 * 1000, n_intervals = 0),
 
@@ -326,8 +232,7 @@ app.layout = html.Div(style = dark_style, children = [
 
 @app.callback(
     [dash.dependencies.Output('aid_history', 'figure'),
-    dash.dependencies.Output('aid_performance_vs_hodl', 'figure'),
-    dash.dependencies.Output('aid_performance_vs_asset_mix', 'figure')],
+    dash.dependencies.Output('aid_performance_vs_hodl', 'figure')],
         [dash.dependencies.Input('dataframe-dropdown', 'value'),
         dash.dependencies.Input('secondary_y', 'value'),
         dash.dependencies.Input('update-interval', 'n_intervals')]
@@ -345,13 +250,13 @@ def update_graph(selected_df, secondary_y, n_intervals):
         trigger = ctx.triggered[0]['prop_id']
         if trigger == 'update-interval.n_intervals':
             print('routine update')
-            performance_data = data_pull(aid = aid_op, bin_size = bin_size)
+            performance_data = get_aid_data(rubi = rubi_op, aid = aid_op, bin_size = bin_size)
         elif trigger == 'dataframe-dropdown.value':
             print('dataframe-dropdown.value')
         elif trigger == 'secondary_y.value':
             print('secondary_y.value')
 
-    df = performance_data[selected_df]
+    df = performance_data['data']
 
     return {
         'data': [
@@ -379,7 +284,7 @@ def update_graph(selected_df, secondary_y, n_intervals):
         'data': [
             {
                 "x": df['timestamp'],
-                "y": df['hodl_strat_performance_delta'],
+                "y": df['total_delta_usd'],
                 "type": "lines",
                 "name": "Performance Delta vs. HODL Strat (USD)",
                 "yaxis": "y1"
@@ -394,28 +299,6 @@ def update_graph(selected_df, secondary_y, n_intervals):
         ],
         'layout': {
             "title": " Market Aid Performance Delta vs. HODL Strat " + selected_df,
-            "yaxis": {"title": "Performance Delta USD", "side": "left"},
-            "yaxis2": {"title": secondary_y, "side": "right", "overlaying": "y"},
-        },
-    }, {
-        'data': [
-            {
-                "x": df['timestamp'],
-                "y": df['asset_mix_strat_performance_delta'],
-                "type": "lines",
-                "name": "Performance Delta vs. Ideal Mix (USD)",
-                "yaxis": "y1"
-            },
-            {
-                "x": df['timestamp'],
-                "y": df[secondary_y],
-                "type": "lines",
-                "name": secondary_y,
-                "yaxis": "y2"
-            },
-        ],
-        'layout': {
-            "title": " Market Aid Performance Delta vs. Asset Mix Strat " + selected_df,
             "yaxis": {"title": "Performance Delta USD", "side": "left"},
             "yaxis2": {"title": secondary_y, "side": "right", "overlaying": "y"},
         },
