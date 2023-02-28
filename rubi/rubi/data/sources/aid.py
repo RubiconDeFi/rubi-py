@@ -92,7 +92,7 @@ class AidData:
             return pd.DataFrame(columns=column_name_mapping.values())
         else:
             df = df.rename(columns=column_name_mapping)
-            df = df.sort_values(['block', 'index']).reset_index(drop=True)
+            df = df.sort_values(['block', 'block_index', 'index']).reset_index(drop=True)
 
             #TODO: this should most likely be moved to a synthetic field going forward 
             df['credits_debits'] = 0
