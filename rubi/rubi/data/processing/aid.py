@@ -73,14 +73,6 @@ class AidProcessing:
             group['delta'] = group['balance'] - group['credits_debits'] 
             group['delta_raw'] = group['balance_raw'] - group['credits_debits_raw']
 
-            # we want the end balance for every block, so we first group by block and block_index to get the max event index, then we get the max block_index value. we get the max block per timestamp to make it easier to work with.
-            idx = group.groupby('timestamp')['block'].idxmax().reset_index(drop=True)
-            group = group.loc[idx]
-            idxx = group.groupby(['block', 'block_index'])['index'].idxmax().reset_index(drop=True)
-            group = group.loc[idxx]
-            idxxx = group.groupby('block')['block_index'].idxmax().reset_index(drop=True)
-            group = group.loc[idxxx]
-
             # now we get the data at each timestamp
             if raw: 
                 asset_deltas[asset] = group.set_index('timestamp').to_dict()['delta_raw']
