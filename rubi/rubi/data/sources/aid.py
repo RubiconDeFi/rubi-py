@@ -53,7 +53,11 @@ class AidData:
         if end_time:
             where['timestamp_lte'] = end_time
 
-        histories = self.market_aid.Query.aidTokenHistories(first = first, where = [AidToken.aid == aid.lower()])
+        #histories = self.market_aid.Query.aidTokenHistories(first = first, where = [AidToken.aid == aid.lower()])
+        if where:
+            histories = self.market_aid.Query.aidTokenHistories(first = first, where = where)
+        else:
+            histories = self.market_aid.Query.aidTokenHistories(first = first)
 
         field_paths = [
             histories.timestamp,
