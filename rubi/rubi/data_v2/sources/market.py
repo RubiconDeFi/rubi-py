@@ -72,31 +72,34 @@ class MarketData:
         if order_direction.lower() not in ('asc', 'desc'):
             raise ValueError("Invalid order_direction, must be 'asc' or 'desc'")
 
-        # handle the conditional parameters
-        where = []
-        if maker:
-            where.append(subgraph.Offer.maker == maker.lower())
-        if start_block:
-            where.append(subgraph.Offer.block_number >= start_block)
-        if end_block:
-            where.append(subgraph.Offer.block_number <= end_block)
-        if start_time:
-            where.append(subgraph.Offer.timestamp >= start_time)
-        if end_time:
-            where.append(subgraph.Offer.timestamp <= end_time)
-        if pay_gem:
-            where.append(subgraph.Offer.pay_gem == pay_gem.lower())
-        if buy_gem:
-            where.append(subgraph.Offer.buy_gem == buy_gem.lower())
-        if open is not None:
-            where.append(subgraph.Offer.open == open)
+        # Build the list of where conditions
+        where = [
+            subgraph.Offer.maker == maker.lower() if maker else None,
+            subgraph.Offer.block_number >= start_block if start_block else None,
+            subgraph.Offer.block_number <= end_block if end_block else None,
+            subgraph.Offer.timestamp >= start_time if start_time else None,
+            subgraph.Offer.timestamp <= end_time if end_time else None,
+            subgraph.Offer.pay_gem == pay_gem.lower() if pay_gem else None,
+            subgraph.Offer.buy_gem == buy_gem.lower() if buy_gem else None,
+            subgraph.Offer.open == open if open is not None else None
+        ]
+        where = [condition for condition in where if condition is not None]
 
         # set the offer query
-        offers = subgraph.Query.offers(
-            orderBy = order_by,
-            orderDirection = order_direction,
-            first=first,
-        )
+        # TODO: this can be cleaned up a bit
+        if where:
+            offers = subgraph.Query.offers(
+                orderBy = order_by,
+                orderDirection = order_direction,
+                first=first,
+                where = where
+            )
+        else:
+            offers = subgraph.Query.offers(
+                orderBy = order_by,
+                orderDirection = order_direction,
+                first=first
+            )
 
         # set the paths to the data we want to query
         paths = [
