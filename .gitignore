@@ -105,6 +105,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+*.env
 .env
 .venv
 env/
@@ -139,3 +140,6 @@ brom.py
 
 # ignore the rdb files
 .rdb
+
+#intellij
+.idea
