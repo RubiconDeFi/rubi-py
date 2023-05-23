@@ -1,0 +1,17 @@
+name: "Optimism Goerli"
+chain_id: 420
+currency: "ETH"
+rpc_url: "https://goerli.optimism.io"
+explorer_url: "https://goerli-explorer.optimism.io/"
+
+rubicon:
+  market:
+    address: "0x9d0D6c259566d8161a1b2c513af0463992db38bc"
+  router:
+    address: "0x7a1B7720E691E74ee523E4ecBD6C77A094222757"
+
+token_addresses:
+  ETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
+  WETH: "0x4200000000000000000000000000000000000006"
+  OP: "0xCeE7148028Ff1B08163343794E85883174a61393"
+  USDC: "0xe432f229521eE954f80C83257485405E3d848d17"
