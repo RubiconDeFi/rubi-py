@@ -54,8 +54,6 @@ class Network:
     @classmethod
     def build(cls, name: NetworkName, node_url: str) -> "Network":
         try:
-            print("network:" + os.path.dirname(os.path.abspath(__file__)))
-
             path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name.value}"
 
             with open(f"{path}/network.yaml") as f:

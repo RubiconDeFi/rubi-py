@@ -88,13 +88,9 @@ class BaseContract:
             max_priority_fee_per_gas=max_priority_fee_per_gas
         )
 
-        print(base_txn)
-
         txn = instantiated_contract_function.build_transaction(
             transaction=base_txn
         )
-
-        print(txn)
 
         signed_txn = self.w3.eth.account.sign_transaction(
             transaction_dict=txn,

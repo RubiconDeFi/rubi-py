@@ -75,7 +75,7 @@ class RubiconMarket(BaseContract):
         :param id: the id of the offer being queried
         :type id: int
         :return: a description of the offer as (pay_amt, pay_gem, buy_amt, buy_gem)
-        :rtype: int
+        :rtype: Tuple[int, ChecksumAddress, int, ChecksumAddress]
         """
         return self.contract.functions.getOffer(id).call()
 
@@ -173,7 +173,7 @@ class RubiconMarket(BaseContract):
         :type pay_amt: int
         :return: (buy_amt, approvalAmount) the amount of tokens that will be received and the amount to approve for the
         transaction
-        :rtype: (int, int)
+        :rtype: Tuple[int, int]
         """
         return self.contract.functions.getBuyAmountWithFee(buy_gem, pay_gem, pay_amt).call()
 
@@ -196,7 +196,7 @@ class RubiconMarket(BaseContract):
         :type buy_amt: int
         :return: (pay_amt, approvalAmount) the amount of tokens that will be paid and the amount to approve for the
         transaction
-        :rtype: (int, int)
+        :rtype: Tuple[int, int]
         """
         return self.contract.functions.getPayAmountWithFee(buy_gem, pay_gem, buy_amt).call()
 
@@ -275,6 +275,7 @@ class RubiconMarket(BaseContract):
 
         offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos, owner, recipient)
 
+        # TODO: fix return types as they aren't coming back as expected at the moment
         return self._default_transaction_handler(
             instantiated_contract_function=offer,
             gas=gas,
