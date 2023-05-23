@@ -6,11 +6,11 @@ import polars as pl
 class TokenList:
     """this class acts as an access point for token lists from various sources"""
 
-    def get_optimism_token_list(network = 'optimism'):
+    def get_optimism_token_list(self, network = 'optimism'):
 
         networks = {
-            'ethereum' : [1], 
-            'goerli' : [69],
+            'ethereum' : [1],   
+            'goerli' : [69], 
             'optimism' : [10], 
             'optimism_goerli' : [42],
             'all' : [1, 69, 10, 42]

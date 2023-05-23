@@ -4,7 +4,6 @@ from typing import List, Optional
 import polars as pl
 
 from rubi.data_v2.sources.helper import Rolodex, TokenList
-from typing import List, Optional
 
 class MarketData: 
     """this class acts as an access point for data from the RubiconMarket.sol contract"""
@@ -24,7 +23,8 @@ class MarketData:
         self.polygon_mumbai_v2 = self.subgrounds.load_subgraph(self.rolodex.polygon_mumbai_rubicon_v2)
 
         # create token lists for each network
-        self.op_main_token_list = self.token_list.get_token_list(network='optimism')
+        # TODO: this is a temporary solution, we will want to handle this in a more scalable way in the future
+        self.op_main_token_list = self.token_list.get_optimism_token_list('optimism')
 
         # a dictionary to easily access the subgraph objects
         self.subgraphs = {
@@ -40,7 +40,7 @@ class MarketData:
 
     # TODO: for today, we are only going to focus on doing a single network query at a time. in the future, we will want to be able to query multiple networks at once (in parallel) and then merge the results together 
     def get_offers(self, 
-                    network: str = 'optimism',
+                    network: str = 'optimism', # TODO: we may not want to set this as a default, but instead require it to be set
                     maker: Optional[str] = None,
                     start_block: Optional[int] = None,
                     end_block: Optional[int] = None,
@@ -151,7 +151,7 @@ class MarketData:
         data_frame = pl.DataFrame(flattened_data)
 
         # if the dataframe is empty, return an empty dataframe
-        if data_frame.empty:
+        if data_frame.shape[0] == 0:
             return data_frame
 
         # Create a temporary DataFrame for joining
@@ -177,7 +177,136 @@ class MarketData:
             (data_frame["buy_amt"] / (10 ** data_frame["buy_gem_decimals"])).alias("buy_amt_decimal"),
         )
 
-        # drop the 'address_right' and 'address_left' columns
-        data_frame = data_frame.drop(["address_right", "address_left"])
+        # drop the duplicate columns caused by the join
+        data_frame = data_frame.drop(["address_right", "symbol_right", "decimals_right"])
+
+        return data_frame
+    
+    def get_trades(self, 
+              network: str = 'optimism',
+              taker: Optional[str] = None,
+              start_block: Optional[int] = None,
+              end_block: Optional[int] = None,
+              start_time: Optional[int] = None,
+              end_time: Optional[int] = None,
+              take_gem: Optional[str] = None,
+              give_gem: Optional[str] = None,
+              order_by: str = 'timestamp',
+              order_direction: str = 'asc', 
+              first: int = 1000000000):
+    
+        # Handle the network parameter
+        if network not in ('optimism', 'optimism_goerli', 'arbitrum_goerli', 'polygon_mumbai'):
+            raise ValueError("Invalid network, must be 'optimism', 'optimism_goerli', 'arbitrum_goerli', or 'polygon_mumbai'")
+        else: 
+            subgraph = self.subgraphs[network]
+            token_list_df = self.token_lists[network]
+        
+        # Handle the order_by parameter
+        if order_by.lower() not in ('timestamp', 'block_number'):
+            raise ValueError("Invalid order_by, must be 'timestamp' or 'block_number'")
+        elif order_by.lower() == 'timestamp':
+            order_by = subgraph.Take.timestamp
+        elif order_by.lower() == 'block_number':
+            order_by = subgraph.Take.transaction.block_number
+        
+        # Handle the order_direction parameter
+        if order_direction.lower() not in ('asc', 'desc'):
+            raise ValueError("Invalid order_direction, must be 'asc' or 'desc'")
+
+        # Build the list of where conditions
+        where = [
+            subgraph.Take.taker.id == taker.lower() if taker else None,
+            subgraph.Take.transaction.block_number >= start_block if start_block else None,
+            subgraph.Take.transaction.block_number <= end_block if end_block else None,
+            subgraph.Take.timestamp >= start_time if start_time else None,
+            subgraph.Take.timestamp <= end_time if end_time else None,
+            subgraph.Take.take_gem == take_gem.lower() if take_gem else None,
+            subgraph.Take.give_gem == give_gem.lower() if give_gem else None
+        ]
+        where = [condition for condition in where if condition is not None]
+
+        # Set the take query
+        if where:
+            takes = subgraph.Query.takes(
+                orderBy = order_by,
+                orderDirection = order_direction,
+                first=first,
+                where = where
+            )
+        else:
+            takes = subgraph.Query.takes(
+                orderBy = order_by,
+                orderDirection = order_direction,
+                first=first
+            )
+
+        # Set the paths to the data we want to query
+        paths = [
+            takes.id,
+            takes.transaction.timestamp,
+            takes.transaction.block_number,
+            takes.transaction.block_index,
+            takes.index,
+            takes.taker.id,
+            takes.take_gem,
+            takes.give_gem,
+            takes.take_amt,
+            takes.give_amt
+        ]
+
+        # Query the subgraph for the data and return it as a JSON object
+        json_data = self.subgrounds.query_json(paths, pagination_strategy=ShallowStrategy)
+
+        flattened_data = [
+            {
+                'id': entry['id'],
+                'timestamp': entry['transaction']['timestamp'],
+                'block_number': entry['transaction']['block_number'],
+                'block_index': entry['transaction']['block_index'],
+                'index': entry['index'],
+                'taker_id': entry['taker']['id'],
+                'take_gem': entry['take_gem'],
+                'give_gem': entry['give_gem'],
+                'take_amt': entry['take_amt'],
+                'give_amt': entry['give_amt'],
+            }
+            for item in json_data
+            for key, value in item.items()
+            for entry in value
+        ]
+
+        # Convert the flattened JSON data to a Polars DataFrame
+        data_frame = pl.DataFrame(flattened_data)
+
+        # If the dataframe is empty, return an empty dataframe
+        if data_frame.shape[0] == 0:
+            return data_frame
+
+        # Create a temporary DataFrame for joining
+        temp_df = token_list_df["address", "symbol", "decimals"].with_columns(
+            pl.col("address").alias("give_gem"),
+            pl.col("symbol").alias("give_gem_symbol"),
+            pl.col("decimals").alias("give_gem_decimals"),
+        )
+
+        # Join the data_frame with token_list_df on the take_gem and give_gem columns
+        data_frame = (
+            data_frame.join(token_list_df["address", "symbol", "decimals"].with_columns(
+                pl.col("address").alias("take_gem"),
+                pl.col("symbol").alias("take_gem_symbol"),
+                pl.col("decimals").alias("take_gem_decimals"),
+            ), on="take_gem", how="left")
+            .join(temp_df, on="give_gem", how="left")
+        )
+
+        # Create new columns for the take amount and give amount in decimal format
+        data_frame = data_frame.with_columns(
+            (data_frame["take_amt"] / (10 ** data_frame["take_gem_decimals"])).alias("take_amt_decimal"),
+            (data_frame["give_amt"] / (10 ** data_frame["give_gem_decimals"])).alias("give_amt_decimal"),
+        )
+
+        # drop the duplicate columns caused by the join
+        data_frame = data_frame.drop(["address_right", "symbol_right", "decimals_right"])
 
         return data_frame
