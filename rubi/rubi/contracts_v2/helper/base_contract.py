@@ -76,7 +76,7 @@ class BaseContract:
         nonce: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> Any:
+    ) -> str:
         if not self.signing_permissions:
             raise Exception(f"cannot write transaction without signing rights. "
                             f"re-instantiate {self.__class__} with a wallet and private key")
@@ -103,7 +103,7 @@ class BaseContract:
         if nonce is None:
             self._wait_for_transaction_receipt(transaction=signed_txn)
 
-        return result
+        return result.hex()
 
     def _transaction_params(
         self,

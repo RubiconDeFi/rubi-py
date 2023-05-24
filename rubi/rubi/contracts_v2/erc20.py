@@ -1,7 +1,6 @@
 import json
 from typing import Optional
 
-from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
@@ -158,7 +157,7 @@ class ERC20(BaseContract):
         gas: int = 100000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> bool:
+    ) -> str:
         """approves the spender to spend the amount of the erc20 token from the signer's wallet
 
         :param spender: address of the spender
@@ -175,8 +174,8 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
         estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
-        :return: the signed transaction
-        :rtype: SignedTransaction
+        :return: transaction hash
+        :rtype: str
         """
         approve = self.contract.functions.approve(spender, amount)
 
@@ -197,7 +196,7 @@ class ERC20(BaseContract):
         gas: int = 100000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> bool:
+    ) -> str:
         """transfers the amount of the erc20 token to the recipient
 
         :param recipient: address of the recipient
@@ -214,8 +213,8 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
         estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
-        :return: the signed transaction
-        :rtype: SignedTransaction
+        :return: transaction hash
+        :rtype: str
         """
         transfer = self.contract.functions.transfer(recipient, amount)
 
@@ -237,7 +236,7 @@ class ERC20(BaseContract):
         gas: int = 100000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> bool:
+    ) -> str:
         """transfers the amount of the erc20 token from the sender to the recipient
 
         :param sender: address of the sender
@@ -256,8 +255,8 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
         estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
-        :return: the signed transaction
-        :rtype: SignedTransaction
+        :return: transaction hash
+        :rtype: str
         """
 
         transfer_from = self.contract.functions.transferFrom(sender, recipient, amount)
@@ -279,7 +278,7 @@ class ERC20(BaseContract):
         gas: int = 100000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> bool:
+    ) -> str:
         """increases the allowance of the spender by the added_value
 
         :param spender: address of the spender
@@ -296,8 +295,8 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
         estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
-        :return: the signed transaction
-        :rtype: SignedTransaction
+        :return: transaction hash
+        :rtype: str
         """
         increase_allowance = self.contract.functions.increaseAllowance(spender, added_value)
 
@@ -318,7 +317,7 @@ class ERC20(BaseContract):
         gas: int = 100000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> bool:
+    ) -> str:
         """decreases the allowance of the spender by the subtracted_value
 
         :param spender: address of the spender
@@ -335,8 +334,8 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
         estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
-        :return: the signed transaction
-        :rtype: SignedTransaction
+        :return: transaction hash
+        :rtype: str
         """
         decrease_allowance = self.contract.functions.decreaseAllowance(spender, subtracted_value)
 

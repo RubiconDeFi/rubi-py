@@ -23,7 +23,7 @@ class Network:
         # TODO: I think there should be a better way than having to pass this to the init
         # this whole init should be rethought along what I have done in contracts as currently this may be confusing
         path: str,
-        node_url: str,
+        http_node_url: str,
         name: str,
         chain_id: int,
         currency: str,
@@ -34,7 +34,7 @@ class Network:
     ) -> None:
         self.name = name
         self.chain_id = chain_id
-        self.w3 = Web3(Web3.HTTPProvider(node_url))
+        self.w3 = Web3(Web3.HTTPProvider(http_node_url))
 
         self.currency = currency
         self.rpc_url = rpc_url
@@ -52,13 +52,13 @@ class Network:
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
     @classmethod
-    def build(cls, name: NetworkName, node_url: str) -> "Network":
+    def build(cls, name: NetworkName, http_node_url: str) -> "Network":
         try:
             path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name.value}"
 
             with open(f"{path}/network.yaml") as f:
                 network_data = yaml.safe_load(f)
-                return cls(path=path, node_url=node_url, **network_data)
+                return cls(path=path, http_node_url=http_node_url, **network_data)
         except FileNotFoundError:
             raise Exception(f"no network config found for {name.value}, there should be a corresponding folder in "
                             f"the network_config directory")

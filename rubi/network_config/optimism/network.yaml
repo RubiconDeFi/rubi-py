@@ -1,0 +1,18 @@
+name: "Optimism"
+chain_id: 10
+currency: "ETH"
+rpc_url: "https://mainnet.optimism.io"
+explorer_url: "https://optimistic.etherscan.io/"
+
+rubicon:
+  market:
+    address: "" # TODO: UPDATE ON DEPLOYMENT OF V2
+  router:
+    address: "" # TODO: UPDATE ON DEPLOYMENT OF V2
+
+token_addresses:
+  ETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"
+  WETH: "0x4200000000000000000000000000000000000006"
+  WBTC: "0x68f180fcCe6836688e9084f035309E29Bf0A2095"
+  OP: "0x4200000000000000000000000000000000000042"
+  USDC: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607"
