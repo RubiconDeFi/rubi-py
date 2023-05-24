@@ -9,8 +9,8 @@ additional input such as api keys. when it is clearly useful, we will add higher
 
 ### SDK Disclaimer
 
-This codebase is in Alpha and could contain bugs or change significantly between versions. Contributing through Issues or Pull Requests is welcome!
+this codebase is in Alpha and could contain bugs or change significantly between versions. contributing through Issues or Pull Requests is welcome!
 
 ### Protocol Disclaimer
 
-Please refer to [this](https://docs.rubicon.finance/docs/protocol/rubicon-pools/risks) for information on the risks associated to the Rubicon Protocol.
+please refer to [this](https://docs.rubicon.finance/protocol/risks) for information on the risks associated to the Rubicon Protocol.
