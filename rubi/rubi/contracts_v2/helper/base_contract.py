@@ -1,6 +1,7 @@
 import logging as log
+from threading import Thread
 from time import sleep
-from typing import Optional, Any, Callable, TypeVar
+from typing import Optional, Callable, TypeVar, Type, Dict, Any
 
 from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
@@ -9,6 +10,8 @@ from web3._utils.filters import LogFilter  # noqa
 from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
+
+from rubi.contracts_v2.helper.event_types import BaseEvent
 
 T = TypeVar("T")
 
@@ -46,7 +49,7 @@ class BaseContract:
         self.signing_permissions = (wallet is not None and key is not None)
 
         if self.signing_permissions:
-            log.info(f"instantiated with signing rights")
+            log.info(f"instantiated {self.__class__} with signing rights")
 
             # Force typing as my editors inspection is throwing a tantrum
             self.wallet = wallet  # type: ChecksumAddress
@@ -64,6 +67,38 @@ class BaseContract:
         contract = w3.eth.contract(address=address, abi=contract_abi)
 
         return cls(w3=w3, contract=contract, wallet=wallet, key=key)
+
+    ######################################################################
+    # event listeners
+    ######################################################################
+
+    # TODO: revisit poll time. Right now it is set to block production time of optimism according to:
+    # https://community.optimism.io/docs/protocol/2-rollup-protocol/#block-storage
+    # however arbitrum produces blocks faster (every 0.25 secs) according to:
+    # https://arbiscan.io/chart/blocktime so we may be prudent to account for different chains
+    # however the better way to do this is probably a websocket connection to the node
+    def start_event_poller(
+        self,
+        pair_name: str,
+        event_type: Type[BaseEvent],
+        argument_filters: Optional[Dict[str, Any]] = None,
+        event_handler: Optional[Callable] = None,
+        poll_time: int = 2
+    ) -> None:
+        # TODO: investigate using a block filter so that you don't need to poll for each event
+        # however parsing the event also needs to be updated then
+        # filter_params: dict = {"fromBlock": "latest", "address": self.contract.address}
+        # block_filter = self.w3.eth.filter(filter_params)
+
+        event_filter = event_type.create_event_filter(contract=self.contract, argument_filters=argument_filters)
+        handler = event_handler if event_handler is not None else event_type.default_handler
+
+        thread = Thread(
+            target=self._start_default_event_poller,
+            args=(pair_name, event_type, event_filter, handler, poll_time),
+            daemon=True
+        )
+        thread.start()
 
     ######################################################################
     # helper methods
@@ -130,8 +165,17 @@ class BaseContract:
             raise Exception(f"transaction {transaction.hash.hex()} failed")
 
     @staticmethod
-    def _start_default_listener(event_filter: LogFilter, event_handler: Callable, poll_time: int = 10) -> None:
+    def _start_default_event_poller(
+        pair_name: str,
+        event_type: Type[BaseEvent],
+        event_filter: LogFilter,
+        event_handler: Callable,
+        poll_time: int
+    ) -> None:
         while True:
-            for event in event_filter.get_new_entries():
-                event_handler(event)
+            try:
+                for event_data in event_filter.get_new_entries():
+                    event_handler(pair_name, event_type, event_data)
+            except Exception as e:
+                log.error(e)
             sleep(poll_time)

@@ -39,9 +39,9 @@ class ERC20(BaseContract):
             key=key
         )
 
-        self.name = self.name()
-        self.symbol = self.symbol()
-        self.decimal = self.decimals()
+        self.name: str = self.name()
+        self.symbol: str = self.symbol()
+        self.decimal: int = self.decimals()
 
     @classmethod
     def from_network(

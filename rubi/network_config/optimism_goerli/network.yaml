@@ -8,7 +8,7 @@ rubicon:
   market:
     address: "0x9d0D6c259566d8161a1b2c513af0463992db38bc"
   router:
-    address: "0x7a1B7720E691E74ee523E4ecBD6C77A094222757"
+    address: "0x0a0795d7015aB52BcDd987975474bD73062B5494"
 
 token_addresses:
   ETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"

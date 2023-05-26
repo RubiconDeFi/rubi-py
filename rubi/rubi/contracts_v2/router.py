@@ -1,12 +1,10 @@
-from threading import Thread
-from typing import Optional, Type, Tuple, List
+from typing import Optional, Tuple, List
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts_v2.helper import BaseContract
-from rubi.contracts_v2.helper.event_types import EmitSwap
 from rubi.network import Network
 
 
@@ -217,20 +215,6 @@ class RubiconRouter(BaseContract):
         """
 
         return self.contract.functions.checkClaimAllUserBonusTokens(user, target_bath_tokens, token).call()
-
-    ######################################################################
-    # event listeners
-    ######################################################################
-
-    def start_event_listener(self, event_type: Type[EmitSwap]):
-        event_filter = event_type.create_event_filter(self.contract)
-
-        thread = Thread(
-            target=self._start_default_listener,
-            args=(event_filter, event_type.handler, 10),
-            daemon=True
-        )
-        thread.start()
 
     ######################################################################
     # write calls

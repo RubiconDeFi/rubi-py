@@ -1,12 +1,12 @@
 from threading import Thread
-from typing import Optional, Tuple, Type, List
+from typing import Optional, Tuple, Type, List, Dict, Any, Callable
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts_v2.helper.base_contract import BaseContract
-from rubi.contracts_v2.helper.event_types import BaseMarketEvent
+from rubi.contracts_v2.helper.event_types import BaseMarketEvent, BaseEvent
 from rubi.network import Network
 
 
@@ -201,21 +201,6 @@ class RubiconMarket(BaseContract):
         return self.contract.functions.getPayAmountWithFee(buy_gem, pay_gem, buy_amt).call()
 
     ######################################################################
-    # event listeners
-    ######################################################################
-
-    # TODO: add support for filtering by pair, maker, etc
-    def start_event_listener(self, event_type: Type[BaseMarketEvent]):
-        event_filter = event_type.create_event_filter(self.contract)
-
-        thread = Thread(
-            target=self._start_default_listener,
-            args=(event_filter, event_type.handler, 10),
-            daemon=True
-        )
-        thread.start()
-
-    ######################################################################
     # write calls
     ######################################################################
 
@@ -228,6 +213,7 @@ class RubiconMarket(BaseContract):
         buy_amt: int,
         buy_gem: ChecksumAddress,
         pos: int = 0,
+        rounding: bool = True,
         owner: Optional[ChecksumAddress] = None,
         recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
@@ -248,6 +234,8 @@ class RubiconMarket(BaseContract):
         :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
         to insert the offer at
         :type pos: int
+        :param rounding: add rounding to match "close enough" orders, defaults to True
+        :type: rounding: bool
         :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class
         :type owner: Optional[ChecksumAddress]
         :param recipient: the recipient of the offer's fill, defaults to the wallet that was provided in instantiating
@@ -274,9 +262,8 @@ class RubiconMarket(BaseContract):
         owner = owner if owner is not None else self.wallet
         recipient = recipient if recipient is not None else self.wallet
 
-        offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos, owner, recipient)
+        offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, owner, recipient)
 
-        # TODO: fix return types as they aren't coming back as expected at the moment
         return self._default_transaction_handler(
             instantiated_contract_function=offer,
             gas=gas,
