@@ -1,6 +1,6 @@
 import logging as log
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Type
+from typing import Dict, Any, Optional, Type, TypeVar
 
 from eth_typing import ChecksumAddress, HexStr
 from eth_utils import add_0x_prefix
@@ -8,11 +8,18 @@ from web3._utils.filters import LogFilter  # noqa
 from web3.contract import Contract
 from web3.types import EventData
 
+# To solve for circular dependency
+_BaseContract = TypeVar("_BaseContract")
 
-# TODO: look into how these events are being constructed because things are not working as intended right now
+
 class BaseEvent(ABC):
     def __init__(self, block_number: int, **args):
         self.block_number = block_number
+
+    @staticmethod
+    @abstractmethod
+    def get_event_contract(market: _BaseContract, router: _BaseContract) -> _BaseContract:
+        raise NotImplementedError()
 
     @staticmethod
     @abstractmethod
@@ -22,6 +29,19 @@ class BaseEvent(ABC):
     @classmethod
     def default_handler(cls, pair_name: str, event_type: Type["BaseEvent"], event_data: EventData) -> None:
         log.info(event_data)
+
+    @staticmethod
+    @abstractmethod
+    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+        raise NotImplementedError()
+
+    # noinspection PyMethodMayBeStatic
+    def client_filter(self, wallet: ChecksumAddress) -> bool:
+        return True
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 ######################################################################
@@ -33,6 +53,10 @@ class BaseMarketEvent(BaseEvent, ABC):
         super().__init__(**args)
         self.id = int(id.hex(), 16)
         self.pair = add_0x_prefix(HexStr(pair.hex()))
+
+    @staticmethod
+    def get_event_contract(market: _BaseContract, router: _BaseContract) -> _BaseContract:
+        return market
 
 
 class EmitOfferEvent(BaseMarketEvent):
@@ -56,9 +80,9 @@ class EmitOfferEvent(BaseMarketEvent):
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
         return contract.events.emitOffer.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
-    def __repr__(self):
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+        return {"pair": [bid_identifier, ask_identifier], "maker": wallet}
 
 
 class EmitTakeEvent(BaseMarketEvent):
@@ -85,9 +109,12 @@ class EmitTakeEvent(BaseMarketEvent):
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
         return contract.events.emitTake.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
-    def __repr__(self):
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
+    @staticmethod
+    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr, wallet: ChecksumAddress) -> dict:
+        return {"pair": [bid_identifier, ask_identifier]}
+
+    def client_filter(self, wallet: ChecksumAddress) -> bool:
+        return self.maker == wallet or self.taker == wallet
 
 
 class EmitCancelEvent(BaseMarketEvent):
@@ -112,6 +139,10 @@ class EmitCancelEvent(BaseMarketEvent):
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
         return contract.events.emitCancel.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+        return {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+
 
 class EmitFeeEvent(BaseMarketEvent):
     def __init__(
@@ -133,6 +164,10 @@ class EmitFeeEvent(BaseMarketEvent):
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
         return contract.events.emitFee.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+        return {"pair": [bid_identifier, ask_identifier], "fee_to": wallet}
+
 
 class EmitDeleteEvent(BaseMarketEvent):
     def __init__(self, maker: ChecksumAddress, **args):
@@ -143,6 +178,10 @@ class EmitDeleteEvent(BaseMarketEvent):
     @staticmethod
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
         return contract.events.emitDelete.create_filter(argument_filters=argument_filters, fromBlock="latest")
+
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+        return {"pair": [bid_identifier, ask_identifier], "maker": wallet}
 
 
 ######################################################################
@@ -162,6 +201,9 @@ class EmitSwap(BaseEvent):
     def __init__(self, **args):
         super().__init__(**args)
         self.__dict__.update(args)
+
+    def get_event_contract(self, market: Contract, router: Contract) -> Contract:
+        return router
 
     @staticmethod
     def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:

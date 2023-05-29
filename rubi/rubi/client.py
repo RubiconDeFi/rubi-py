@@ -4,15 +4,17 @@ from _decimal import Decimal
 from multiprocessing import Queue
 from threading import Thread
 from time import sleep
-from typing import Union, List, Optional, Dict, Type
+from typing import Union, List, Optional, Dict, Type, Any, Callable
 
 from eth_typing import ChecksumAddress
 from web3.types import EventData
 
 from rubi import (
-    OrderType, Side, BaseOrderTransaction, MarketOrderTransaction, LimitOrderTransaction, Pair, OrderBook, NetworkName,
+    OrderSide, NewMarketOrder, NewLimitOrder, Pair, OrderBook,
+    NetworkName,
     Network,
-    RubiconMarket, RubiconRouter, ERC20, PairDoesNotExistException, BaseMarketEvent, BaseEvent, OrderEvent
+    RubiconMarket, RubiconRouter, ERC20, PairDoesNotExistException, BaseEvent, OrderEvent,
+    Transaction, BaseNewOrder, NewCancelOrder, UpdateLimitOrder
 )
 
 
@@ -171,102 +173,221 @@ class Client:
     # event methods
     ######################################################################
 
-    # TODO: make this work for router as well
-    def start_event_poller(self, pair_name: str, event_type: Type[BaseMarketEvent], poll_time: int = 2) -> None:
+    def start_event_poller(
+        self,
+        pair_name: str,
+        event_type: Type[BaseEvent],
+        filters: Optional[Dict[str, Any]] = None,
+        event_handler: Optional[Callable] = None,
+        poll_time: int = 2
+    ) -> None:
         if self.message_queue is None:
             raise Exception("event poller is configured to place messages on the message queue. message queue"
                             "cannot be none")
 
         pair = self._pairs.get(pair_name)
 
-        self.market.start_event_poller(
+        argument_filters = event_type.default_filters(
+            bid_identifier=pair.bid_identifier,
+            ask_identifier=pair.ask_identifier,
+            wallet=self.wallet
+        ) if filters is None else filters
+
+        event_type.get_event_contract(market=self.market, router=self.router).start_event_poller(
             pair_name=pair_name,
             event_type=event_type,
-            # TODO: this filter does not work for EmitFeeEvent
-            argument_filters={"pair": [pair.ask_identifier, pair.bid_identifier]},
-            event_handler=self._event_handler,
+            argument_filters=argument_filters,
+            event_handler=self._default_event_handler if event_handler is None else event_handler,
             poll_time=poll_time
         )
 
-    def _event_handler(self, pair_name: str, event_type: Type[BaseEvent], event_data: EventData) -> None:
+    def _default_event_handler(self, pair_name: str, event_type: Type[BaseEvent], event_data: EventData) -> None:
         raw_event = event_type(block_number=event_data["blockNumber"], **event_data["args"])
 
-        pair = self._pairs.get(pair_name)
+        if raw_event.client_filter(wallet=self.wallet):
+            pair = self._pairs.get(pair_name)
 
-        order_event = OrderEvent.from_event(pair=pair, event=raw_event)
+            order_event = OrderEvent.from_event(pair=pair, event=raw_event, wallet=self.wallet)
 
-        self.message_queue.put(order_event)
+            self.message_queue.put(order_event)
 
     ######################################################################
     # order methods
     ######################################################################
+    # TODO: would be cool if these methods could understand how much they are spending on gas (use TxReceipt)
+    # also need a way to return the order id for limit orders
 
-    # TODO: need this method to understand how much it is spending on gas
-    def place_order(self, order: BaseOrderTransaction) -> str:
+    def place_market_order(self, transaction: Transaction) -> str:
         # TODO instantiate best_ask and best_bid properly
+        # This will probably require an orderbook to be instantiated
         best_ask = 1
         best_bid = 1
 
+        if len(transaction.orders) > 1:
+            raise Exception("call place_order with one order only")
+
+        order: NewMarketOrder = transaction.orders[0]  # noqa
+
         pair = self.get_pair(pair_name=order.pair)
 
-        match order.order_type:
-            case OrderType.MARKET:
-                order: MarketOrderTransaction
+        match order.order_side:
+            case OrderSide.BUY:
+                return self.market.buy_all_amount(
+                    buy_gem=pair.base_asset.address,
+                    buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    pay_gem=pair.quote_asset.address,
+                    max_fill_amount=self._to_erc20_amount(
+                        (1 + order.allowable_slippage) * best_ask, pair.quote_asset
+                    ),
+                    nonce=transaction.nonce,
+                    gas=transaction.gas,
+                    max_fee_per_gas=transaction.max_fee_per_gas,
+                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                )
+            case OrderSide.SELL:
+                return self.market.sell_all_amount(
+                    pay_gem=pair.base_asset.address,
+                    pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    buy_gem=pair.quote_asset.address,
+                    min_fill_amount=self._to_erc20_amount(
+                        (1 - order.allowable_slippage) * best_bid, pair.quote_asset
+                    ),
+                    nonce=transaction.nonce,
+                    gas=transaction.gas,
+                    max_fee_per_gas=transaction.max_fee_per_gas,
+                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                )
 
-                match order.order_side:
-                    case Side.BID:
-                        return self.market.buy_all_amount(
-                            buy_gem=pair.base_asset.address,
-                            buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
-                            pay_gem=pair.quote_asset.address,
-                            max_fill_amount=self._to_erc20_amount(
-                                (1 + order.allowable_slippage) * best_ask, pair.quote_asset
-                            ),
-                            nonce=order.nonce,
-                            gas=order.gas,
-                            max_fee_per_gas=order.max_fee_per_gas,
-                            max_priority_fee_per_gas=order.max_priority_fee_per_gas
-                        )
-                    case Side.ASK:
-                        return self.market.sell_all_amount(
-                            pay_gem=pair.base_asset.address,
-                            pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
-                            buy_gem=pair.quote_asset.address,
-                            min_fill_amount=self._to_erc20_amount(
-                                (1 - order.allowable_slippage) * best_bid, pair.quote_asset
-                            ),
-                            nonce=order.nonce,
-                            gas=order.gas,
-                            max_fee_per_gas=order.max_fee_per_gas,
-                            max_priority_fee_per_gas=order.max_priority_fee_per_gas
-                        )
+    def place_limit_order(self, transaction: Transaction) -> str:
+        if len(transaction.orders) > 1:
+            raise Exception("call place_order with one order only")
 
-            case OrderType.LIMIT:
-                order: LimitOrderTransaction
+        order: NewLimitOrder = transaction.orders[0]  # noqa
 
-                match order.order_side:
-                    case Side.BID:
-                        return self.market.offer(
-                            pay_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
-                            pay_gem=pair.quote_asset.address,
-                            buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
-                            buy_gem=pair.base_asset.address,
-                            nonce=order.nonce,
-                            gas=order.gas,
-                            max_fee_per_gas=order.max_fee_per_gas,
-                            max_priority_fee_per_gas=order.max_priority_fee_per_gas
-                        )
-                    case Side.ASK:
-                        return self.market.offer(
-                            pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
-                            pay_gem=pair.base_asset.address,
-                            buy_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
-                            buy_gem=pair.quote_asset.address,
-                            nonce=order.nonce,
-                            gas=order.gas,
-                            max_fee_per_gas=order.max_fee_per_gas,
-                            max_priority_fee_per_gas=order.max_priority_fee_per_gas
-                        )
+        pair = self.get_pair(pair_name=order.pair)
+
+        match order.order_side:
+            case OrderSide.BUY:
+                return self.market.offer(
+                    pay_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
+                    pay_gem=pair.quote_asset.address,
+                    buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    buy_gem=pair.base_asset.address,
+                    nonce=transaction.nonce,
+                    gas=transaction.gas,
+                    max_fee_per_gas=transaction.max_fee_per_gas,
+                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                )
+            case OrderSide.SELL:
+                return self.market.offer(
+                    pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    pay_gem=pair.base_asset.address,
+                    buy_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
+                    buy_gem=pair.quote_asset.address,
+                    nonce=transaction.nonce,
+                    gas=transaction.gas,
+                    max_fee_per_gas=transaction.max_fee_per_gas,
+                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                )
+
+    def cancel_limit_order(self, transaction: Transaction) -> str:
+        if len(transaction.orders) > 1:
+            raise Exception("call place_order with one order only")
+
+        order: NewCancelOrder = transaction.orders[0]  # noqa
+
+        return self.market.cancel(
+            id=order.order_id,
+            nonce=transaction.nonce,
+            gas=transaction.gas,
+            max_fee_per_gas=transaction.max_fee_per_gas,
+            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+        )
+
+    def batch_place_limit_orders(self, transaction: Transaction) -> str:
+        pay_amts = []
+        pay_gems = []
+        buy_amts = []
+        buy_gems = []
+
+        for order in transaction.orders:
+            order: NewLimitOrder
+            pair = self.get_pair(order.pair)
+
+            match order.order_side:
+                case OrderSide.BUY:
+                    pay_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    pay_gems.append(pair.quote_asset.address)
+                    buy_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    buy_gems.append(pair.base_asset.address)
+                case OrderSide.SELL:
+                    pay_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    pay_gems.append(pair.base_asset.address)
+                    buy_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    buy_gems.append(pair.quote_asset.address)
+
+        return self.market.batch_offer(
+            pay_amts=pay_amts,
+            pay_gems=pay_gems,
+            buy_amts=buy_amts,
+            buy_gems=buy_gems,
+            nonce=transaction.nonce,
+            gas=transaction.gas,
+            max_fee_per_gas=transaction.max_fee_per_gas,
+            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+        )
+
+    def batch_update_limit_orders(self, transaction: Transaction) -> str:
+        order_ids = []
+        pay_amts = []
+        pay_gems = []
+        buy_amts = []
+        buy_gems = []
+
+        for order in transaction.orders:
+            order: UpdateLimitOrder
+            pair = self.get_pair(order.pair)
+
+            order_ids.append(order.order_id)
+
+            match order.order_side:
+                case OrderSide.BUY:
+                    pay_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    pay_gems.append(pair.quote_asset.address)
+                    buy_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    buy_gems.append(pair.base_asset.address)
+                case OrderSide.SELL:
+                    pay_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    pay_gems.append(pair.base_asset.address)
+                    buy_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    buy_gems.append(pair.quote_asset.address)
+
+        return self.market.batch_offer(
+            pay_amts=pay_amts,
+            pay_gems=pay_gems,
+            buy_amts=buy_amts,
+            buy_gems=buy_gems,
+            nonce=transaction.nonce,
+            gas=transaction.gas,
+            max_fee_per_gas=transaction.max_fee_per_gas,
+            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+        )
+
+    def batch_cancel_limit_orders(self, transaction: Transaction) -> str:
+        order_ids = []
+
+        for order in transaction.orders:
+            order: NewCancelOrder
+
+            order_ids.append(order.order_id)
+
+        return self.market.batch_cancel(
+            ids=order_ids,
+            nonce=transaction.nonce,
+            gas=transaction.gas,
+            max_fee_per_gas=transaction.max_fee_per_gas,
+            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+        )
 
     ######################################################################
     # helper methods
@@ -288,13 +409,10 @@ class Client:
             )
         )
 
-    # TODO: revise this to work for quote asset as well
-    # additionally add functionality for referencing the mid price of the market
-    # and just hook this up so that it is actually used
+    # TODO: implement this and use check transactions before they go through to prevent failure
     @staticmethod
-    def _check_allowance(pair: Pair, order: BaseOrderTransaction):
-        if pair.current_base_asset_allowance < order.size:
-            raise Exception("Insufficient allowance for order")
+    def _check_allowance(pair: Pair, order: BaseNewOrder):
+        pass
 
     @staticmethod
     def _to_erc20_amount(amount: Decimal, asset: ERC20) -> int:

@@ -8,7 +8,6 @@ import rubi.contracts as contracts
 from rubi.contracts.helper import networks
 from rubi.data import Data, SuperData
 
-# TODO rethink this class as a client
 
 class RubiconData:
     """this class serves to tie in the various data sources and tooling for the Rubicon protocol that can be collected without a node connection. the Rubicon class inherits the functionality of this data class while adding the ability to interact with the contracts. more to come soon!

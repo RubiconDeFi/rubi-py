@@ -1,7 +1,7 @@
 import logging as log
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, TypeVar, Type, Dict, Any
+from typing import Optional, Callable, Type, Dict, Any
 
 from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
@@ -11,9 +11,7 @@ from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
 
-from rubi.contracts_v2.helper.event_types import BaseEvent
-
-T = TypeVar("T")
+from .events import BaseEvent
 
 
 class BaseContract:
@@ -85,7 +83,7 @@ class BaseContract:
         event_handler: Optional[Callable] = None,
         poll_time: int = 2
     ) -> None:
-        # TODO: investigate using a block filter so that you don't need to poll for each event
+        # TODO: investigate using a more generic filter so that you don't need to poll for each event
         # however parsing the event also needs to be updated then
         # filter_params: dict = {"fromBlock": "latest", "address": self.contract.address}
         # block_filter = self.w3.eth.filter(filter_params)
@@ -161,6 +159,8 @@ class BaseContract:
         return {key: value for key, value in transaction.items() if value is not None}
 
     def _wait_for_transaction_receipt(self, transaction: SignedTransaction) -> None:
+        # TODO: actually make use of the transaction receipt to update data structures
+        # e.g: gas
         if self.w3.eth.wait_for_transaction_receipt(transaction.hash)['status'] == 0:
             raise Exception(f"transaction {transaction.hash.hex()} failed")
 

@@ -4,7 +4,7 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts_v2.helper import BaseContract
+from rubi.contracts_v2.types import BaseContract
 from rubi.network import Network
 
 

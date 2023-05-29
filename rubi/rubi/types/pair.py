@@ -17,11 +17,11 @@ class Pair:
         self.base_asset: ERC20 = base_asset
         self.quote_asset: ERC20 = quote_asset
 
-        self.bid_identifier: bytes = base_asset.w3.solidity_keccak(
+        self.bid_identifier: str = base_asset.w3.solidity_keccak(
             abi_types=["address", "address"],
             values=[self.quote_asset.address, self.base_asset.address]
         ).hex()
-        self.ask_identifier: bytes = base_asset.w3.solidity_keccak(
+        self.ask_identifier: str = base_asset.w3.solidity_keccak(
             abi_types=["address", "address"],
             values=[self.base_asset.address, self.quote_asset.address]
         ).hex()

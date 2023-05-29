@@ -6,9 +6,9 @@ explorer_url: "https://optimistic.etherscan.io/"
 
 rubicon:
   market:
-    address: "" # TODO: UPDATE ON DEPLOYMENT OF V2
+    address: "0x7a512d3609211e719737e82c7bb7271ec05da70d"
   router:
-    address: "" # TODO: UPDATE ON DEPLOYMENT OF V2
+    address: "0x7Af14ADc8Aea70f063c7eA3B2C1AD0D7A59C4bFf"
 
 token_addresses:
   ETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"

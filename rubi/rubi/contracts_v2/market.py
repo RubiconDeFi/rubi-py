@@ -1,12 +1,10 @@
-from threading import Thread
-from typing import Optional, Tuple, Type, List, Dict, Any, Callable
+from typing import Optional, Tuple, List
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts_v2.helper.base_contract import BaseContract
-from rubi.contracts_v2.helper.event_types import BaseMarketEvent, BaseEvent
+from rubi.contracts_v2.types.base_contract import BaseContract
 from rubi.network import Network
 
 
