@@ -1,27 +1,29 @@
 # network_config
 
-this is the default location of all network config in the repo. config here is used to construct a `Network` instance
-found in [network.py](../rubi/network/network.py). this can then be used to instantiate contracts in the
+This is the default location of all network config in the repo. Config here is used to construct a `Network` instance
+found in [network.py](../rubi/network/network.py). This can then be used to instantiate contracts in the
 [contracts_v2](../rubi/contracts_v2) folder using the `from_network` constructor.
 
-to understand how this is all mapped into the `Network` instance please see: [network.py](../rubi/network/network.py).
+To understand how this is all mapped into the `Network` instance please see: [network.py](../rubi/network/network.py).
 
-## directory structure
-
-```yaml
-network_config:
-  { network name }:
-    network.yaml # <- the configuration for the network
-    abis: # <- the abis of all the rubicon contracts deployed on chain
-      market.json
-      etc
-    ERC20.json # <- standard abi for the openzepplin ERC20 contract.
+### Directory Structure
 
 ```
+├── network_config
+│   ├── {network name}
+│   │   ├── abis <- the abis of all the rubicon contracts deployed on chain.
+│   │   │   ├── market.json
+│   │   │   ├── ...
+│   │   ├── network.yaml <- the configuration for the network.
+│   ├── ...
+│   ├── ERC20.json <- standard abi for the openzepplin ERC20 contract.
+│   ├── README.md
+└──...
+```
 
-note: the network name must map to the `NetworkName` enum found in [network.py](../rubi/network/network.py).
+Note: the {network name} folder must map to the `NetworkName` enum found in [network.py](../rubi/network/network.py).
 
-## network.yaml
+### network.yaml
 
 ```yaml
 name: "Optimism Goerli" # <- the plaintext name of the network

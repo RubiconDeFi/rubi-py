@@ -9,8 +9,8 @@ from rubi.network import Network
 
 
 class RubiconRouter(BaseContract):
-    """this class represents the RubiconRouter.sol contract and by default has read functionality.
-    if a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
+    """This class represents the RubiconRouter.sol contract and by default has read functionality.
+    If a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
 
     :param w3: Web3 instance
     :type w3: Web3
@@ -44,6 +44,17 @@ class RubiconRouter(BaseContract):
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None
     ) -> "RubiconRouter":
+        """Create a RubiconRouter instance based on a Network instance.
+
+        :param network: A Network instance.
+        :type network: Network
+        :param wallet: Optional wallet address to use for interacting with the contract.
+        :type wallet: Optional[ChecksumAddress]
+        :param key: Optional private key for the wallet.
+        :type key: Optional[str]
+        :return: A RubiconRouter instance based on the Network instance.
+        :rtype: RubiconRouter
+        """
         return cls.from_address_and_abi(
             w3=network.w3,
             address=network.rubicon.router.address,
@@ -64,7 +75,7 @@ class RubiconRouter(BaseContract):
         tokens: List[ChecksumAddress],
         maker: ChecksumAddress,
     ) -> Tuple[int, int]:
-        """iterates through all the base_token/tokens[i] offers of the maker and returns the balance of the base_token
+        """Iterates through all the base_token/tokens[i] offers of the maker and returns the balance of the base_token
         in the book and the balance of the base token
 
         :param base_token:
@@ -315,14 +326,14 @@ class RubiconRouter(BaseContract):
         )
 
     # TODO
-    # sellAllAmountForETH
-    # sellAllAmountWithETH
-    # buyAllAmountWithETH
-    # buyAllAmountForETH
-    # swapWithETH
-    # swapForETH
-    # offerWithETH
-    # offerForETH
-    # cancelForETH
-    # depositWithETH
-    # withdrawForETH
+    #  sellAllAmountForETH
+    #  sellAllAmountWithETH
+    #  buyAllAmountWithETH
+    #  buyAllAmountForETH
+    #  swapWithETH
+    #  swapForETH
+    #  offerWithETH
+    #  offerForETH
+    #  cancelForETH
+    #  depositWithETH
+    #  withdrawForETH

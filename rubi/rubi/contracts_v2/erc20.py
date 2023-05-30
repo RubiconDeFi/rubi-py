@@ -1,4 +1,6 @@
 import json
+import os
+from _decimal import Decimal
 from typing import Optional
 
 from eth_typing import ChecksumAddress
@@ -51,18 +53,35 @@ class ERC20(BaseContract):
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None
     ) -> "ERC20":
+        """Create an ERC20 instance based on a Network instance and token name.
+
+        :param name: The name of the token.
+        :type name: str
+        :param network: A Network instance.
+        :type network: Network
+        :param wallet: Optional wallet address to use for interacting with the contract.
+        :type wallet: Optional[ChecksumAddress]
+        :param key: Optional private key for the wallet.
+        :type key: Optional[str]
+        :return: An ERC20 instance based on the Network instance and token name.
+        :rtype: ERC20
+        :raises Exception: If the token name does not exist in the network configuration.
+        :raises Exception: If the ERC20.json ABI file is not found in the network_config folder.
+        """
+
         if network.token_addresses[name] is None:
             raise Exception(f"{name} in not a valid token according to the network config.")
 
         abi: ABI
 
         try:
-            with open("network_config/ERC20.json") as f:
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/ERC20.json"
+
+            with open(path) as f:
                 abi = json.load(f)
 
         except FileNotFoundError:
-            with open("../../network_config/ERC20.json") as f:
-                abi = json.load(f)
+            raise Exception("ERC20.json abi not found. this file should in the network_config folder")
 
         return cls.from_address_and_abi(
             w3=network.w3,
@@ -78,7 +97,7 @@ class ERC20(BaseContract):
 
     # allowance(owner (address), spender (address)) -> uint256
     def allowance(self, owner: ChecksumAddress, spender: ChecksumAddress) -> int:
-        """reads the allowance of the spender from the owner for the erc20 contract
+        """Reads the allowance of the spender from the owner for the erc20 contract
 
         :param owner: address that owns the erc20 tokens
         :type owner: str
@@ -93,7 +112,7 @@ class ERC20(BaseContract):
 
     # balanceOf(account (address)) -> uint256
     def balance_of(self, account: ChecksumAddress) -> int:
-        """reads the erc20 balance of the account
+        """Reads the erc20 balance of the account
 
         :param account: the address of the account to read the balance of
         :type account: str
@@ -105,7 +124,7 @@ class ERC20(BaseContract):
 
     # totalSupply() -> uint256
     def total_supply(self) -> int:
-        """reads the total supply of the erc20 token
+        """Reads the total supply of the erc20 token
 
         :return: the total supply of the erc20 token, in the integer representation of the token
         :rtype: int
@@ -115,7 +134,7 @@ class ERC20(BaseContract):
 
     # decimals() -> uint256
     def decimals(self) -> int:
-        """reads the number of decimals of the erc20 token - warning this is not a constant function, so it may result
+        """Reads the number of decimals of the erc20 token - warning this is not a constant function, so it may result
         in an error in its current implementation
 
         :return: the number of decimals of the erc20 token
@@ -126,7 +145,7 @@ class ERC20(BaseContract):
 
     # name() -> string
     def name(self) -> str:
-        """reads the name of the erc20 token
+        """Reads the name of the erc20 token
 
         :return: the name of the erc20 token
         :rtype: str
@@ -136,7 +155,7 @@ class ERC20(BaseContract):
 
     # symbol() -> string
     def symbol(self) -> str:
-        """reads the symbol of the erc20 token
+        """Reads the symbol of the erc20 token
 
         :return: the symbol of the erc20 token
         :rtype: str
@@ -158,7 +177,7 @@ class ERC20(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """approves the spender to spend the amount of the erc20 token from the signer's wallet
+        """Approves the spender to spend the amount of the erc20 token from the signer's wallet
 
         :param spender: address of the spender
         :type spender: ChecksumAddress
@@ -197,7 +216,7 @@ class ERC20(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """transfers the amount of the erc20 token to the recipient
+        """Transfers the amount of the erc20 token to the recipient
 
         :param recipient: address of the recipient
         :type recipient: ChecksumAddress
@@ -237,7 +256,7 @@ class ERC20(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """transfers the amount of the erc20 token from the sender to the recipient
+        """Transfers the amount of the erc20 token from the sender to the recipient
 
         :param sender: address of the sender
         :type sender: ChecksumAddress
@@ -279,7 +298,7 @@ class ERC20(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """increases the allowance of the spender by the added_value
+        """Increases the allowance of the spender by the added_value
 
         :param spender: address of the spender
         :type spender: ChecksumAddress
@@ -318,7 +337,7 @@ class ERC20(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """decreases the allowance of the spender by the subtracted_value
+        """Decreases the allowance of the spender by the subtracted_value
 
         :param spender: address of the spender
         :type spender: ChecksumAddress
@@ -351,32 +370,32 @@ class ERC20(BaseContract):
     # helper methods
     ######################################################################
 
-    def to_float(self, number: int) -> float:
-        """converts an integer representation of the token to a float representation of the token by dividing the
+    def to_decimal(self, number: int) -> Decimal:
+        """Converts an integer representation of the token to a Decimal representation of the token by dividing the
         integer by 10 to the power of the number of decimals of the token
 
         :param number: the integer representation of the token
         :type number: int
-        :return: the float representation of the token
-        :rtype: float
+        :return: the Decimal representation of the token
+        :rtype: Decimal
         """
 
         if number == 0:
-            return 0
+            return Decimal("0")
         else:
-            return number / (10 ** self.decimal)
+            return Decimal(number) / Decimal(10 ** self.decimal)
 
-    def to_integer(self, number: float) -> int:
-        """converts a float representation of the token to an integer representation of the token by multiplying the
+    def to_integer(self, number: Decimal) -> int:
+        """Converts a Decimal representation of the token to an integer representation of the token by multiplying the
         float by 10 to the power of the number of decimals of the token
 
-        :param number: the float representation of the token
-        :type number: float
+        :param number: the Decimal representation of the token
+        :type number: Decimal
         :return: the integer representation of the token
         :rtype: int
         """
 
-        if number == 0:
+        if number == Decimal("0"):
             return 0
         else:
             return int(number * (10 ** self.decimal))

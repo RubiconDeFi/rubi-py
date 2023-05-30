@@ -1,5 +1,4 @@
 import logging as log
-import math
 from _decimal import Decimal
 from multiprocessing import Queue
 from threading import Thread
@@ -19,45 +18,99 @@ from rubi import (
 
 
 class Client:
+    """This class is a client for Rubicon. It aims to provide a simple and understandable interface when interacting
+    with the Rubicon protocol. If not instantiated with a wallet and key then all the methods that require signing
+    will throw an error.
+
+    :param network: A Network instance
+    :type network: Network
+    :param message_queue: Optional message queue for processing events.
+    :type message_queue: Queue
+    :param wallet: Wallet address.
+    :type wallet: ChecksumAddress
+    :param key: Key for the wallet.
+    :type key: str
+    """
 
     def __init__(
         self,
-        network_name: NetworkName,
-        http_node_url: str,
-        wallet: Union[ChecksumAddress, str],
-        key: str,
+        network: Network,
         message_queue: Optional[Queue] = None,
+        wallet: Optional[Union[ChecksumAddress, str]] = None,
+        key: Optional[str] = None,
     ):
-        self.network = Network.build(name=network_name, http_node_url=http_node_url)
+        """constructor method."""
+        self.network = network
 
-        self.wallet = self.network.w3.to_checksum_address(wallet)
+        self.wallet = self.network.w3.to_checksum_address(wallet) if wallet else wallet
         self.key = key
 
-        self.market = RubiconMarket.from_network(network=self.network, wallet=self.wallet, key=key)
-        self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=key)
+        self.market = RubiconMarket.from_network(network=self.network, wallet=self.wallet, key=self.key)
+        self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=self.key)
 
         self._pairs: Dict[str, Pair] = {}
         self._pair_orderbooks: Dict[str, OrderBook] = {}
 
         self.message_queue = message_queue
 
+    @classmethod
+    def from_network_name(
+        cls,
+        network_name: NetworkName,
+        http_node_url: str,
+        message_queue: Optional[Queue] = None,
+        wallet: Optional[Union[ChecksumAddress, str]] = None,
+        key: Optional[str] = None,
+    ):
+        """Initialize a Client using a network name and http_node_url.
+
+        :param network_name: Name of the network.
+        :type network_name: NetworkName
+        :param http_node_url: URL of the HTTP node.
+        :type http_node_url: str
+        :param message_queue: Optional message queue for processing events.
+        :type message_queue: Optional[Queue]
+        :param wallet: Wallet address (optional).
+        :type wallet: Optional[Union[ChecksumAddress, str]]
+        :param key: Key for the wallet (optional).
+        :type key: str
+        """
+        network = Network.from_config(name=network_name, http_node_url=http_node_url)
+
+        return cls(
+            network=network,
+            message_queue=message_queue,
+            wallet=wallet,
+            key=key
+        )
+
     ######################################################################
     # pair methods
     ######################################################################
 
     def add_pair(self, pair_name: str, base_asset_allowance: Decimal, quote_asset_allowance: Decimal) -> None:
+        """Add a Pair to the Client. This method creates a Pair instance and adds it to the Client's internal
+        _pairs dictionary. Additionally, this method updates the spender allowance of the Rubicon Market for both
+        base asset and the quote asset.
+
+        :param pair_name: Name of the Pair in the format "<base_asset>/<quote_asset>".
+        :type pair_name: str
+        :param base_asset_allowance: Allowance for the base asset.
+        :type base_asset_allowance: Decimal
+        :param quote_asset_allowance: Allowance for the quote asset.
+        :type quote_asset_allowance: Decimal
+        """
+
         base, quote = pair_name.split("/")
 
         base_asset = ERC20.from_network(name=base, network=self.network, wallet=self.wallet, key=self.key)
         quote_asset = ERC20.from_network(name=quote, network=self.network, wallet=self.wallet, key=self.key)
 
-        current_base_asset_allowance = self._from_erc20_amount(
-            amount=base_asset.allowance(owner=self.wallet, spender=self.market.address),
-            asset=base_asset
+        current_base_asset_allowance = base_asset.to_decimal(
+            number=base_asset.allowance(owner=self.wallet, spender=self.market.address)
         )
-        current_quote_asset_allowance = self._from_erc20_amount(
-            amount=quote_asset.allowance(owner=self.wallet, spender=self.market.address),
-            asset=quote_asset
+        current_quote_asset_allowance = quote_asset.to_decimal(
+            number=quote_asset.allowance(owner=self.wallet, spender=self.market.address)
         )
 
         self._pairs[f"{base}/{quote}"] = Pair(
@@ -68,13 +121,20 @@ class Client:
             current_quote_asset_allowance=current_quote_asset_allowance
         )
 
-        self.update_pair_allowance(
-            pair_name=pair_name,
-            new_base_asset_allowance=base_asset_allowance,
-            new_quote_asset_allowance=quote_asset_allowance
-        )
+        # only edit allowance if client has signing rights
+        if self.wallet is not None and self.key is not None:
+            self.update_pair_allowance(
+                pair_name=pair_name,
+                new_base_asset_allowance=base_asset_allowance,
+                new_quote_asset_allowance=quote_asset_allowance
+            )
 
     def get_pairs_list(self) -> List[str]:
+        """Get a list of all pair names in the clients internal _pairs dictionary.
+
+        :return: List of pair names.
+        :rtype: List[str]
+        """
         return list(self._pairs.keys())
 
     def update_pair_allowance(
@@ -83,6 +143,18 @@ class Client:
         new_base_asset_allowance: Decimal,
         new_quote_asset_allowance: Decimal
     ) -> None:
+        """Update the allowance for the base and quote assets of a pair if the current allowance is different from the
+        new allowance. This method also updates the Pair data structure so that the allowance can be read without having
+        to do a call to the chain.
+
+        :param pair_name: Name of the pair.
+        :type pair_name: str
+        :param new_base_asset_allowance: New allowance for the base asset.
+        :type new_base_asset_allowance: Decimal
+        :param new_quote_asset_allowance: New allowance for the quote asset.
+        :type new_quote_asset_allowance: Decimal
+        :raises PairDoesNotExistException: If the pair does not exist in the clients internal _pairs dict.
+        """
         pair = self.get_pair(pair_name=pair_name)
 
         if pair.current_base_asset_allowance != new_base_asset_allowance:
@@ -102,7 +174,16 @@ class Client:
             pair.update_quote_asset_allowance(new_quote_asset_allowance=new_quote_asset_allowance)
 
     def get_pair(self, pair_name: str) -> Pair:
-        pair = self._pairs[pair_name]
+        """Retrieves the Pair object associated with the specified pair name. If the pair does not exist
+        in the client, it raises a PairDoesNotExistException.
+
+        :param pair_name: Name of the pair.
+        :type pair_name: str
+        :return: The Pair object.
+        :rtype: Pair
+        :raises PairDoesNotExistException: If the pair does not exist in the client.
+        """
+        pair = self._pairs.get(pair_name)
 
         if pair is None:
             raise PairDoesNotExistException(
@@ -112,6 +193,13 @@ class Client:
         return pair
 
     def remove_pair(self, pair_name: str) -> None:
+        """Removes a pair from the client. It updates the pair's asset allowances
+        to zero and deletes the pair and its corresponding order book from the client.
+
+        :param pair_name: Name of the pair to remove.
+        :type pair_name: str
+        :raises PairDoesNotExistException: If the pair does not exist in the client before removal.
+        """
         self.update_pair_allowance(
             pair_name=pair_name,
             new_base_asset_allowance=Decimal("0"),
@@ -119,26 +207,48 @@ class Client:
         )
 
         del self._pairs[pair_name]
-        del self._pair_orderbooks[pair_name]
+        if self._pair_orderbooks.get(pair_name):
+            del self._pair_orderbooks[pair_name]
 
     ######################################################################
-    # book methods
+    # orderbook methods
     ######################################################################
 
     def get_orderbook(self, pair_name: str) -> OrderBook:
+        """Retrieve the order book for a specific pair from the Rubicon Router.
+
+        :param pair_name: Name of the pair to retrieve the order book for.
+        :type pair_name: str
+        :return: The order book for the specified pair.
+        :rtype: OrderBook
+        :raises PairDoesNotExistException: If the pair does not exist in the client.
+        """
         pair = self.get_pair(pair_name=pair_name)
 
-        rubicon_book = self.router.get_book_from_pair(asset=pair.base_asset.address, quote=pair.quote_asset.address)
+        rubicon_offer_book = self.router.get_book_from_pair(
+            asset=pair.base_asset.address,
+            quote=pair.quote_asset.address
+        )
 
-        print(rubicon_book)
-
-        return OrderBook.from_rubicon_book(
-            rubicon_book=rubicon_book,
+        return OrderBook.from_rubicon_offer_book(
+            offer_book=rubicon_offer_book,
             base_asset=pair.base_asset,
             quote_asset=pair.quote_asset
         )
 
     def start_orderbook_poller(self, pair_name: str, poll_time: int = 2) -> None:
+        """Starts a background thread that continuously polls the order book for the specified pair
+        at a specified polling interval. The retrieved order book is added to the message queue of the client.
+        The poller will run until the pair is removed from the client.
+
+        :param pair_name: Name of the pair to start the order book poller for.
+        :type pair_name: str
+        :param poll_time: Polling interval in seconds, defaults to 2 seconds.
+        :type poll_time: int, optional
+        :raises Exception: If the message queue is not configured.
+        :raises PairDoesNotExistException: If the pair does not exist in the client.
+        """
+
         if self.message_queue is None:
             raise Exception("orderbook poller is configured to place messages on the message queue. message queue"
                             "cannot be none")
@@ -154,6 +264,15 @@ class Client:
         thread.start()
 
     def _start_orderbook_poller(self, pair: Pair, poll_time: int = 2) -> None:
+        """The internal implementation of the order book poller. It continuously retrieves the order book
+        for the specified pair and adds it to the pair order books dictionary and the message queue of the client. The
+        poller will run until the pair is removed from the client.
+
+        :param pair: The pair to start the order book poller for.
+        :type pair: Pair
+        :param poll_time: Polling interval in seconds, defaults to 2 seconds.
+        :type poll_time: int, optional
+        """
         polling: bool = True
         while polling:
             try:
@@ -181,11 +300,29 @@ class Client:
         event_handler: Optional[Callable] = None,
         poll_time: int = 2
     ) -> None:
+        """Starts a background event poller that continuously listens for events of the specified event type
+        related to the specified pair. The retrieved events are processed by the event handler and added to the message
+        queue of the client. The poller will run until the pair is removed from the client.
+
+        :param pair_name: Name of the pair to start the event poller for.
+        :type pair_name: str
+        :param event_type: Type of the event to listen for.
+        :type event_type: Type[BaseEvent]
+        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters.
+        :type filters: Optional[Dict[str, Any]], optional
+        :param event_handler: Optional event handler function to process the retrieved events, defaults to the
+        self._default_event_handler.
+        :type event_handler: Optional[Callable], optional
+        :param poll_time: Polling interval in seconds, defaults to 2 seconds.
+        :type poll_time: int, optional
+        :raises Exception: If the message queue is not configured.
+        :raises PairDoesNotExistException: If the pair does not exist in the client.
+        """
         if self.message_queue is None:
             raise Exception("event poller is configured to place messages on the message queue. message queue"
                             "cannot be none")
 
-        pair = self._pairs.get(pair_name)
+        pair = self.get_pair(pair_name)
 
         argument_filters = event_type.default_filters(
             bid_identifier=pair.bid_identifier,
@@ -202,6 +339,16 @@ class Client:
         )
 
     def _default_event_handler(self, pair_name: str, event_type: Type[BaseEvent], event_data: EventData) -> None:
+        """The default event handler function used by the event poller. It processes the retrieved events
+        and adds the corresponding order events to the message queue of the client.
+
+        :param pair_name: Name of the pair associated with the event.
+        :type pair_name: str
+        :param event_type: Type of the event.
+        :type event_type: Type[BaseEvent]
+        :param event_data: Data of the retrieved event.
+        :type event_data: EventData
+        """
         raw_event = event_type(block_number=event_data["blockNumber"], **event_data["args"])
 
         if raw_event.client_filter(wallet=self.wallet):
@@ -215,14 +362,19 @@ class Client:
     # order methods
     ######################################################################
     # TODO: would be cool if these methods could understand how much they are spending on gas (use TxReceipt)
-    # also need a way to return the order id for limit orders
+    #  also need a way to return the order id for limit orders
 
     def place_market_order(self, transaction: Transaction) -> str:
-        # TODO instantiate best_ask and best_bid properly
-        # This will probably require an orderbook to be instantiated
-        best_ask = 1
-        best_bid = 1
+        """Place a market order transaction by executing the specified transaction object. The transaction
+        object should contain a single order of type NewMarketOrder. The order is retrieved from the transaction and
+        the corresponding market buy or sell method is called based on the order side.
 
+        :param transaction: Transaction object containing the market order.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed market order.
+        :rtype: str
+        :raises Exception: If the transaction contains more than one order.
+        """
         if len(transaction.orders) > 1:
             raise Exception("call place_order with one order only")
 
@@ -234,11 +386,9 @@ class Client:
             case OrderSide.BUY:
                 return self.market.buy_all_amount(
                     buy_gem=pair.base_asset.address,
-                    buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    buy_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.quote_asset.address,
-                    max_fill_amount=self._to_erc20_amount(
-                        (1 + order.allowable_slippage) * best_ask, pair.quote_asset
-                    ),
+                    max_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
                     nonce=transaction.nonce,
                     gas=transaction.gas,
                     max_fee_per_gas=transaction.max_fee_per_gas,
@@ -247,11 +397,9 @@ class Client:
             case OrderSide.SELL:
                 return self.market.sell_all_amount(
                     pay_gem=pair.base_asset.address,
-                    pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    pay_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.quote_asset.address,
-                    min_fill_amount=self._to_erc20_amount(
-                        (1 - order.allowable_slippage) * best_bid, pair.quote_asset
-                    ),
+                    min_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
                     nonce=transaction.nonce,
                     gas=transaction.gas,
                     max_fee_per_gas=transaction.max_fee_per_gas,
@@ -259,6 +407,15 @@ class Client:
                 )
 
     def place_limit_order(self, transaction: Transaction) -> str:
+        """Place a limit order transaction by executing the specified transaction object. The transaction object should
+        contain a single order of type NewLimitOrder.
+
+        :param transaction: Transaction object containing the limit order.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed limit order.
+        :rtype: str
+        :raises Exception: If the transaction contains more than one order.
+        """
         if len(transaction.orders) > 1:
             raise Exception("call place_order with one order only")
 
@@ -269,9 +426,9 @@ class Client:
         match order.order_side:
             case OrderSide.BUY:
                 return self.market.offer(
-                    pay_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
+                    pay_amt=pair.quote_asset.to_integer(order.price * order.size),
                     pay_gem=pair.quote_asset.address,
-                    buy_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    buy_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.base_asset.address,
                     nonce=transaction.nonce,
                     gas=transaction.gas,
@@ -280,9 +437,9 @@ class Client:
                 )
             case OrderSide.SELL:
                 return self.market.offer(
-                    pay_amt=self._to_erc20_amount(order.size, pair.base_asset),
+                    pay_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.base_asset.address,
-                    buy_amt=self._to_erc20_amount(order.price * order.size, pair.quote_asset),
+                    buy_amt=pair.quote_asset.to_integer(order.price * order.size),
                     buy_gem=pair.quote_asset.address,
                     nonce=transaction.nonce,
                     gas=transaction.gas,
@@ -291,6 +448,15 @@ class Client:
                 )
 
     def cancel_limit_order(self, transaction: Transaction) -> str:
+        """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
+        should contain a single order of type NewCancelOrder.
+
+        :param transaction: Transaction object containing the cancel order.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed cancel order.
+        :rtype: str
+        :raises Exception: If the transaction contains more than one order.
+        """
         if len(transaction.orders) > 1:
             raise Exception("call place_order with one order only")
 
@@ -305,6 +471,13 @@ class Client:
         )
 
     def batch_place_limit_orders(self, transaction: Transaction) -> str:
+        """Place multiple limit orders in a batch transaction.
+
+        :param transaction: Transaction object containing multiple limit orders.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed batch limit orders.
+        :rtype: str
+        """
         pay_amts = []
         pay_gems = []
         buy_amts = []
@@ -316,14 +489,14 @@ class Client:
 
             match order.order_side:
                 case OrderSide.BUY:
-                    pay_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    pay_amts.append(pair.quote_asset.to_integer(order.price * order.size))
                     pay_gems.append(pair.quote_asset.address)
-                    buy_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    buy_amts.append(pair.base_asset.to_integer(order.size))
                     buy_gems.append(pair.base_asset.address)
                 case OrderSide.SELL:
-                    pay_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    pay_amts.append(pair.base_asset.to_integer(order.size))
                     pay_gems.append(pair.base_asset.address)
-                    buy_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    buy_amts.append(pair.quote_asset.to_integer(order.price * order.size))
                     buy_gems.append(pair.quote_asset.address)
 
         return self.market.batch_offer(
@@ -338,6 +511,13 @@ class Client:
         )
 
     def batch_update_limit_orders(self, transaction: Transaction) -> str:
+        """Update multiple limit orders in a batch transaction.
+
+        :param transaction: Transaction object containing multiple limit order updates.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed batch limit order updates.
+        :rtype: str
+        """
         order_ids = []
         pay_amts = []
         pay_gems = []
@@ -352,14 +532,14 @@ class Client:
 
             match order.order_side:
                 case OrderSide.BUY:
-                    pay_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    pay_amts.append(pair.quote_asset.to_integer(order.price * order.size))
                     pay_gems.append(pair.quote_asset.address)
-                    buy_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    buy_amts.append(pair.base_asset.to_integer(order.size))
                     buy_gems.append(pair.base_asset.address)
                 case OrderSide.SELL:
-                    pay_amts.append(self._to_erc20_amount(order.size, pair.base_asset))
+                    pay_amts.append(pair.base_asset.to_integer(order.size))
                     pay_gems.append(pair.base_asset.address)
-                    buy_amts.append(self._to_erc20_amount(order.price * order.size, pair.quote_asset))
+                    buy_amts.append(pair.quote_asset.to_integer(order.price * order.size))
                     buy_gems.append(pair.quote_asset.address)
 
         return self.market.batch_offer(
@@ -374,6 +554,13 @@ class Client:
         )
 
     def batch_cancel_limit_orders(self, transaction: Transaction) -> str:
+        """Cancel multiple limit orders in a batch transaction.
+
+        :param transaction: Transaction object containing multiple limit order cancellations.
+        :type transaction: Transaction
+        :return: The transaction hash of the executed batch limit order cancellations.
+        :rtype: str
+        """
         order_ids = []
 
         for order in transaction.orders:
@@ -394,10 +581,10 @@ class Client:
     ######################################################################
 
     # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
-    # or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
-    # See: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
+    #  See: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    @staticmethod
     def _update_asset_allowance(
-        self,
         asset: ERC20,
         spender: ChecksumAddress,
         new_allowance: Decimal
@@ -405,7 +592,7 @@ class Client:
         log.info(
             asset.approve(
                 spender=spender,
-                amount=self._to_erc20_amount(amount=new_allowance, asset=asset)
+                amount=asset.to_integer(number=new_allowance)
             )
         )
 
@@ -413,11 +600,3 @@ class Client:
     @staticmethod
     def _check_allowance(pair: Pair, order: BaseNewOrder):
         pass
-
-    @staticmethod
-    def _to_erc20_amount(amount: Decimal, asset: ERC20) -> int:
-        return math.floor(amount * 10 ** asset.decimal)
-
-    @staticmethod
-    def _from_erc20_amount(amount: int, asset: ERC20) -> Decimal:
-        return Decimal(amount) / Decimal(10 ** asset.decimal)

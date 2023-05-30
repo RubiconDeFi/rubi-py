@@ -9,8 +9,8 @@ from rubi.network import Network
 
 
 class RubiconMarket(BaseContract):
-    """this class represents the RubiconMarket.sol contract and by default has read functionality.
-    if a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
+    """This class represents the RubiconMarket.sol contract and by default has read functionality.
+    If a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
 
     :param w3: Web3 instance
     :type w3: Web3
@@ -44,6 +44,17 @@ class RubiconMarket(BaseContract):
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None
     ) -> "RubiconMarket":
+        """Create a RubiconMarket instance based on a Network instance.
+
+        :param network: A Network instance.
+        :type network: Network
+        :param wallet: Optional wallet address to use for interacting with the contract.
+        :type wallet: Optional[ChecksumAddress]
+        :param key: Optional private key for the wallet.
+        :type key: Optional[str]
+        :return: A RubiconMarket instance based on the Network instance.
+        :rtype: RubiconMarket
+        """
         return cls.from_address_and_abi(
             w3=network.w3,
             address=network.rubicon.market.address,
@@ -58,7 +69,7 @@ class RubiconMarket(BaseContract):
 
     # makerFee() -> (uint265)
     def get_maker_fee(self) -> int:
-        """returns the maker fee on Rubicon
+        """Returns the maker fee on Rubicon
 
         :return: the maker fee
         :rtype: int
@@ -68,7 +79,7 @@ class RubiconMarket(BaseContract):
 
     # getOffer(id (uint256)) -> (uint256, address, uint256, address)
     def get_offer(self, id: int) -> Tuple[int, ChecksumAddress, int, ChecksumAddress]:
-        """returns the offer associated with the provided id
+        """Returns the offer associated with the provided id
 
         :param id: the id of the offer being queried
         :type id: int
@@ -79,7 +90,7 @@ class RubiconMarket(BaseContract):
 
     # getMinSell(pay_gem (address)) -> uint256
     def get_min_sell(self, pay_gem: ChecksumAddress) -> int:
-        """returns the minimum sell amount for an offer
+        """Returns the minimum sell amount for an offer
 
         :param pay_gem: the address of the token being sold by the maker
         :type pay_gem: str
@@ -91,7 +102,7 @@ class RubiconMarket(BaseContract):
 
     # getBestOffer(sell_gem (address), buy_gem (address)) -> uint256
     def get_best_offer(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
-        """returns the best offer for the given pair of tokens
+        """Returns the best offer for the given pair of tokens
 
         :param sell_gem: the address of the token being sold by the maker
         :type sell_gem: str
@@ -105,7 +116,7 @@ class RubiconMarket(BaseContract):
 
     # getWorseOffer(id (uint256)) -> uint256
     def get_worse_offer(self, id: int) -> int:
-        """returns the id of the offer that is worse than the given offer
+        """Returns the id of the offer that is worse than the given offer
 
         :param id: the id of the offer
         :type id: int
@@ -117,7 +128,7 @@ class RubiconMarket(BaseContract):
 
     # getBetterOffer(id (uint256)) -> uint256
     def get_better_offer(self, id: int) -> int:
-        """returns the id of the offer that is better than the given offer
+        """Returns the id of the offer that is better than the given offer
 
         :param id: the id of the offer
         :type id: int
@@ -129,7 +140,7 @@ class RubiconMarket(BaseContract):
 
     # getOfferCount(sell_gem (address), buy_gem (address)) -> uint256
     def get_offer_count(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
-        """returns the number of offers for a token pair
+        """Returns the number of offers for a token pair
 
         :param sell_gem: the address of the token being sold by the maker
         :type sell_gem: ChecksumAddress
@@ -143,7 +154,7 @@ class RubiconMarket(BaseContract):
 
     # calculateFees(amount (uint256), isPay (bool)) -> uint256
     def calculate_fees(self, amount: int) -> int:
-        """calculate fees on an amount
+        """Calculate fees on an amount
 
         :param amount: the address of the token being bought
         :type amount: int
@@ -160,7 +171,7 @@ class RubiconMarket(BaseContract):
         pay_gem: ChecksumAddress,
         pay_amt: int
     ) -> Tuple[int, int]:
-        """returns the amount of the buy_gem you will receive if you send the pay_amt to the contract along with the
+        """Returns the amount of the buy_gem you will receive if you send the pay_amt to the contract along with the
         amount to approve for the transaction
 
         :param buy_gem: the address of the token being bought
@@ -183,7 +194,7 @@ class RubiconMarket(BaseContract):
         buy_gem: ChecksumAddress,
         buy_amt: int
     ) -> Tuple[int, int]:
-        """returns the amount of the pay_gem you will need to pay to the contract to receive the buy_amt along with the
+        """Returns the amount of the pay_gem you will need to pay to the contract to receive the buy_amt along with the
         amount to approve for the transaction
 
         :param buy_gem: the address of the token being bought
@@ -219,7 +230,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
+        """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
         :param pay_amt: the amount of the token being sold
         :type pay_amt: int
@@ -279,7 +290,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """cancel an offer by offer id
+        """Cancel an offer by offer id
 
         :param id: the id of the offer to cancel
         :type id: int
@@ -319,7 +330,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """batch the placement of a set of offers in one transaction
+        """Batch the placement of a set of offers in one transaction
 
         :param pay_amts: the amounts of the token being sold
         :type pay_amts: List[int]
@@ -364,7 +375,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """cancel a set offer by offer id in a single transaction
+        """Cancel a set offer by offer id in a single transaction
 
         :param ids: the ids of the offers to cancel
         :type ids: List[int]
@@ -405,7 +416,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """batch update a set of offers in a single transaction and return a list of new offer ids
+        """Batch update a set of offers in a single transaction and return a list of new offer ids
 
         :param ids: the ids of the offers to cancel
         :type ids: List[int]
@@ -453,7 +464,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
+        """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
         min_fill_amount of the buy_gem token
 
         :param pay_gem: the address of the tokens being sold
@@ -499,7 +510,7 @@ class RubiconMarket(BaseContract):
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> str:
-        """buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
+        """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
         max_fill_amount of the pay_gem token
 
         :param buy_gem: the address of the tokens being bought

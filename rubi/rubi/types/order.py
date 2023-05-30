@@ -5,16 +5,17 @@ from typing import Optional, Union, List
 from eth_typing import ChecksumAddress
 
 from rubi import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
-from rubi.types.conversion_helper import _price_and_size_from_asset_amounts
 from rubi.types.pair import Pair
 
 
 class OrderSide(Enum):
+    """Enumeration representing the order side."""
     BUY = "BUY"
     SELL = "SELL"
 
 
 class OrderType(Enum):
+    """Enumeration representing the order type."""
     MARKET = "MARKET"
     LIMIT = "LIMIT"
 
@@ -24,38 +25,78 @@ class OrderType(Enum):
 
 
 class BaseNewOrder:
+    """Base class for representing a new order.
+
+    :param pair_name: The name of the trading pair.
+    :type pair_name: str
+    :param order_type: The type of the order.
+    :type order_type: OrderType
+    :param order_side: The side of the order (buy or sell).
+    :type order_side: OrderSide
+    """
+
     def __init__(
         self,
         pair_name: str,
         order_type: OrderType,
         order_side: OrderSide,
     ):
+        """constructor method."""
         self.pair = pair_name
         self.order_side = order_side
         self.order_type = order_type
 
 
 class NewMarketOrder(BaseNewOrder):
+    """Class representing a new market order.
+
+    :param pair_name: The name of the pair being traded e.g. WETH/USDC.
+    :type pair_name: str
+    :param order_side: The side of the order (BUY or SELL).
+    :type order_side: OrderSide
+    :param size: The size of the order.
+    :type size: Decimal
+    :param worst_execution_price: The worst execution price for the order (optional). Defaults to 0 if selling and
+    10 million if buying as random bounds.
+    :type worst_execution_price: Decimal
+    """
+
     def __init__(
         self,
         pair_name: str,
         order_side: OrderSide,
         size: Decimal,
-        # TODO: think about allowable_slippage
-        allowable_slippage: Optional[Decimal] = Decimal("0.005"),
+        worst_execution_price: Optional[Decimal],
     ):
+        """constructor method."""
+
         super().__init__(
             pair_name=pair_name,
             order_type=OrderType.MARKET,
             order_side=order_side,
 
         )
+        self.size = size
 
-        self.size = size,
-        self.allowable_slippage = allowable_slippage
+        if worst_execution_price is None:
+            self.worst_execution_price = Decimal("0") if order_side.SELL else Decimal("10") ** Decimal("7")
+        else:
+            self.worst_execution_price = worst_execution_price
 
 
 class NewLimitOrder(BaseNewOrder):
+    """Class representing a new limit order
+
+    :param pair_name: The name of the pair being traded e.g. WETH/USDC.
+    :type pair_name: str
+    :param order_side: The side of the order (buy or sell).
+    :type order_side: OrderSide
+    :param size: The size of the order.
+    :type size: Decimal
+    :param price: The price of the order.
+    :type price: Decimal
+    """
+
     def __init__(
         self,
         pair_name: str,
@@ -63,6 +104,7 @@ class NewLimitOrder(BaseNewOrder):
         size: Decimal,
         price: Decimal
     ):
+        """constructor method."""
         super().__init__(
             pair_name=pair_name,
             order_type=OrderType.LIMIT,
@@ -74,6 +116,20 @@ class NewLimitOrder(BaseNewOrder):
 
 
 class UpdateLimitOrder(BaseNewOrder):
+    """Class representing an update to an existing limit order
+
+    :param pair_name: The name of the pair being traded e.g. WETH/USDC.
+    :type pair_name: str
+    :param order_side: The side of the order (BUY or SELL).
+    :type order_side: OrderSide
+    :param order_id: The ID of the order to update.
+    :type order_id: int
+    :param size: The updated size of the order.
+    :type size: Decimal
+    :param price: The updated price of the order.
+    :type price: Decimal
+    """
+
     def __init__(
         self,
         pair_name: str,
@@ -82,6 +138,7 @@ class UpdateLimitOrder(BaseNewOrder):
         size: Decimal,
         price: Decimal
     ):
+        """constructor method"""
         super().__init__(
             pair_name=pair_name,
             order_type=OrderType.LIMIT,
@@ -94,12 +151,23 @@ class UpdateLimitOrder(BaseNewOrder):
 
 
 class NewCancelOrder(BaseNewOrder):
+    """Class representing a limit order cancellation
+
+    :param pair_name: The name of the trading pair.
+    :type pair_name: str
+    :param order_side: The side of the order (buy or sell).
+    :type order_side: OrderSide
+    :param order_id: The ID of the order to cancel.
+    :type order_id: int
+    """
+
     def __init__(
         self,
         pair_name: str,
         order_side: OrderSide,
         order_id: int
     ):
+        """constructor method"""
         super().__init__(
             pair_name=pair_name,
             order_type=OrderType.LIMIT,
@@ -110,6 +178,21 @@ class NewCancelOrder(BaseNewOrder):
 
 
 class Transaction:
+    """
+    Class representing a transaction to be executed on chain
+
+    :param orders: The list of orders to include in the transaction.
+    :type orders: List[BaseNewOrder]
+    :param nonce: The nonce for the transaction (optional).
+    :type nonce: int
+    :param gas: The gas limit for the transaction.
+    :type gas: int
+    :param max_fee_per_gas: The maximum fee per gas for the transaction (optional).
+    :type max_fee_per_gas: int
+    :param max_priority_fee_per_gas: The maximum priority fee per gas for the transaction (optional).
+    :type max_priority_fee_per_gas: int
+    """
+
     def __init__(
         self,
         orders: List[BaseNewOrder],
@@ -118,6 +201,7 @@ class Transaction:
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ):
+        """constructor method"""
         if len(orders) < 1:
             raise Exception("Transaction cannot be instantiated with an empty order list")
 
@@ -129,6 +213,26 @@ class Transaction:
 
 
 class OrderEvent:
+    """Class to represent Rubicon Market events as an order
+
+    :param limit_order_id: The ID of the limit order.
+    :type limit_order_id: int
+    :param limit_order_owner: The owner of the limit order.
+    :type limit_order_owner: ChecksumAddress
+    :param market_order_owner: The owner of the market order (optional). Only has a value if event is an emitTakeEvent.
+    :type market_order_owner: Optional[ChecksumAddress]
+    :param pair_name: The name of the pair being traded e.g. WETH/USDC.
+    :type pair_name: str
+    :param order_side: The side of the order (BUY or SELL).
+    :type order_side: OrderSide
+    :param order_type: The type of the order (MARKET, LIMIT, LIMIT_TAKEN, or CANCEL).
+    :type order_type: OrderType
+    :param price: The price of the order.
+    :type price: Decimal
+    :param size: The size of the order.
+    :type size: Decimal
+    """
+
     def __init__(
         self,
         limit_order_id: int,
@@ -142,7 +246,7 @@ class OrderEvent:
     ):
         self.limit_order_id = limit_order_id
         self.limit_order_owner = limit_order_owner
-        self.market_order_owner = market_order_owner
+        self.market_order_owner: Optional[ChecksumAddress] = market_order_owner
         self.pair_name = pair_name
         self.order_side = order_side
         self.order_type = order_type
@@ -151,6 +255,19 @@ class OrderEvent:
 
     @classmethod
     def from_event(cls, pair: Pair, event: BaseEvent, wallet: ChecksumAddress) -> "OrderEvent":
+        """Create an OrderEvent from a BaseEvent emitted by the Rubicon Market.
+
+        :param pair: The asset pair associated with the event.
+        :type pair: Pair
+        :param event: The event to convert.
+        :type event: BaseEvent
+        :param wallet: The wallet address associated with the event.
+        :type wallet: ChecksumAddress
+        :return: The created OrderEvent.
+        :rtype: OrderEvent
+        :raises Exception: If the event cannot be converted into an OrderEvent. This occurs if the Base event has a type
+        other than EmitOfferEvent, EmitCancelEvent or EmitTakeEvent
+        """
         if isinstance(event, EmitOfferEvent):
             if pair.bid_identifier == event.pair:
                 return cls._build_order(
@@ -224,12 +341,25 @@ class OrderEvent:
         base_amt: int,
         quote_amt: int
     ) -> "OrderEvent":
-        price, size = _price_and_size_from_asset_amounts(
-            base_asset=pair.base_asset,
-            quote_asset=pair.quote_asset,
-            base_amount=base_amt,
-            quote_amount=quote_amt
-        )
+        """Build an OrderEvent from event data.
+
+        :param event: The event data.
+        :type event: Union[EmitOfferEvent, EmitCancelEvent, EmitTakeEvent]
+        :param pair: The asset pair associated with the event.
+        :type pair: Pair
+        :param side: The order side.
+        :type side: OrderSide
+        :param order_type: The order type.
+        :type order_type: OrderType
+        :param base_amt: The base amount of the order.
+        :type base_amt: int
+        :param quote_amt: The quote amount of the order.
+        :type quote_amt: int
+        :return: The constructed OrderEvent.
+        :rtype: OrderEvent
+        """
+        size = pair.base_asset.to_decimal(base_amt)
+        price = pair.quote_asset.to_decimal(quote_amt) / size
 
         return cls(
             limit_order_id=event.id,

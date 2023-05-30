@@ -2,8 +2,10 @@
 Python for Rubicon
 
 ## Description 
-the [Rubicon](https://rubicon.finance) protocol is a limit order book market on [Optimism](https://www.optimism.io/). this repository is currently home to rubi, a python package for interacting with the Rubicon protocol. documentation for rubi can be found [here](https://rubi.readthedocs.io/en/latest/#). going forward, it will contain 
-useful tooling for interacting with, and developing on, the Rubicon protocol. 
+The [Rubicon](https://rubicon.finance) protocol is a limit order book market on [Optimism](https://www.optimism.io/). 
+This repository is currently home to rubi, a python package for interacting with the Rubicon protocol. Documentation for
+rubi can be found [here](https://rubi.readthedocs.io/en/latest/#). Going forward, it will contain useful tooling for 
+interacting with, and developing on, the Rubicon protocol. 
 
 [![Discord chat][discord-badge]][discord-url]
 
@@ -14,8 +16,10 @@ useful tooling for interacting with, and developing on, the Rubicon protocol.
 
 ### SDK Disclaimer
 
-This codebase is in Alpha and could contain bugs or change significantly between versions. Contributing through Issues or Pull Requests is welcome!
+This codebase is in Alpha and could contain bugs or change significantly between versions. Contributing through Issues 
+or Pull Requests is welcome!
 
 ### Protocol Disclaimer
 
-Please refer to [this](https://docs.rubicon.finance/docs/protocol/rubicon-pools/risks) for information on the risks associated to the Rubicon Protocol.
+Please refer to [this](https://docs.rubicon.finance/protocol/risks) for information on the risks associated to the 
+Rubicon Protocol.
