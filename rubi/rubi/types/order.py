@@ -4,7 +4,7 @@ from typing import Optional, Union, List
 
 from eth_typing import ChecksumAddress
 
-from rubi import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
+from rubi.contracts.types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
 from rubi.types.pair import Pair
 
 

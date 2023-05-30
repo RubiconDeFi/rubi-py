@@ -25,7 +25,8 @@ applications.
 │   ├── ERC20.json
 │   ├── README.md
 ├── rubi
-│   ├── contracts_v2
+│   ├── contracts
+│   ├── data
 │   ├── network
 │   ├── types
 │   ├── client.py

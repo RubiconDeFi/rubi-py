@@ -8,7 +8,7 @@ from web3 import Web3
 from web3.contract import Contract
 from web3.types import ABI
 
-from rubi.contracts_v2.types.base_contract import BaseContract
+from rubi.contracts.base_contract import BaseContract
 from rubi.network import Network
 
 

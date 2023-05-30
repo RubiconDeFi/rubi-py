@@ -1,1 +1,3 @@
 i'll add in some more thoughts about trade offs, and attempt to do so in a succint fashion, so others can be fully informed about whats going on under the hood and make their own decisions. more to come... 
+
+TODO this directory still needs significant love.

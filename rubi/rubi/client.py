@@ -8,12 +8,28 @@ from typing import Union, List, Optional, Dict, Type, Any, Callable
 from eth_typing import ChecksumAddress
 from web3.types import EventData
 
-from rubi import (
-    OrderSide, NewMarketOrder, NewLimitOrder, Pair, OrderBook,
+from rubi.contracts import (
+    RubiconMarket,
+    RubiconRouter,
+    ERC20,
+)
+from rubi.network import (
     NetworkName,
     Network,
-    RubiconMarket, RubiconRouter, ERC20, PairDoesNotExistException, BaseEvent, OrderEvent,
-    Transaction, BaseNewOrder, NewCancelOrder, UpdateLimitOrder
+)
+from rubi.types import (
+    OrderSide,
+    NewMarketOrder,
+    NewLimitOrder,
+    Pair,
+    OrderBook,
+    PairDoesNotExistException,
+    BaseEvent,
+    OrderEvent,
+    Transaction,
+    BaseNewOrder,
+    NewCancelOrder,
+    UpdateLimitOrder
 )
 
 
@@ -263,6 +279,8 @@ class Client:
         )
         thread.start()
 
+    # TODO: ideally this should use the RubiconMarket events to update itself instead of repeatedly polling the
+    #  get_orderbook method. But it's fine for now.
     def _start_orderbook_poller(self, pair: Pair, poll_time: int = 2) -> None:
         """The internal implementation of the order book poller. It continuously retrieves the order book
         for the specified pair and adds it to the pair order books dictionary and the message queue of the client. The

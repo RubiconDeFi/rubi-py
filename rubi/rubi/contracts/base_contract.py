@@ -11,7 +11,7 @@ from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
 
-from .events import BaseEvent
+from rubi.contracts.types.events import BaseEvent
 
 
 class BaseContract:

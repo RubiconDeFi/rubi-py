@@ -1,5 +1,5 @@
 import os
-import json 
+import json
 import hexbytes
 import logging as log
 from eth_abi import decode
@@ -8,6 +8,11 @@ from web3._utils.events import get_event_data
 
 from rubi.contracts.helper import networks
 
+
+# DEPRECATED
+# TODO: this is the old implementation for the RubiconMarketAidFactory and RubiconMarketAid. It needs to be updated in
+#  line with all the other contracts in this repo. Usage is not recommended in it's current state and it is not included
+#  in any of the __init__.py files.
 class FactoryAid:
     """this class represents the MarketAidFactory.sol contract and has read functionality for the contract
     
@@ -19,6 +24,7 @@ class FactoryAid:
 
     def __init__(self, w3, contract=None):
         """constructor method"""
+        raise DeprecationWarning()
 
         chain = w3.eth.chain_id
 
@@ -46,14 +52,14 @@ class FactoryAid:
         :return: the admin address
         :rtype: str
         """
-            
-        try: 
+
+        try:
             admin = self.contract.functions.admin().call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
 
-        return admin             
+        return admin
 
     # getUserMarketAids(user (address))
     def get_user_market_aids(self, user):
@@ -63,9 +69,9 @@ class FactoryAid:
         :rtype: list
         """
 
-        try: 
+        try:
             aids = self.contract.functions.getUserMarketAids(user).call()
-        except ValueError: 
+        except ValueError:
             aids = self.contract.functions.getUserMarketAids(self.w3.to_checksum_address(user)).call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -81,12 +87,12 @@ class FactoryAid:
         :rtype: str
         """
 
-        try: 
+        try:
             rubicon_market = self.contract.functions.rubiconMarket().call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return rubicon_market
 
 class FactoryAidSigner(FactoryAid):
@@ -129,7 +135,7 @@ class FactoryAidSigner(FactoryAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -149,21 +155,22 @@ class FactoryAidSigner(FactoryAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return create
 
-class MarketAid: 
+class MarketAid:
 
     # init function
     # TODO: possibly allow a chain variable to be passed in
     def __init__(self, w3, address, contract=None):
+        raise DeprecationWarning()
 
         # load in the aid abi 
         path = f"{os.path.dirname(os.path.realpath(__file__))}/helper/abis/MarketAid.json"
         with open(path) as f:
             aid_abi = json.load(f)
         f.close()
-    
+
         # create contract instance or set based upon initiliazation
         if contract:
             self.contract = contract
@@ -197,7 +204,7 @@ class MarketAid:
         :rtype: str
         """
 
-        try: 
+        try:
             rubicon_market_address = self.contract.functions.RubiconMarketAddress().call()
         except Exception as e:
             log.error(e, exc_info=True)
@@ -213,12 +220,12 @@ class MarketAid:
         :rtype: str
         """
 
-        try: 
+        try:
             admin = self.contract.functions.admin().call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return admin
 
     # approvedStrategists()
@@ -229,14 +236,14 @@ class MarketAid:
         :rtype: list
         """
 
-        try: 
+        try:
             approved_strategists = self.contract.functions.approvedStrategists(address).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return approved_strategists
-    
+
     # getOutstandingStrategistTrades(asset (address), quote (address), strategist (address))
     def get_outstanding_strategist_trades(self, asset, quote, strategist):
         """this function returns the list of outstanding trades for a strategist
@@ -251,14 +258,14 @@ class MarketAid:
         :rtype: list
         """
 
-        try: 
+        try:
             outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(asset, quote, strategist).call()
-        except ValueError: 
+        except ValueError:
             outstanding_strategist_trades = self.contract.functions.getOutstandingStrategistTrades(self.w3.to_checksum_address(asset), self.w3.to_checksum_address(quote), self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return outstanding_strategist_trades
 
     # getStrategistTotalLiquidity(asset (address), quote (address), strategist (address))
@@ -275,14 +282,14 @@ class MarketAid:
         :rtype: int
         """
 
-        try: 
+        try:
             strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(asset, quote, strategist).call()
-        except ValueError: 
+        except ValueError:
             strategist_total_liquidity = self.contract.functions.getStrategistTotalLiquidity(self.w3.to_checksum_address(asset), self.w3.to_checksum_address(quote), self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return strategist_total_liquidity
 
     # isApprovedStrategist(strategist (address))
@@ -295,14 +302,14 @@ class MarketAid:
         :rtype: bool
         """
 
-        try: 
+        try:
             is_approved_strategist = self.contract.functions.isApprovedStrategist(strategist).call()
-        except ValueError: 
+        except ValueError:
             is_approved_strategist = self.contract.functions.isApprovedStrategist(self.w3.to_checksum_address(strategist)).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return is_approved_strategist
 
     def get_strategist_trade(self, trade_id):
@@ -319,12 +326,12 @@ class MarketAid:
             log.error("trade id is not an integer")
             return None
 
-        try: 
+        try:
             strategist_trade = self.contract.functions.strategistTrades(trade_id).call()
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return strategist_trade
 
     ######################################################################
@@ -339,7 +346,7 @@ class MarketAid:
     # TODO: determine if this is the right assumtption to make about how the data is being received 
     # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
     # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_strategist_trade(self, data): 
+    def stream_log_strategist_trade(self, data):
 
         # load the data into an attribute dictionary that web3 can use
         # data = AttributeDict(json.loads(data))
@@ -363,7 +370,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'ask_id': event['args']['askId'],  
+                    'ask_id': event['args']['askId'],
                     'bid_id': event['args']['bidId'],
                     'ask_asset': event['args']['askAsset'],
                     'bid_asset': event['args']['bidAsset'],
@@ -374,9 +381,9 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
+            return None
 
-    def parse_log_strategist_trade(self, log): 
+    def parse_log_strategist_trade(self, log):
 
         # get the event data from the log
         try:
@@ -392,7 +399,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'ask_id': event['args']['askId'],  
+                    'ask_id': event['args']['askId'],
                     'bid_id': event['args']['bidId'],
                     'ask_asset': event['args']['askAsset'],
                     'bid_asset': event['args']['bidAsset'],
@@ -403,7 +410,7 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
+            return None
 
     '''
     event LogScrubbedStratTrade(
@@ -423,7 +430,7 @@ class MarketAid:
     # TODO: determine if this is the right assumtption to make about how the data is being received 
     # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
     # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_scrubbed_strat_trade(self, data): 
+    def stream_log_scrubbed_strat_trade(self, data):
 
         # load the data into an attribute dictionary that web3 can use
         # data = AttributeDict(json.loads(data))
@@ -447,7 +454,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'asset_fill': event['args']['assetFill'],  
+                    'asset_fill': event['args']['assetFill'],
                     'bath_asset_address': event['args']['bathAssetAddress'],
                     'quote_fill': event['args']['quoteFill'],
                     'quote_address': event['args']['quoteAddress']
@@ -456,9 +463,9 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
-        
-    def parse_log_scrubbed_strat_trade(self, log): 
+            return None
+
+    def parse_log_scrubbed_strat_trade(self, log):
 
         # get the event data from the log
         try:
@@ -474,7 +481,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'asset_fill': event['args']['assetFill'],  
+                    'asset_fill': event['args']['assetFill'],
                     'bath_asset_address': event['args']['bathAssetAddress'],
                     'quote_fill': event['args']['quoteFill'],
                     'quote_address': event['args']['quoteAddress']
@@ -483,7 +490,7 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
+            return None
 
     '''
     event LogStrategistRewardClaim(
@@ -508,7 +515,7 @@ class MarketAid:
     # TODO: determine if this is the right assumtption to make about how the data is being received 
     # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
     # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_batch_market_making_trades(self, data): 
+    def stream_log_batch_market_making_trades(self, data):
 
         # load the data into an attribute dictionary that web3 can use
         # data = AttributeDict(json.loads(data))
@@ -527,16 +534,16 @@ class MarketAid:
             trade = {
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'trades': event['args']['trades']
             }
             return trade
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
-        
-    def parse_log_batch_market_making_trades(self, log): 
+            return None
+
+    def parse_log_batch_market_making_trades(self, log):
 
         # get the event data from the log
         try:
@@ -547,14 +554,14 @@ class MarketAid:
             trade = {
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'trades': event['args']['trades']
             }
             return trade
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
+            return None
 
     '''
         event LogRequote(
@@ -571,7 +578,7 @@ class MarketAid:
     # TODO: determine if this is the right assumtption to make about how the data is being received 
     # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
     # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_requote(self, data): 
+    def stream_log_requote(self, data):
 
         # load the data into an attribute dictionary that web3 can use
         # data = AttributeDict(json.loads(data))
@@ -596,7 +603,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'scrub_trade_id': scrub_trade_id,
                     'trade_id': trade_id
             }
@@ -604,9 +611,9 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
-    
-    def parse_log_requote(self, log): 
+            return None
+
+    def parse_log_requote(self, log):
 
         # get the event data from the log
         try:
@@ -623,7 +630,7 @@ class MarketAid:
                     'id': trade_id,
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'scrub_trade_id': scrub_trade_id,
                     'trade_id': trade_id
             }
@@ -631,11 +638,11 @@ class MarketAid:
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
+            return None
 
     '''
     event LogBatchRequoteOffers(address strategist, uint256[] scrubbedOfferIDs);
-    ''' 
+    '''
     # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
     # the graph does something similar to this when you run codegen, it should be a simple string manipulation problem from the abis 
     def get_log_batch_requote_offers_hash(self):
@@ -644,7 +651,7 @@ class MarketAid:
     # TODO: determine if this is the right assumtption to make about how the data is being received 
     # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
     # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_batch_requote_offers(self, data): 
+    def stream_log_batch_requote_offers(self, data):
 
         # load the data into an attribute dictionary that web3 can use
         # data = AttributeDict(json.loads(data))
@@ -663,16 +670,16 @@ class MarketAid:
             trade = {
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'scrub_trade_id': event['args']['scrubbedOfferIDs']
             }
             return trade
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
-    
-    def parse_log_batch_requote_offers(self, log): 
+            return None
+
+    def parse_log_batch_requote_offers(self, log):
 
         # get the event data from the log
         try:
@@ -683,15 +690,15 @@ class MarketAid:
             trade = {
                     'txn': event['transactionHash'].hex(),
                     'event': event['event'],
-                    'strategist': event['args']['strategist'],  
+                    'strategist': event['args']['strategist'],
                     'scrub_trade_id': event['args']['scrubbedOfferIDs']
             }
             return trade
 
         except Exception as e:
             log.error(e, exc_info=True)
-            return None 
-     
+            return None
+
 
 class MarketAidSigner(MarketAid):
     """this class represents a MarketAid.sol contract with read and write functionality. it inherits from the MarketAid class and adds the ability to sign transactions.
@@ -771,7 +778,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return max_approve
 
     # adminPullAllFunds(erc20s address[])
@@ -794,10 +801,10 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
-        
+
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
@@ -839,7 +846,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -871,7 +878,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return rebalance
 
     # approveStrategist(strategist (address))
@@ -894,7 +901,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -926,7 +933,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return approve
 
     # batchMarketMakingTrades(tokenPairs (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
@@ -957,7 +964,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -977,9 +984,9 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return batch
-    
+
     # batchRequoteAllOffers(tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
     def batch_requote_all_offers(self, token_pair, ask_numerators, ask_denominators, bid_numerators, bid_denominators, nonce=None, gas=3000000, gas_price=None):
         """this function executes a batch requote while clearing all offers the strategist has on the RubiconMarket
@@ -1008,7 +1015,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -1028,7 +1035,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return batch
 
     # batchRequoteOffers(ids (uint256[]), tokenPair (address[2]), askNumerators (uint256[]), askDenominators (uint256[]), bidNumerators (uint256[]), bidDenominators (uint256[]))
@@ -1061,7 +1068,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -1081,7 +1088,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return batch
 
     # placeMarketMakingTrades(tokenPair (address[2]), askNumerator (uint256), askDenominator (uint256), bidNumerator (uint256), bidDenominator (uint256))
@@ -1113,13 +1120,13 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
-        try: 
+        try:
             trade = self.contract.functions.placeMarketMakingTrades(token_pair, ask_numerator, ask_denominator, bid_numerator, bid_denominator).build_transaction(txn)
             trade = self.w3.eth.account.sign_transaction(trade, self.key)
             self.w3.eth.send_raw_transaction(trade.rawTransaction)
@@ -1133,7 +1140,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return trade
 
     # removeStrategist(strategist (address))
@@ -1224,7 +1231,7 @@ class MarketAidSigner(MarketAid):
 
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
-        
+
         txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
 
         try:
@@ -1282,7 +1289,7 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return scrub
 
     # scrubStrategistTrades(ids (uint256[]))
@@ -1305,7 +1312,7 @@ class MarketAidSigner(MarketAid):
             txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
         else:
             txn_nonce = nonce
-        
+
         if gas_price is None:
             gas_price = self.w3.eth.gas_price
 
@@ -1325,5 +1332,5 @@ class MarketAidSigner(MarketAid):
         except Exception as e:
             log.error(e, exc_info=True)
             return None
-        
+
         return scrub
