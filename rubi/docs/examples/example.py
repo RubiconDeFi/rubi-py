@@ -1,10 +1,13 @@
 import logging as log
 import os
+from _decimal import Decimal
+from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
-from rubi.contracts_v2 import RubiconMarket, ERC20
-from rubi.network import Network, NetworkName
+from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi.client import Client
+from rubi.network import NetworkName
 
 # load from env file
 load_dotenv("../../local.env")
@@ -14,7 +17,6 @@ load_dotenv("../../local.env")
 # DEV_WALLET= { your wallet address 0x... }
 # DEV_KEY={ your private key }
 
-
 # set logging config
 log.basicConfig(level=log.INFO)
 
@@ -23,36 +25,41 @@ http_node_url = os.getenv("OP_GOERLI_NODE")
 wallet = os.getenv("DEV_WALLET")
 key = os.getenv("DEV_KEY")
 
-# create network instance
-network = Network.build(name=NetworkName.OPTIMISM_GOERLI, http_node_url=http_node_url)
+# create a queue to receive messages
+queue = Queue()
 
-# create read only rubicon market from the network
-read_only_market = RubiconMarket.from_network(network=network)
+# create client
+client = Client.from_network_name(
+    network_name=NetworkName.OPTIMISM_GOERLI,
+    http_node_url=http_node_url,
+    wallet=wallet,
+    key=key,
+    message_queue=queue
+)
 
-# create coin instances from the network
-weth = ERC20.from_network(name="WETH", network=network, wallet=wallet, key=key)
-read_only_usdc = ERC20.from_network(name="USDC", network=network)
+# add the WETH/USDC pair to the client
+client.add_pair(pair_name="WETH/USDC", base_asset_allowance=Decimal("0.2"), quote_asset_allowance=Decimal("1000"))
 
-# get the id of the best bid on the WETH/USDC market
-# bid_id = read_only_market.get_best_offer(sell_gem=read_only_usdc.address, buy_gem=read_only_weth.address)
+# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
+client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
+client.start_orderbook_poller("WETH/USDC")
 
-# log.info(f"bid id: {bid_id}")
+# Place a new limit order
+limit_order = NewLimitOrder(
+    pair_name="WETH/USDC",
+    order_side=OrderSide.BUY,
+    size=Decimal("1"),
+    price=Decimal("114.13")  # 1914.13
+)
 
-# get the information on the bid
-# log.info(read_only_market.get_offer(bid_id))
+client.place_limit_order(
+    transaction=Transaction(
+        orders=[limit_order]
+    )
+)
 
-# create a permissioned rubicon market
-permissioned_market = RubiconMarket.from_network(network=network, wallet=wallet, key=key)
+# Print events and order books
+while True:
+    message = queue.get()
 
-# place an offer to sell 0.1 WETH for 1980 USDC
-log.info(permissioned_market.offer(
-    pay_amt=100000000000000000,
-    pay_gem=weth.address,
-    buy_amt=198000000000000000000,
-    buy_gem=read_only_usdc.address,
-))
-
-# log.info(weth.transfer(
-#     recipient=network.w3.to_checksum_address("0xC30276833798867C1dBC5c468bf51cA900b44E4c"),
-#     amount=1
-# ))
+    log.info(message)
