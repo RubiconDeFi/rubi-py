@@ -329,7 +329,7 @@ class Client:
         :param filters: Optional filters to apply when retrieving events, defaults to the events default filters.
         :type filters: Optional[Dict[str, Any]], optional
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
-        self._default_event_handler.
+            self._default_event_handler.
         :type event_handler: Optional[Callable], optional
         :param poll_time: Polling interval in seconds, defaults to 2 seconds.
         :type poll_time: int, optional

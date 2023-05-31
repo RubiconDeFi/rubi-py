@@ -6,22 +6,21 @@ from multiprocessing import Queue
 from dotenv import load_dotenv
 
 from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
-from rubi.client import Client
-from rubi.network import NetworkName
+from rubi import Client, NetworkName
 
 # load from env file
 load_dotenv("../../local.env")
 
 # you local.env should look like this:
-# OP_GOERLI_NODE={ the url of the node you are using to connect to the network }
-# DEV_WALLET= { your wallet address 0x... }
+# HTTP_NODE_URL={ the url of the node you are using to connect to the network }
+# DEV_WALLET={ your wallet address 0x... }
 # DEV_KEY={ your private key }
 
 # set logging config
 log.basicConfig(level=log.INFO)
 
 # set the env variables
-http_node_url = os.getenv("OP_GOERLI_NODE")
+http_node_url = os.getenv("HTTP_NODE_URL")
 wallet = os.getenv("DEV_WALLET")
 key = os.getenv("DEV_KEY")
 
@@ -49,7 +48,7 @@ limit_order = NewLimitOrder(
     pair_name="WETH/USDC",
     order_side=OrderSide.BUY,
     size=Decimal("1"),
-    price=Decimal("114.13")  # 1914.13
+    price=Decimal("1914.13")
 )
 
 client.place_limit_order(

@@ -104,7 +104,7 @@ class ERC20(BaseContract):
         :param spender: address that is allowed to spend the erc20 tokens
         :type spender: str
         :return: the allowance of the spender from the owner for the contract, in the integer representation of the
-        token
+            token
         :rtype: int
         """
 
@@ -188,10 +188,10 @@ class ERC20(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -227,10 +227,10 @@ class ERC20(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -269,10 +269,10 @@ class ERC20(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -309,10 +309,10 @@ class ERC20(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -348,10 +348,10 @@ class ERC20(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str

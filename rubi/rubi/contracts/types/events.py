@@ -50,7 +50,7 @@ class BaseEvent(ABC):
         :param contract: The contract instance.
         :type contract: Contract
         :param argument_filters: Optional filters. Only events that match these filters will be returned when the filter
-        is queried.
+            is queried.
         :type argument_filters: Optional[Dict[str, Any]]
         :return: The created event filter.
         :rtype: LogFilter

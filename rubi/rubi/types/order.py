@@ -57,7 +57,7 @@ class NewMarketOrder(BaseNewOrder):
     :param size: The size of the order.
     :type size: Decimal
     :param worst_execution_price: The worst execution price for the order (optional). Defaults to 0 if selling and
-    10 million if buying as random bounds.
+        10 million if buying as random bounds.
     :type worst_execution_price: Decimal
     """
 
@@ -266,7 +266,7 @@ class OrderEvent:
         :return: The created OrderEvent.
         :rtype: OrderEvent
         :raises Exception: If the event cannot be converted into an OrderEvent. This occurs if the Base event has a type
-        other than EmitOfferEvent, EmitCancelEvent or EmitTakeEvent
+            other than EmitOfferEvent, EmitCancelEvent or EmitTakeEvent
         """
         if isinstance(event, EmitOfferEvent):
             if pair.bid_identifier == event.pair:

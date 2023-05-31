@@ -10,6 +10,10 @@ interacting with the Rubicon. The SDK is built with the goal of enabling efficie
 Rubicon's smart contracts, empowering developers to effortlessly access and utilize Rubicon's features in their Python
 applications.
 
+### Examples
+
+Examples of using the rubi sdk can be found [here](docs/examples).
+
 ### Directory Structure
 
 ```

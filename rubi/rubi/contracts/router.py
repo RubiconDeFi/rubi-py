@@ -76,14 +76,14 @@ class RubiconRouter(BaseContract):
         maker: ChecksumAddress,
     ) -> Tuple[int, int]:
         """Iterates through all the base_token/tokens[i] offers of the maker and returns the balance of the base_token
-        in the book and the balance of the base token
+        in the book and the balance of the base token.
 
-        :param base_token:
+        :param base_token: The address of the base token.
         :type base_token: ChecksumAddress
-        :param tokens:
+        :param tokens: A list of all the tokens to calculate the balance of
         :type tokens: List[ChecksumAddress]
-        :param maker: ChecksumAddress
-        :type maker
+        :param maker: The address of the maker to fet the balance for
+        :type maker: ChecksumAddress
         :return: balance in book, total token balance
         :rtype: Tuple[int, int]
         """
@@ -124,8 +124,8 @@ class RubiconRouter(BaseContract):
         :param quote: The address of the quote token.
         :type quote: ChecksumAddress
         :return: A tuple containing two lists: asks and bids. Each list contains a sublist of length 3, representing
-        the order book entries in the following format (pay_amt, buy_amt, id). The asks list represents the orders
-        selling the asset, while the bids list represents the orders buying the asset.
+            the order book entries in the following format (pay_amt, buy_amt, id). The asks list represents the orders
+            selling the asset, while the bids list represents the orders buying the asset.
         :rtype: Tuple[List[List[int]], List[List[int]]]
         """
 
@@ -159,7 +159,7 @@ class RubiconRouter(BaseContract):
         :param quote: The address of the quote token.
         :type quote: ChecksumAddress
         :return: A tuple containing the ID of the best offer, the pay_amt, the address of the pay_gem,
-                 the buy_amt, and the address of the buy_gem.
+            the buy_amt, and the address of the buy_gem.
         :rtype: Tuple[int, int, ChecksumAddress, int, ChecksumAddress]
         """
 
@@ -259,10 +259,10 @@ class RubiconRouter(BaseContract):
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
-        + (2 * base fee per gas of latest block).
+            + (2 * base fee per gas of latest block).
         :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: Max priority fee that can be paid for gas.
-        Defaults to calling the chain to estimate the max_priority_fee_per_gas.
+        :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
+            estimate the max_priority_fee_per_gas.
         :type max_priority_fee_per_gas: Optional[int]
         :return: Transaction hash.
         :rtype: str
@@ -306,10 +306,10 @@ class RubiconRouter(BaseContract):
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
-        + (2 * base fee per gas of latest block).
+            + (2 * base fee per gas of latest block).
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
-        estimate the max_priority_fee_per_gas.
+            estimate the max_priority_fee_per_gas.
         :type max_priority_fee_per_gas: Optional[int]
         :return: Transaction hash.
         :rtype: str

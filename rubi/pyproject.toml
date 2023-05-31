@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "rubi"
-version = "1.3.2"
-description = "a python SDK for the Rubicon Protocol"
-authors = ["denver <denver@rubicon.finance>"]
+version = "2.0.0"
+description = "A python SDK for the Rubicon Protocol"
+authors = ["denver <denver@rubicon.finance>", "adam <adam@rubicon.finance>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -16,7 +16,7 @@ pytest = "^7.3.1"
 eth-tester = "^0.9.0b1"
 py-evm = "^0.7.0a2"
 eth-utils = "^2.1.0"
-subgrounds = { version = "^1.5.1", extras = ["dash"] }
+subgrounds = { version = "^1.6.0", extras = ["dash"] }
 
 [tool.poetry.group.dev.dependencies]
 python-dotenv = "^0.21.0"

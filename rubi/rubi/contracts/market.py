@@ -181,7 +181,7 @@ class RubiconMarket(BaseContract):
         :param pay_amt: the amount of the token being sold to receive the token being bought
         :type pay_amt: int
         :return: (buy_amt, approvalAmount) the amount of tokens that will be received and the amount to approve for the
-        transaction
+            transaction
         :rtype: Tuple[int, int]
         """
         return self.contract.functions.getBuyAmountWithFee(buy_gem, pay_gem, pay_amt).call()
@@ -204,7 +204,7 @@ class RubiconMarket(BaseContract):
         :param buy_amt: the amount of the token being bought
         :type buy_amt: int
         :return: (pay_amt, approvalAmount) the amount of tokens that will be paid and the amount to approve for the
-        transaction
+            transaction
         :rtype: Tuple[int, int]
         """
         return self.contract.functions.getPayAmountWithFee(buy_gem, pay_gem, buy_amt).call()
@@ -241,24 +241,24 @@ class RubiconMarket(BaseContract):
         :param buy_gem: the address of the token being bought
         :type buy_gem: ChecksumAddress
         :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
-        to insert the offer at
+            to insert the offer at
         :type pos: int
         :param rounding: add rounding to match "close enough" orders, defaults to True
         :type: rounding: bool
         :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class
         :type owner: Optional[ChecksumAddress]
         :param recipient: the recipient of the offer's fill, defaults to the wallet that was provided in instantiating
-        this class
+            this class
         :type recipient: Optional[ChecksumAddress]
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: Optional[int]
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -299,10 +299,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -345,10 +345,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -384,10 +384,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -433,10 +433,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -480,10 +480,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str
@@ -526,10 +526,10 @@ class RubiconMarket(BaseContract):
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-        max_priority_fee (from chain) + (2 * base fee per gas of latest block)
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block)
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-        estimate the max_priority_fee_per_gas
+            estimate the max_priority_fee_per_gas
         :type max_priority_fee_per_gas: Optional[int]
         :return: transaction hash
         :rtype: str

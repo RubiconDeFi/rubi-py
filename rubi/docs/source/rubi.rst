@@ -1,47 +1,23 @@
-API
-===
+rubi package
+============
 
-.. automodule:: rubi
+Subpackages
+-----------
 
-.. autoclass:: Rubicon
-   :members:
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: rubi.contracts
+   rubi.contracts
+   rubi.network
+   rubi.types
 
-.. autoclass:: RubiconMarket
-   :members:
+Submodules
+----------
 
-.. autoclass:: RubiconMarketSigner
-   :members:
+rubi.client module
+------------------
 
-.. autoclass:: RubiconRouter
-   :members:
+.. toctree::
+   :maxdepth: 4
 
-.. autoclass:: RubiconRouterSigner
-   :members:
-
-.. autoclass:: FactoryAid
-   :members:
-
-.. autoclass:: FactoryAidSigner
-   :members:
-
-.. autoclass:: MarketAid
-   :members:
-
-.. autoclass:: MarketAidSigner
-   :members:
-
-.. automodule:: rubi.book
-
-.. autoclass:: Book
-   :members:
-
-.. automodule:: rubi.contracts.helper
-
-.. autoclass:: ERC20
-   :members:
-
-.. autoclass:: ERC20Signer
-   :members:
-
+   client
