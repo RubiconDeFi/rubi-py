@@ -8,20 +8,20 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 sphinx = "7.0.1"
-web3 = "^6.4.0"
-hexbytes = "^0.3.0"
-attributedict = "^0.3.0"
-eth-abi = "^4.0.0"
-pytest = "^7.3.1"
-eth-tester = "^0.9.0b1"
-py-evm = "^0.7.0a2"
-eth-utils = "^2.1.0"
-subgrounds = { version = "^1.6.0", extras = ["dash"] }
+web3 = "6.4.0"
+hexbytes = "0.3.0"
+attributedict = "0.3.0"
+eth-abi = "4.0.0"
+pytest = "7.3.1"
+eth-tester = "0.9.0b1"
+py-evm = "0.7.0a2"
+eth-utils = "2.1.0"
+subgrounds = { version = "1.6.0", extras = ["dash"] }
 
 [tool.poetry.group.dev.dependencies]
-python-dotenv = "^0.21.0"
-ipykernel = "^6.5.0"
-jupyter = "^1.0.0"
+python-dotenv = "0.21.1"
+ipykernel = "6.23.1"
+jupyter = "1.0.0"
 
 [tool.poetry.extras]
 docs = ["sphinx"]

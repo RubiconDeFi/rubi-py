@@ -2416,7 +2416,7 @@ docs = ["sphinx"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "0fc8c7ea26b24764814b9f9a6aa35885494032dc931725e88882d3b19d8fcff3"
+content-hash = "53d78b92bf8689669ef50f808511279ed5e1a100d85ec8e6cf515ad9f1793e99"
 
 [metadata.files]
 aiohttp = [
