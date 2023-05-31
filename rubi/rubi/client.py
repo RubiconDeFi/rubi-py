@@ -104,7 +104,11 @@ class Client:
     # pair methods
     ######################################################################
 
-    def add_pair(self, pair_name: str, base_asset_allowance: Decimal, quote_asset_allowance: Decimal) -> None:
+    def add_pair(
+            self, pair_name: str, 
+            base_asset_allowance: Optional[Decimal] = None, 
+            quote_asset_allowance: Optional[Decimal] = None
+        ) -> None:
         """Add a Pair to the Client. This method creates a Pair instance and adds it to the Client's internal
         _pairs dictionary. Additionally, this method updates the spender allowance of the Rubicon Market for both
         base asset and the quote asset.
@@ -129,6 +133,9 @@ class Client:
             number=quote_asset.allowance(owner=self.wallet, spender=self.market.address)
         )
 
+        if current_base_asset_allowance == Decimal("0") or current_quote_asset_allowance == Decimal("0"):
+            log.warning("allowance for base or quote asset is zero. this may cause issues when placing orders")
+
         self._pairs[f"{base}/{quote}"] = Pair(
             name=pair_name,
             base_asset=base_asset,
@@ -138,7 +145,7 @@ class Client:
         )
 
         # only edit allowance if client has signing rights
-        if self.wallet is not None and self.key is not None:
+        if self.wallet is not None and self.key is not None and base_asset_allowance and quote_asset_allowance:
             self.update_pair_allowance(
                 pair_name=pair_name,
                 new_base_asset_allowance=base_asset_allowance,
