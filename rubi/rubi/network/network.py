@@ -2,7 +2,6 @@ import json
 import os
 from enum import Enum
 from typing import Optional
-from pkg_resources import resource_exists, resource_stream
 
 import yaml
 from eth_typing import ChecksumAddress
@@ -114,17 +113,17 @@ class Network:
         """
         w3 = Web3(Web3.HTTPProvider(http_node_url))
 
-        network_name = NetworkId(w3.eth.chain_id).name.lower()
+        name_name = NetworkId(w3.eth.chain_id).name.lower()
 
-        resource_path = f"../network_config/{network_name}/network.yaml"
-        if not resource_exists('rubi', resource_path):
-            raise Exception(f"no network config found for {network_name}, there should be a corresponding folder in "
+        try:
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name_name}"
+
+            with open(f"{path}/network.yaml") as f:
+                network_data = yaml.safe_load(f)
+                return cls(path=path, w3=w3, custom_token_addresses_file=custom_token_addresses_file, **network_data)
+        except FileNotFoundError:
+            raise Exception(f"no network config found for {name_name}, there should be a corresponding folder in "
                             f"the network_config directory")
-        with resource_stream('rubi', resource_path) as f:
-            network_data = yaml.safe_load(f)
-            print(f"loaded network config for {network_name} from {resource_path}")
-
-        return cls(path=resource_path, w3=w3, custom_token_addresses_file=custom_token_addresses_file, **network_data)
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
@@ -175,11 +174,8 @@ class ContractRepr:
         """
         self.address = w3.to_checksum_address(address)
 
-        base_dir_path = os.path.dirname(path)
-        file_path = os.path.join(base_dir_path, "abis", f"{name}.json")
-
         try:
-            with resource_stream('rubi', file_path) as f:
+            with open(f"{path}/abis/{name}.json") as f:
                 self.abi = json.load(f)
         except FileNotFoundError:
             self.abi = None
