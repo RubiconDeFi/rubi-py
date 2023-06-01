@@ -92,7 +92,7 @@ class Network:
                                 f"{working_directory}/{custom_token_addresses_file}.")
             except AttributeError:
                 raise Exception(f"{custom_token_addresses_file} cannot be empty, should be in the format: "
-                                f"token_symbol: address, e.g. WETH: 0x4200000000000000000000000000000000000006")
+                                f"token_symbol: address, e.g. WETH: chain_specific_weth_address")
 
         self.token_addresses = checksummed_token_addresses
 
@@ -113,16 +113,16 @@ class Network:
         """
         w3 = Web3(Web3.HTTPProvider(http_node_url))
 
-        name_name = NetworkId(w3.eth.chain_id).name.lower()
+        network_name = NetworkId(w3.eth.chain_id).name.lower()
 
         try:
-            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name_name}"
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{network_name}"
 
             with open(f"{path}/network.yaml") as f:
                 network_data = yaml.safe_load(f)
                 return cls(path=path, w3=w3, custom_token_addresses_file=custom_token_addresses_file, **network_data)
         except FileNotFoundError:
-            raise Exception(f"no network config found for {name_name}, there should be a corresponding folder in "
+            raise Exception(f"no network config found for {network_name}, there should be a corresponding folder in "
                             f"the network_config directory")
 
     def __repr__(self):
