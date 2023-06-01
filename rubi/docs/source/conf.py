@@ -12,9 +12,9 @@ sys.path.insert(0, os.path.abspath("../.."))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'rubi'
-copyright = '2022, denver'
-author = 'denver'
-release = '0.4.2'
+copyright = '2022, Rubicon'
+author = 'Rubicon'
+release = '2.0.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

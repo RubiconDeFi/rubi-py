@@ -1,829 +1,553 @@
-import hexbytes
-import logging as log
-from eth_abi import decode
-from eth_abi.codec import ABICodec
-from web3._utils.events import get_event_data
+from typing import Optional, Tuple, List
 
-from rubi.contracts.helper import networks
+from eth_typing import ChecksumAddress
+from web3 import Web3
+from web3.contract import Contract
 
-class RubiconMarket: 
-    """this class represents the RubiconMarket.sol contract and has read functionality.
+from rubi.contracts.base_contract import BaseContract
+from rubi.network import Network
+
+
+class RubiconMarket(BaseContract):
+    """This class represents the RubiconMarket.sol contract and by default has read functionality.
+    If a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
 
     :param w3: Web3 instance
     :type w3: Web3
-    :param contract: an optional contract instance, if not provided, the contract will be instantiated using the address and abi from the networks.py file given the chain id of the w3 instance
-    :type contract: Web3 object, optional
+    :param contract: Contract instance
+    :type contract: Contract
+    :param wallet: a wallet address of the signer (optional, default is None)
+    :type wallet: Optional[ChecksumAddress]
+    :param key: the private key of the signer (optional, default is None)
+    :type key: Optional[str]
     """
 
-    def __init__(self, w3, contract=None):
+    def __init__(
+        self,
+        w3: Web3,
+        contract: Contract,
+        wallet: Optional[ChecksumAddress] = None,
+        key: Optional[str] = None
+    ) -> None:
         """constructor method"""
+        super().__init__(
+            w3=w3,
+            contract=contract,
+            wallet=wallet,
+            key=key
+        )
 
-        chain = w3.eth.chain_id
+    @classmethod
+    def from_network(
+        cls,
+        network: Network,
+        wallet: Optional[ChecksumAddress] = None,
+        key: Optional[str] = None
+    ) -> "RubiconMarket":
+        """Create a RubiconMarket instance based on a Network instance.
 
-        if contract:
-            self.contract = contract
-            self.address = self.contract.address
-        else:
-            network = networks[chain]()
-            self.contract = w3.eth.contract(address=network.market, abi=network.market_abi)
-            self.address = network.market
-
-        self.chain = chain
-        self.w3 = w3
-        self.log_make_abi = self.contract.events.LogMake._get_event_abi()
-        self.log_take_abi = self.contract.events.LogTake._get_event_abi()
-        self.log_kill_abi = self.contract.events.LogKill._get_event_abi()
-        self.offer_deleted_abi = self.contract.events.OfferDeleted._get_event_abi()
-        self.codec: ABICodec = w3.codec
+        :param network: A Network instance.
+        :type network: Network
+        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
+        :type wallet: Optional[ChecksumAddress]
+        :param key: Optional private key for the wallet (optional, default is None).
+        :type key: Optional[str]
+        :return: A RubiconMarket instance based on the Network instance.
+        :rtype: RubiconMarket
+        """
+        return cls.from_address_and_abi(
+            w3=network.w3,
+            address=network.rubicon.market.address,
+            contract_abi=network.rubicon.market.abi,
+            wallet=wallet,
+            key=key
+        )
 
     ######################################################################
     # read calls
     ######################################################################
 
-    # getBestOffer(sell_gem (address), buy_gem(address))
-    def get_best_offer(self, sell_gem, buy_gem):
-        """returns the best offer for the given pair of tokens
+    # makerFee() -> (uint265)
+    def get_maker_fee(self) -> int:
+        """Returns the maker fee on Rubicon
+
+        :return: the maker fee
+        :rtype: int
+        """
+
+        return self.contract.functions.makerFee().call()
+
+    # getOffer(id (uint256)) -> (uint256, address, uint256, address)
+    def get_offer(self, id: int) -> Tuple[int, ChecksumAddress, int, ChecksumAddress]:
+        """Returns the offer associated with the provided id
+
+        :param id: the id of the offer being queried
+        :type id: int
+        :return: a description of the offer as (pay_amt, pay_gem, buy_amt, buy_gem)
+        :rtype: Tuple[int, ChecksumAddress, int, ChecksumAddress]
+        """
+        return self.contract.functions.getOffer(id).call()
+
+    # getMinSell(pay_gem (address)) -> uint256
+    def get_min_sell(self, pay_gem: ChecksumAddress) -> int:
+        """Returns the minimum sell amount for an offer
+
+        :param pay_gem: the address of the token being sold by the maker
+        :type pay_gem: str
+        :return: the minimum amount of pay_gem that can be sold in an offer
+        :rtype: int
+        """
+
+        return self.contract.functions.getMinSell(pay_gem).call()
+
+    # getBestOffer(sell_gem (address), buy_gem (address)) -> uint256
+    def get_best_offer(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
+        """Returns the best offer for the given pair of tokens
 
         :param sell_gem: the address of the token being sold by the maker
         :type sell_gem: str
         :param buy_gem: the address of the token being bought by the maker
         :type buy_gem: str
         :return: the id of the best offer on the book, None if there is no offer on the book
-        :rtype: int, None
+        :rtype: int
         """
 
-        try: 
-            best_offer = self.contract.functions.getBestOffer(sell_gem, buy_gem).call()
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_gem = self.w3.to_checksum_address(sell_gem)
-            buy_gem = self.w3.to_checksum_address(buy_gem)
-            best_offer = self.contract.functions.getBestOffer(sell_gem, buy_gem).call()
-            # TODO: add error handling, local logging, and OT tracing
-            # TODO: when you pass in two zero addresses, it returns zero, is this a bug or a feature?
-                   # basically if you pass in any two addresses that don't have an offer, it returns zero
-                   # the question now is, do we want to return zero or do we want to return an errror
-                   # and handle this when the function then views the offer
-                   # prolly the latter...
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return best_offer
+        return self.contract.functions.getBestOffer(sell_gem, buy_gem).call()
 
-    # getBetterOffer(id (uint256))
-    def get_better_offer(self, id):
-        """returns the id of the offer that is better than the given offer
-
-        :param id: the id of the offer
-        :type id: int
-        :return: the id of the offer that is better than the given offer, none if there is no better offer
-        :rtype: int, None
-        """
-            
-        try: 
-            better_offer = self.contract.functions.getBetterOffer(id).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return better_offer
-
-    # getWorseOffer(id (uint256))
-    def get_worse_offer(self, id):
-        """returns the id of the offer that is worse than the given offer
+    # getWorseOffer(id (uint256)) -> uint256
+    def get_worse_offer(self, id: int) -> int:
+        """Returns the id of the offer that is worse than the given offer
 
         :param id: the id of the offer
         :type id: int
         :return: the id of the offer that is worse than the given offer, none if there is no worse offer
-        :rtype: int, None
-        """
-
-        try: 
-            worse_offer = self.contract.functions.getWorseOffer(id).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return worse_offer
-
-    # getBuyAmount(buy_gem (address), pay_gem (address), pay_amt (uint256))
-    def get_buy_amount(self, buy_gem, pay_gem, pay_amt):
-        """returns the amount of buy_gem that can be bought with pay_amt of pay_gem
-
-        :param buy_gem: the address of the token being bought
-        :type buy_gem: str
-        :param pay_gem: the address of the token being paid
-        :type pay_gem: str
-        :param pay_amt: the amount of pay_gem being paid, in the integer representation of the token amount
-        :type pay_amt: int
-        :return: the amount of buy_gem that can be bought with pay_amt of pay_gem, in the integer representation of the buy_gem amount
         :rtype: int
         """
 
-        try: 
-            buy_amount = self.contract.functions.getBuyAmount(buy_gem, pay_gem, pay_amt).call()
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            pay_gem = self.w3.to_checksum_address(pay_gem)
-            buy_gem = self.w3.to_checksum_address(buy_gem)
-            buy_amount = self.contract.functions.getBuyAmount(buy_gem, pay_gem, pay_amt).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return buy_amount
+        return self.contract.functions.getWorseOffer(id).call()
 
-    # getFeeBPS()
-    def get_fee_bps(self):
-        """returns the fee in basis points
-        
-        :return: the fee in basis points
-        :rtype: int
-        """
-
-        try: 
-            fee_bps = self.contract.functions.getFeeBPS().call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return fee_bps
-
-    # getOffer(id (uint256))
-    # returns: [pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address)] - pay gem is what the offerer is selling, buy gem is what the offerer is buying
-    def get_offer(self, id):
-        """returns the offer with the given id in the form of a list - [pay_amt, pay_gem, buy_amt, buy_gem]
+    # getBetterOffer(id (uint256)) -> uint256
+    def get_better_offer(self, id: int) -> int:
+        """Returns the id of the offer that is better than the given offer
 
         :param id: the id of the offer
         :type id: int
-        :return: the offer with the given id
-        :rtype: array
+        :return: the id of the offer that is better than the given offer, none if there is no better offer
+        :rtype: int
         """
 
-        try: 
-            offer = self.contract.functions.getOffer(id).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return offer
+        return self.contract.functions.getBetterOffer(id).call()
 
-    # getOfferCount(sell_gem (address), buy_gem (address))
-    def get_offer_count(self, sell_gem, buy_gem):
-        """returns the number of offers on the book for the given pair of tokens
+    # getOfferCount(sell_gem (address), buy_gem (address)) -> uint256
+    def get_offer_count(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
+        """Returns the number of offers for a token pair
 
         :param sell_gem: the address of the token being sold by the maker
-        :type sell_gem: str
+        :type sell_gem: ChecksumAddress
         :param buy_gem: the address of the token being bought by the maker
-        :type buy_gem: str
-        :return: the number of offers on the book for the given pair of tokens, None if there are no offers on the book for the given pair of tokens
-        :rtype: int, None 
+        :type buy_gem: ChecksumAddress
+        :return: the number of offers for a token pair, None if there are no offers for the token pair
+        :rtype: int
         """
 
-        try: 
-            offer_count = self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_gem = self.w3.to_checksum_address(sell_gem)
-            buy_gem = self.w3.to_checksum_address(buy_gem)
-            offer_count = self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return offer_count
+        return self.contract.functions.getOfferCount(sell_gem, buy_gem).call()
 
-    # getOwner(id (uint256))
-    def get_owner(self, id):
-        """returns the address of the owner of the offer with the given id
+    # calculateFees(amount (uint256), isPay (bool)) -> uint256
+    def calculate_fees(self, amount: int) -> int:
+        """Calculate fees on an amount
 
-        :param id: the id of the offer
-        :type id: int
-        :return: the address of the owner of the offer with the given id
-        :rtype: str
+        :param amount: the address of the token being bought
+        :type amount: int
+        :return: the calculated fees on the amount
+        :rtype: int
         """
+        return self.contract.functions.calculateFees(amount, True).call()
 
-        try: 
-            owner = self.contract.functions.getOwner(id).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return owner
+    # getBuyAmountWithFee(buy_gem (address), pay_gem (address), pay_amt (unit256)) ->
+    # (buy_amt (uint256), approvalAmount (uint256))
+    def get_buy_amount_with_fee(
+        self,
+        buy_gem: ChecksumAddress,
+        pay_gem: ChecksumAddress,
+        pay_amt: int
+    ) -> Tuple[int, int]:
+        """Returns the amount of the buy_gem you will receive if you send the pay_amt to the contract along with the
+        amount to approve for the transaction
 
-    # getPayAmount(pay_gem (address), buy_gem (address), buy_amt (uint256))
-    def get_pay_amount(self, pay_gem, buy_gem, buy_amt):
-        """returns the amount of pay_gem that can be paid to buy buy_amt of buy_gem
-        
-        :param pay_gem: the address of the token being paid
-        :type pay_gem: str
         :param buy_gem: the address of the token being bought
-        :type buy_gem: str
-        :param buy_amt: the amount of buy_gem being bought, in the integer representation of the token amount, returns None if the offer could not be filled
-        :type buy_amt: int, None
+        :type buy_gem: ChecksumAddress
+        :param pay_gem: the address of the token being sold
+        :type pay_gem: ChecksumAddress
+        :param pay_amt: the amount of the token being sold to receive the token being bought
+        :type pay_amt: int
+        :return: (buy_amt, approvalAmount) the amount of tokens that will be received and the amount to approve for the
+            transaction
+        :rtype: Tuple[int, int]
         """
+        return self.contract.functions.getBuyAmountWithFee(buy_gem, pay_gem, pay_amt).call()
 
-        try: 
-            pay_amount = self.contract.functions.getPayAmount(pay_gem, buy_gem, buy_amt).call()
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            pay_gem = self.w3.to_checksum_address(pay_gem)
-            buy_gem = self.w3.to_checksum_address(buy_gem)
-            pay_amount = self.contract.functions.getPayAmount(pay_gem, buy_gem, buy_amt).call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return pay_amount
+    # getPayAmountWithFee(pay_gem (address), buy_gem (address), buy_amt (unit256)) ->
+    # (buy_amt (uint256), approvalAmount (uint256))
+    def get_pay_amount_with_fee(
+        self,
+        pay_gem: ChecksumAddress,
+        buy_gem: ChecksumAddress,
+        buy_amt: int
+    ) -> Tuple[int, int]:
+        """Returns the amount of the pay_gem you will need to pay to the contract to receive the buy_amt along with the
+        amount to approve for the transaction
 
-    # matchingEnabled()
-    def matching_enabled(self):
-        """returns whether or not matching is enabled, True if matching is enabled, False if matching is disabled
-
-        :return: whether or not matching is enabled
-        :rtype: bool
+        :param buy_gem: the address of the token being bought
+        :type buy_gem: ChecksumAddress
+        :param pay_gem: the address of the token being sold
+        :type pay_gem: ChecksumAddress
+        :param buy_amt: the amount of the token being bought
+        :type buy_amt: int
+        :return: (pay_amt, approvalAmount) the amount of tokens that will be paid and the amount to approve for the
+            transaction
+        :rtype: Tuple[int, int]
         """
-
-        try: 
-            matching_enabled = self.contract.functions.matchingEnabled().call()
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-        return matching_enabled
-
-    ######################################################################
-    # events & helpers
-    ######################################################################
-
-    # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
-    # the graph does something similar to this when you run codegen, it should be a simple string manipulation problem from the abis 
-    def get_log_make_hash(self):
-        return self.w3.keccak(text="LogMake(bytes32,bytes32,address,address,address,uint128,uint128,uint64)").hex()
-
-    # TODO: determine if this is the right assumtption to make about how the data is being received 
-    # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
-    # i feel like this could be done much faster... 
-    def stream_log_make(self, data): 
-
-        # convert the topics, transaction hash, and block hash to hex strings
-        data['params']['result']['topics'] = [hexbytes.HexBytes(topic) for topic in data['params']['result']['topics']]
-        data['params']['result']['transactionHash'] = hexbytes.HexBytes(data['params']['result']['transactionHash'])
-        data['params']['result']['blockHash'] = hexbytes.HexBytes(data['params']['result']['blockHash'])
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.log_make_abi, data['params']['result'])
-
-            # decode the offer id
-            # TODO: there is probably a way to do this that does not hardcode the type of the id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass an offer back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            offer = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],  
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['pay_amt'],
-                    'buy_amt': event['args']['buy_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'owner': event['args']['maker']
-            }
-            return offer
-
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None 
-
-    def parse_log_make(self, log): 
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.log_make_abi, log)
-
-            # decode the offer id
-            # TODO: there is probably a way to do this that does not hardcode the type of the id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass an offer back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            offer = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],  
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['pay_amt'],
-                    'buy_amt': event['args']['buy_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'owner': event['args']['maker']
-            }
-            return offer
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None 
-
-
-    # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
-    # the graph does something similar to this when you run codegen, it should be a simple string manipulation problem from the abis 
-    def get_log_take_hash(self):
-        return self.w3.keccak(text="LogTake(bytes32,bytes32,address,address,address,address,uint128,uint128,uint64)").hex()
-
-    # TODO: determine if this is the right assumtption to make about how the data is being received 
-    # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
-    # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_take(self, data):
-
-        # convert the topics, transaction hash, and block hash to hex strings
-        data['params']['result']['topics'] = [hexbytes.HexBytes(topic) for topic in data['params']['result']['topics']]
-        data['params']['result']['transactionHash'] = hexbytes.HexBytes(data['params']['result']['transactionHash'])
-        data['params']['result']['blockHash'] = hexbytes.HexBytes(data['params']['result']['blockHash'])
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.log_take_abi, data['params']['result'])
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            trade = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['take_amt'],
-                    'buy_amt': event['args']['give_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'maker': event['args']['maker'],
-                    'taker': event['args']['taker']
-            }
-            return trade
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-        
-    def parse_log_take(self, log):
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.log_take_abi, log)
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            trade = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['take_amt'],
-                    'buy_amt': event['args']['give_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'maker': event['args']['maker'],
-                    'taker': event['args']['taker']
-            }
-            return trade
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-    # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
-    # the graph does something similar to this when you run codegen, it should be a simple string manipulation problem from the abis 
-    def get_log_kill_hash(self): 
-        return self.w3.keccak(text="LogKill(bytes32,bytes32,address,address,address,uint128,uint128,uint64)").hex()
-
-    # TODO: determine if this is the right assumtption to make about how the data is being received 
-    # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
-    # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_log_kill(self, data): 
-
-        # convert the topics, transaction hash, and block hash to hex strings
-        data['params']['result']['topics'] = [hexbytes.HexBytes(topic) for topic in data['params']['result']['topics']]
-        data['params']['result']['transactionHash'] = hexbytes.HexBytes(data['params']['result']['transactionHash'])
-        data['params']['result']['blockHash'] = hexbytes.HexBytes(data['params']['result']['blockHash'])
-
-        # get the event data from the log
-        try:  
-            event = get_event_data(self.codec, self.log_kill_abi, data['params']['result'])
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the killed trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            kill = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['pay_amt'],
-                    'buy_amt': event['args']['buy_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'maker': event['args']['maker']
-            }
-            return kill
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-    
-    def parse_log_kill(self, log):
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.log_kill_abi, log)
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the killed trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            kill = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event'],
-                    'pay_gem': event['args']['pay_gem'],
-                    'buy_gem': event['args']['buy_gem'],
-                    'pay_amt': event['args']['pay_amt'],
-                    'buy_amt': event['args']['buy_amt'],
-                    'timestamp': event['args']['timestamp'],
-                    'maker': event['args']['maker']
-            }
-            return kill
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-    # TODO: today the event signature is hardcoded, but we should be able to get it from the contract
-    # the graph does something similar to this when you run codegen, it should be a simple string manipulation problem from the abis 
-    def get_offer_deleted_hash(self): 
-        return self.w3.keccak(text="OfferDeleted(bytes32)").hex()
-
-    # TODO: determine if this is the right assumtption to make about how the data is being received 
-    # this assumes that the function is being used directly in the context of being passed raw data from a websocket stream that has been loaded and converted to an AttributeDict
-    # TODO: i feel like this could be done much faster... tracing will tell us
-    def stream_offer_deleted(self, data): 
-
-        # convert the topics, transaction hash, and block hash to hex strings
-        data['params']['result']['topics'] = [hexbytes.HexBytes(topic) for topic in data['params']['result']['topics']]
-        data['params']['result']['transactionHash'] = hexbytes.HexBytes(data['params']['result']['transactionHash'])
-        data['params']['result']['blockHash'] = hexbytes.HexBytes(data['params']['result']['blockHash'])
-
-        # get the event data from the log
-        try:  
-            event = get_event_data(self.codec, self.offer_deleted_abi, data['params']['result'])
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the deleted trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            deleted = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event']
-            }
-            return deleted
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-    
-    def parse_offer_deleted(self, log):
-
-        # get the event data from the log
-        try:
-            event = get_event_data(self.codec, self.offer_deleted_abi, log)
-
-            # decode the offer id
-            offer_id = decode(['uint256'], event['args']['id'])[0]
-
-            # now pass the killed trade back in the form of a dictionary
-            # TODO: this is probably not the most performant, we will optimize later
-            deleted = {
-                    'id': offer_id,
-                    'txn': event['transactionHash'].hex(),
-                    'event': event['event']
-            }
-            return deleted
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-class RubiconMarketSigner(RubiconMarket): 
-    """this class represents the RubiconMarket.sol contract and is a super class of the RubiconMarket class. this class has read functionality and inherents the read functionality of the RubiconMarket class. 
-
-    :param w3: a web3 instance
-    :type w3: Web3
-    :param wallet: the signers wallet address
-    :type wallet: str
-    :param key: the signers private key
-    :type key: str
-    :param contract: an optional parameter that allows you to pass in a contract instance, if none the contract will be instantiated from the rolodex.py file
-    :type contract_address: str, optional
-    """
-
-    def __init__(self, w3, wallet, key, contract=None):
-        super().__init__(w3, contract)
-        self.wallet = wallet
-        self.key = key
+        return self.contract.functions.getPayAmountWithFee(buy_gem, pay_gem, buy_amt).call()
 
     ######################################################################
     # write calls
     ######################################################################
 
-    # buy(id (uint256), amount (uint256))
-    # the user must put in the amount of pay_gem that they want and will be charged the amount of buy_gem that the offer is asking for
-    def buy(self, id, amount, nonce=None, gas=3000000, gas_price=None):
-        """buy the amount of pay_gem from the offer with the id, in exchange for the amount of buy_gem at the price of the offer
+    # offer offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address), pos (uint256),
+    # owner (address), recipient (address)) -> uint256
+    def offer(
+        self,
+        pay_amt: int,
+        pay_gem: ChecksumAddress,
+        buy_amt: int,
+        buy_gem: ChecksumAddress,
+        pos: int = 0,
+        rounding: bool = True,
+        owner: Optional[ChecksumAddress] = None,
+        recipient: Optional[ChecksumAddress] = None,
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
-        :param id: id of the offer
-        :type id: int
-        :param amount: amount of pay_gem to buy, in the integer representation of the token
-        :type amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 3000000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the buy transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
-        else:
-            txn_nonce = nonce
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
-        
-        try:
-            buy = self.contract.functions.buy(id, amount).build_transaction(txn)
-            buy = self.w3.eth.account.sign_transaction(buy, self.key)
-            self.w3.eth.send_raw_transaction(buy.rawTransaction)
-
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(buy.hash)['status'] == 0:
-                    log.error(f'buy transaction failed: {buy.hash.hex()}')
-                    raise SystemExit
-
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-        return buy  
-
-    # buyAllAmount(buy_gem (address), buy_amt (uint256), pay_gem (address), max_fill_amount (uint256))
-        # TODO: add clear explanation for function names and parameters
-        # buy_gem is the token you want to buy
-        # buy_amt is the amount of the token you want to buy
-        # pay_gem is the token you want to pay with
-        # max_fill is the maximum amount of the token you want to pay with
-    def buy_all_amount(self, buy_gem, buy_amt, pay_gem, max_fill_amount, nonce=None, gas=3000000, gas_price=None):
-        """buy the buy_amt of the buy_gem token in exchange for the pay_gem token only if it does not exceed the max_fill_amount of the pay_gem token
-        
-        :param buy_gem: address of the token you want to buy
-        :type buy_gem: str
-        :param buy_amt: amount of the token you want to buy, in the integer representation of the token
-        :type buy_amt: int
-        :param pay_gem: address of the token you want to pay with
-        :type pay_gem: str
-        :param max_fill_amount: maximum amount of the pay_gem token you want to pay with, in the integer representation of the token
-        :type max_fill_amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 3000000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the buyAllAmount transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
-        else:
-            txn_nonce = nonce
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
-
-        try: 
-            buy_all_amount = self.contract.functions.buyAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount).build_transaction(txn)
-            buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
-
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(buy_all_amount.hash)['status'] == 0:
-                    log.error(f'buy_all_amount transaction {buy_all_amount.hash.hex()} failed')
-                    raise SystemExit
-
-        except ValueError: 
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            buy_all_amount = self.contract.functions.buyAllAmount(self.w3.to_checksum_address(buy_gem), buy_amt, self.w3.to_checksum_address(pay_gem), max_fill_amount).build_transaction(txn)
-            buy_all_amount = self.w3.eth.account.sign_transaction(buy_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(buy_all_amount.rawTransaction)
-            
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(buy_all_amount.hash)['status'] == 0:
-                    log.error(f'buy_all_amount transaction {buy_all_amount.hash.hex()} failed')
-                    raise SystemExit
-
-        except Exception as e: 
-            log.error(e, exc_info=True)
-            return None
-        
-        return buy_all_amount
-
-    # cancel(id (uint256))
-    def cancel(self, id, nonce=None, gas=3000000, gas_price=None):
-        """cancel the offer with the id, user can only cancel offers they have created
-
-        :param id: id of the offer
-        :type id: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 3000000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the cancel transaction, returns None if the transaction fails
-        :rtype: dict, None
-        """
-
-        if nonce is None:
-            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
-        else:
-            txn_nonce = nonce
-
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
-
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
-
-        try:
-            cancel = self.contract.functions.cancel(id).build_transaction(txn)
-            cancel = self.w3.eth.account.sign_transaction(cancel, self.key)
-            self.w3.eth.send_raw_transaction(cancel.rawTransaction)
-
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(cancel.hash)['status'] == 0:
-                    log.error(f'cancel transaction {cancel.hash.hex()} failed')
-                    raise SystemExit
-
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-        return cancel
-
-    # offer(pay_amt (uint256), pay_gem (address), buy_amt (uint256), buy_gem (address), pos (uint256))
-    def offer(self, pay_amt, pay_gem, buy_amt, buy_gem, pos=0, nonce=None, gas=3000000, gas_price=None):
-        """create an offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
-
-        :param pay_amt: amount of the pay_gem token you want to pay with, in the integer representation of the token
+        :param pay_amt: the amount of the token being sold
         :type pay_amt: int
-        :param pay_gem: address of the token you want to pay with
-        :type pay_gem: str
-        :param buy_amt: amount of the buy_gem token you want to buy, in the integer representation of the token
+        :param pay_gem: the address of the token being sold
+        :type pay_gem: ChecksumAddress
+        :param buy_amt: the amount of the token being bought
         :type buy_amt: int
-        :param buy_gem: address of the token you want to buy
-        :type buy_gem: str
-        :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want to insert the offer at
-        :type pos: int, optional
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 3000000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the offer transaction, returns None if the transaction fails
-        :rtype: dict, None    
+        :param buy_gem: the address of the token being bought
+        :type buy_gem: ChecksumAddress
+        :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
+            to insert the offer at
+        :type pos: int
+        :param rounding: add rounding to match "close enough" orders, defaults to True
+        :type: rounding: bool
+        :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class.
+            (optional, default is None)
+        :type owner: Optional[ChecksumAddress]
+        :param recipient: the recipient of the offer's fill, defaults to the wallet that was provided in instantiating
+            this class (optional, default is None)
+        :type recipient: Optional[ChecksumAddress]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
         """
 
-        if nonce is None:
-            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
-        else:
-            txn_nonce = nonce
+        if not self.signing_permissions:
+            raise Exception(f"cannot write transaction without signing rights. "
+                            f"re-instantiate {self.__class__} with a wallet and private key")
 
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
+        owner = owner if owner is not None else self.wallet
+        recipient = recipient if recipient is not None else self.wallet
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
+        offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, owner, recipient)
 
-        try:
-            offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos).build_transaction(txn)
-            offer = self.w3.eth.account.sign_transaction(offer, self.key)
-            self.w3.eth.send_raw_transaction(offer.rawTransaction)
+        return self._default_transaction_handler(
+            instantiated_contract_function=offer,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
 
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(offer.hash)['status'] == 0:
-                    log.error(f'offer transaction {offer.hash.hex()} failed')
-                    raise SystemExit
+    # cancel(id (uint256)) -> bool
+    def cancel(
+        self,
+        id: int,
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Cancel an offer by offer id
 
-        except ValueError:
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            offer = self.contract.functions.offer(pay_amt, self.w3.to_checksum_address(pay_gem), buy_amt, self.w3.to_checksum_address(buy_gem), pos).build_transaction(txn)
-            offer = self.w3.eth.account.sign_transaction(offer, self.key)
-            self.w3.eth.send_raw_transaction(offer.rawTransaction)
+        :param id: the id of the offer to cancel
+        :type id: int
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
+        """
 
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(offer.hash)['status'] == 0:
-                    log.error(f'offer transaction {offer.hash.hex()} failed')
-                    raise SystemExit
-        
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
+        cancel = self.contract.functions.cancel(id)
 
-        return offer
+        return self._default_transaction_handler(
+            instantiated_contract_function=cancel,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
 
-    # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256))
-    def sell_all_amount(self, pay_gem, pay_amt, buy_gem, min_fill_amount, nonce=None, gas=3000000, gas_price=None):
-        """sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the min_fill_amount of the buy_gem token
+    # batchOffer(payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[])) -> uint256[]
+    def batch_offer(
+        self,
+        pay_amts: List[int],
+        pay_gems: List[ChecksumAddress],
+        buy_amts: List[int],
+        buy_gems: List[ChecksumAddress],
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Batch the placement of a set of offers in one transaction
 
-        :param pay_gem: address of the token you want to pay with
-        :type pay_gem: str
-        :param pay_amt: amount of the pay_gem token you want to pay with, in the integer representation of the token
+        :param pay_amts: the amounts of the token being sold
+        :type pay_amts: List[int]
+        :param pay_gems: the addresses of the tokens being sold
+        :type pay_gems: List[ChecksumAddress]
+        :param buy_amts: the amounts of the token being bought
+        :type buy_amts: List[int]
+        :param buy_gems: the addresses of the tokens being bought
+        :type buy_gems: List[ChecksumAddress]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
+        """
+        if not (len(pay_amts) == len(pay_gems) == len(buy_amts) == len(buy_gems)):
+            raise Exception("mismatches lengths in pay_amts, pay_gems, buy_amts and buy_gems")
+
+        batch_offer = self.contract.functions.batchOffer(pay_amts, pay_gems, buy_amts, buy_gems)
+
+        return self._default_transaction_handler(
+            instantiated_contract_function=batch_offer,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
+
+    # batchCancel (ids (uint256[])) -> bool[]
+    def batch_cancel(
+        self,
+        ids: List[int],
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Cancel a set offer by offer id in a single transaction
+
+        :param ids: the ids of the offers to cancel
+        :type ids: List[int]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
+        """
+        cancels = self.contract.functions.cancel(ids)
+
+        return self._default_transaction_handler(
+            instantiated_contract_function=cancels,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
+
+    # batchRequote (ids (uint256[]), payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[]))
+    # -> uint256[]
+    def batch_requote(
+        self,
+        ids: List[int],
+        pay_amts: List[int],
+        pay_gems: List[ChecksumAddress],
+        buy_amts: List[int],
+        buy_gems: List[ChecksumAddress],
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Batch update a set of offers in a single transaction and return a list of new offer ids
+
+        :param ids: the ids of the offers to cancel
+        :type ids: List[int]
+        :param pay_amts: the amounts of the token being sold
+        :type pay_amts: List[int]
+        :param pay_gems: the addresses of the tokens being sold
+        :type pay_gems: List[ChecksumAddress]
+        :param buy_amts: the amounts of the token being bought
+        :type buy_amts: List[int]
+        :param buy_gems: the addresses of the tokens being bought
+        :type buy_gems: List[ChecksumAddress]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
+        """
+
+        batch_requote = self.contract.functions.batchRequote(ids, pay_amts, pay_gems, buy_amts, buy_gems)
+
+        return self._default_transaction_handler(
+            instantiated_contract_function=batch_requote,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
+
+    # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256)) -> uint256
+    def sell_all_amount(
+        self,
+        pay_gem: ChecksumAddress,
+        pay_amt: int,
+        buy_gem: ChecksumAddress,
+        min_fill_amount: int,
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
+        min_fill_amount of the buy_gem token
+
+        :param pay_gem: the address of the tokens being sold
+        :type pay_gem: ChecksumAddress
+        :param pay_amt: the amount of the token being sold
         :type pay_amt: int
-        :param buy_gem: address of the token you want to buy
-        :type buy_gem: str
-        :param min_fill_amount: minimum amount of the buy_gem token you want to receive, in the integer representation of the token
+        :param buy_gem: the address of the tokens being bought
+        :type buy_gem: ChecksumAddress
+        :param min_fill_amount: minimum amount of the buy_gem token you want to receive
         :type min_fill_amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
-        :type nonce: int, optional
-        :param gas: gas limit of the transaction, defaults to a value of 3000000
-        :type gas: int, optional
-        :param gas_price: gas price of the transaction, defaults to the gas price of the chain
-        :type gas_price: int, optional
-        :return: the transaction object of the sellAllAmount transaction, returns None if the transaction fails
-        :rtype: dict, None
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
         """
+        sell_all_amount = self.contract.functions.sellAllAmount(pay_gem, pay_amt, buy_gem, min_fill_amount)
 
-        if nonce is None:
-            txn_nonce = self.w3.eth.get_transaction_count(self.wallet)
-        else:
-            txn_nonce = nonce
+        return self._default_transaction_handler(
+            instantiated_contract_function=sell_all_amount,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )
 
-        if gas_price is None:
-            gas_price = self.w3.eth.gas_price
+    # buyAllAmount(buy_gem (address), buy_amt (uint256), pay_gem (address), max_fill_amount (uint256)) -> uint256
+    def buy_all_amount(
+        self,
+        buy_gem: ChecksumAddress,
+        buy_amt: int,
+        pay_gem: ChecksumAddress,
+        max_fill_amount: int,
+        nonce: Optional[int] = None,
+        gas: int = 350000,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None
+    ) -> str:
+        """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
+        max_fill_amount of the pay_gem token
 
-        txn = {'chainId': self.chain, 'gas' : gas, 'gasPrice': gas_price, 'nonce': txn_nonce}
+        :param buy_gem: the address of the tokens being bought
+        :type buy_gem: ChecksumAddress
+        :param buy_amt: the amount of the token being bought
+        :type buy_amt: int
+        :param pay_gem: the address of the tokens being sold
+        :type pay_gem: ChecksumAddress
+        :param max_fill_amount: maximum amount of the pay_gem token you want to pay
+        :type max_fill_amount: int
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
+        :type gas: int
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: transaction hash
+        :rtype: str
+        """
+        buy_all_amount = self.contract.functions.sellAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount)
 
-        try:
-            sell_all_amount = self.contract.functions.sellAllAmount(pay_gem, pay_amt, buy_gem, min_fill_amount).build_transaction(txn)
-            sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
-
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(sell_all_amount.hash)['status'] == 0:
-                    log.error(f'sell_all_amount transaction {sell_all_amount.hash.hex()} failed')
-                    raise SystemExit
-
-        except ValueError:
-            print('most likely a checksum error... retrying with checksummed addresses')
-            log.warning('most likely a checksum error... retrying with checksummed addresses')
-            sell_all_amount = self.contract.functions.sellAllAmount(self.w3.to_checksum_address(pay_gem), pay_amt, self.w3.to_checksum_address(buy_gem), min_fill_amount).build_transaction(txn)
-            sell_all_amount = self.w3.eth.account.sign_transaction(sell_all_amount, self.key)
-            self.w3.eth.send_raw_transaction(sell_all_amount.rawTransaction)
-
-            # if a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before continuing
-            if nonce is None:
-                if self.w3.eth.wait_for_transaction_receipt(sell_all_amount.hash)['status'] == 0:
-                    log.error(f'sell_all_amount transaction {sell_all_amount.hash.hex()} failed')
-                    raise SystemExit
-
-        except Exception as e:
-            log.error(e, exc_info=True)
-            return None
-
-        return sell_all_amount
+        return self._default_transaction_handler(
+            instantiated_contract_function=buy_all_amount,
+            gas=gas,
+            nonce=nonce,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas
+        )

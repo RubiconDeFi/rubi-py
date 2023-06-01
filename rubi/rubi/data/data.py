@@ -5,6 +5,7 @@ from rubi.data.sources.helper import Gas, Price, networks
 from rubi.data.processing.user import User, SuperUser
 from rubi.data.processing.aid import AidProcessing
 
+# TODO this needs significant love.
 class Data: 
     """this class acts as the main access point to a variety of data and data tooling for the Rubicon protocol. it acts as a data processing layer built using the subgrounds library and the subgraphs maintained at the follwing repo: https://github.com/RubiconDeFi/rubi-subgraphs
     """

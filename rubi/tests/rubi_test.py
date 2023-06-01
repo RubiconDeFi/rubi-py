@@ -7,6 +7,8 @@ from eth_utils import to_wei
 from eth_tester import PyEVMBackend
 from web3 import EthereumTesterProvider, Web3
 
+# TODO: currently these tests are all borked as they tested the old implementation of the client. They should be updated
+#  to work with the new client.
 from rubi import Rubicon
 
 # the main structural choice here is the utilization of rubi's ability to pass in a contract object to initiliaze the class when the network (in this case EthereumTesterProvider) does not have data in the rolodex

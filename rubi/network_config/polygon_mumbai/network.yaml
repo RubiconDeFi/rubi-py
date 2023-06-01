@@ -1,0 +1,19 @@
+name: "Polygon Mumbai"
+chain_id: 80001
+currency: "MATIC"
+rpc_url: "https://rpc-mumbai.maticvigil.com/"
+explorer_url: "https://mumbai.polygonscan.com/"
+
+rubicon:
+  market:
+    address: "0x10418D9e730fa659b0Baf0b640ee41FcF4EA2aaE"
+  router:
+    address: "0xbA81dF0251A017C2fB687e5469a897529442f008"
+
+token_addresses:
+  WETH: "0xE412a307764cCBE02E055e926516ebD74230cfE0"
+  USDC: "0xcC5f8571D858DAD7fA2238FB9df4Ad384493013C"
+  TEST:	"0x6aeda41c98ab5399044fc36162B57d39c13b658a"
+  USDT:	"0x97fcdaA045F4a3Bc8Fc7ad721EFf38d66B234C7F"
+  DAI:	"0xAb647DF8262580c1caB61Eb165B22616365d3C67"
+  WBTC:	"0x639C6472C45037F7aA868729dFfF69eB3843f1A0"
