@@ -37,7 +37,7 @@ client = Client.from_http_node_url(
 )
 
 # add the WETH/USDC pair to the client
-client.add_pair(pair_name="WETH/USDC", base_asset_allowance=Decimal("0.2"), quote_asset_allowance=Decimal("1000"))
+client.add_pair(pair_name="WETH/USDC", base_asset_allowance=Decimal("1"), quote_asset_allowance=Decimal("2000"))
 
 # start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
 client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
