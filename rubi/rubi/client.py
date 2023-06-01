@@ -40,12 +40,12 @@ class Client:
 
     :param network: A Network instance
     :type network: Network
-    :param message_queue: Optional message queue for processing events.
-    :type message_queue: Queue
-    :param wallet: Wallet address.
-    :type wallet: ChecksumAddress
-    :param key: Key for the wallet.
-    :type key: str
+    :param message_queue: Optional message queue for processing events (optional, default is None).
+    :type message_queue: Optional[Queue]
+    :param wallet: Wallet address (optional, default is None).
+    :type wallet: Optional[ChecksumAddress]
+    :param key: Key for the wallet (optional, default is None).
+    :type key: Optional[str]
     """
 
     def __init__(
@@ -84,11 +84,11 @@ class Client:
         :type network_name: NetworkName
         :param http_node_url: URL of the HTTP node.
         :type http_node_url: str
-        :param message_queue: Optional message queue for processing events.
+        :param message_queue: Optional message queue for processing events (optional, default is None).
         :type message_queue: Optional[Queue]
-        :param wallet: Wallet address (optional).
+        :param wallet: Wallet address (optional, default is None).
         :type wallet: Optional[Union[ChecksumAddress, str]]
-        :param key: Key for the wallet (optional).
+        :param key: Key for the wallet (optional, default is None).
         :type key: str
         """
         network = Network.from_config(name=network_name, http_node_url=http_node_url)
@@ -104,17 +104,21 @@ class Client:
     # pair methods
     ######################################################################
 
-    def add_pair(self, pair_name: str, base_asset_allowance: Decimal, quote_asset_allowance: Decimal) -> None:
+    def add_pair(
+            self, pair_name: str, 
+            base_asset_allowance: Optional[Decimal] = None, 
+            quote_asset_allowance: Optional[Decimal] = None
+        ) -> None:
         """Add a Pair to the Client. This method creates a Pair instance and adds it to the Client's internal
         _pairs dictionary. Additionally, this method updates the spender allowance of the Rubicon Market for both
         base asset and the quote asset.
 
         :param pair_name: Name of the Pair in the format "<base_asset>/<quote_asset>".
         :type pair_name: str
-        :param base_asset_allowance: Allowance for the base asset.
-        :type base_asset_allowance: Decimal
-        :param quote_asset_allowance: Allowance for the quote asset.
-        :type quote_asset_allowance: Decimal
+        :param base_asset_allowance: Allowance for the base asset (optional, default is None).
+        :type base_asset_allowance: Optional[Decimal]
+        :param quote_asset_allowance: Allowance for the quote asset (optional, default is None).
+        :type quote_asset_allowance: Optional[Decimal]
         """
 
         base, quote = pair_name.split("/")
@@ -129,6 +133,9 @@ class Client:
             number=quote_asset.allowance(owner=self.wallet, spender=self.market.address)
         )
 
+        if current_base_asset_allowance == Decimal("0") or current_quote_asset_allowance == Decimal("0"):
+            log.warning("allowance for base or quote asset is zero. this may cause issues when placing orders")
+
         self._pairs[f"{base}/{quote}"] = Pair(
             name=pair_name,
             base_asset=base_asset,
@@ -138,7 +145,7 @@ class Client:
         )
 
         # only edit allowance if client has signing rights
-        if self.wallet is not None and self.key is not None:
+        if self.wallet is not None and self.key is not None and base_asset_allowance and quote_asset_allowance:
             self.update_pair_allowance(
                 pair_name=pair_name,
                 new_base_asset_allowance=base_asset_allowance,
@@ -326,10 +333,10 @@ class Client:
         :type pair_name: str
         :param event_type: Type of the event to listen for.
         :type event_type: Type[BaseEvent]
-        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters.
+        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters (optional, default is None).
         :type filters: Optional[Dict[str, Any]], optional
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
-            self._default_event_handler.
+            self._default_event_handler (optional, default is None).
         :type event_handler: Optional[Callable], optional
         :param poll_time: Polling interval in seconds, defaults to 2 seconds.
         :type poll_time: int, optional
@@ -381,6 +388,8 @@ class Client:
     ######################################################################
     # TODO: would be cool if these methods could understand how much they are spending on gas (use TxReceipt)
     #  also need a way to return the order id for limit orders
+    #  we could listen for the event and return the order id along with relevant gas spend information 
+    #  one thing we will need to be conscious of and figure out how to handle is the fact that gas is caclulated in a variety of ways depending upon the chain 
 
     def place_market_order(self, transaction: Transaction) -> str:
         """Place a market order transaction by executing the specified transaction object. The transaction

@@ -16,9 +16,9 @@ class RubiconRouter(BaseContract):
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param wallet: a wallet address of the signer (optional)
+    :param wallet: a wallet address of the signer (optional, default is None)
     :type wallet: Optional[ChecksumAddress]
-    :param key: the private key of the signer (optional)
+    :param key: the private key of the signer (optional, default is None)
     :type key: Optional[str]
     """
 
@@ -48,9 +48,9 @@ class RubiconRouter(BaseContract):
 
         :param network: A Network instance.
         :type network: Network
-        :param wallet: Optional wallet address to use for interacting with the contract.
+        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None). 
         :type wallet: Optional[ChecksumAddress]
-        :param key: Optional private key for the wallet.
+        :param key: Optional private key for the wallet (optional, default is None).
         :type key: Optional[str]
         :return: A RubiconRouter instance based on the Network instance.
         :rtype: RubiconRouter
@@ -254,15 +254,15 @@ class RubiconRouter(BaseContract):
         :type buy_amts_min: List[int]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
-        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
+        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce (optional, default is None).
         :type nonce: Optional[int]
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
-            + (2 * base fee per gas of latest block).
+            + (2 * base fee per gas of latest block) (optional, default is None).
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
-            estimate the max_priority_fee_per_gas.
+            estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: Transaction hash.
         :rtype: str
@@ -301,15 +301,15 @@ class RubiconRouter(BaseContract):
         :type route: List[ChecksumAddress]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
-        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
+        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce (optional, default is None).
         :type nonce: Optional[int]
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
-            + (2 * base fee per gas of latest block).
+            + (2 * base fee per gas of latest block) (optional, default is None).
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
-            estimate the max_priority_fee_per_gas.
+            estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: Transaction hash.
         :rtype: str
