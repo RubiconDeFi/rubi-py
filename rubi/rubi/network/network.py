@@ -1,21 +1,21 @@
 import json
 import os
 from enum import Enum
+from typing import Optional
 
 import yaml
 from eth_typing import ChecksumAddress
 from web3 import Web3
 
 
-class NetworkName(Enum):
+class NetworkId(Enum):
     # MAINNET
-    OPTIMISM = "optimism"
-    ARBITRUM = "abritrum"
+    OPTIMISM = 10
 
     # TESTNET
-    OPTIMISM_GOERLI = "optimism_goerli"
-    ARBITRUM_GOERLI = "abritrum_goerli"
-    POLYGON_MUMBAI = "polygon_mumbai"
+    OPTIMISM_GOERLI = 420
+    ARBITRUM_GOERLI = 421613
+    POLYGON_MUMBAI = 80001
 
 
 class Network:
@@ -34,8 +34,10 @@ class Network:
         rpc_url: str,
         explorer_url: str,
         rubicon: dict,
-        token_addresses: dict
-    ) -> None:
+        token_addresses: dict,
+        # optional custom token config file from the user
+        custom_token_addresses_file: Optional[str] = None
+    ):
         """Initializes a Network instance.
 
         :param path: The path to the network configuration.
@@ -56,6 +58,10 @@ class Network:
         :type rubicon: dict
         :param token_addresses: Dictionary containing token addresses on the network.
         :type token_addresses: dict
+        :param custom_token_addresses_file: The name of a yaml file (relative to the current working directory) with
+            custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
+            (optional, default is None).
+        :type custom_token_addresses_file: Optional[str]
         """
         self.name = name
         self.chain_id = chain_id
@@ -70,29 +76,53 @@ class Network:
         for k, v in token_addresses.items():
             checksummed_token_addresses[k] = self.w3.to_checksum_address(v)
 
+        if custom_token_addresses_file:
+            working_directory = os.getcwd()
+
+            if not (custom_token_addresses_file.endswith(".yaml") or custom_token_addresses_file.endswith(".yml")):
+                raise Exception(f"token_config_file: {custom_token_addresses_file} must be a yaml file.")
+
+            try:
+                with open(f"{working_directory}/{custom_token_addresses_file}") as f:
+                    custom_token_addresses = yaml.safe_load(f)
+                    for k, v in custom_token_addresses.items():
+                        checksummed_token_addresses[k] = self.w3.to_checksum_address(v)
+            except FileNotFoundError:
+                raise Exception(f"could not find token_config_file, expected it to be a yaml file here: "
+                                f"{working_directory}/{custom_token_addresses_file}.")
+            except AttributeError:
+                raise Exception(f"{custom_token_addresses_file} cannot be empty, should be in the format: "
+                                f"token_symbol: address, e.g. WETH: 0x4200000000000000000000000000000000000006")
+
         self.token_addresses = checksummed_token_addresses
 
     @classmethod
-    def from_config(cls, name: NetworkName, http_node_url: str) -> "Network":
-        """Create a Network instance based on the network name provided which links to network_config/{network_name}/.
+    def from_config(cls, http_node_url: str, custom_token_addresses_file: Optional[str] = None) -> "Network":
+        """Create a Network instance based on the node url provided. A call is then made to this node to get the
+        chain_id which links to network_config/{network_name}/ using the NetworkId Enum.
 
-        :param name: The name of the network.
-        :type name: NetworkName
         :param http_node_url: The URL of the HTTP node for the network.
         :type http_node_url: str
+        :param custom_token_addresses_file: The name of a yaml file (relative to the current working directory) with
+            custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
+            (optional, default is None).
+        :type custom_token_addresses_file: Optional[str]
         :return: A Network instance based on the network configuration.
         :rtype: Network
         :raises Exception: If no network configuration file is found for the specified network name.
         """
+        w3 = Web3(Web3.HTTPProvider(http_node_url))
+
+        name_name = NetworkId(w3.eth.chain_id).name.lower()
+
         try:
-            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name.value}"
-            w3 = Web3(Web3.HTTPProvider(http_node_url))
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/{name_name}"
 
             with open(f"{path}/network.yaml") as f:
                 network_data = yaml.safe_load(f)
-                return cls(path=path, w3=w3, **network_data)
+                return cls(path=path, w3=w3, custom_token_addresses_file=custom_token_addresses_file, **network_data)
         except FileNotFoundError:
-            raise Exception(f"no network config found for {name.value}, there should be a corresponding folder in "
+            raise Exception(f"no network config found for {name_name}, there should be a corresponding folder in "
                             f"the network_config directory")
 
     def __repr__(self):

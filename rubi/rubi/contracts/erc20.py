@@ -183,7 +183,8 @@ class ERC20(BaseContract):
         :type spender: ChecksumAddress
         :param amount: amount of the erc20 token to approve the spender to spend
         :type amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce (optional, default is None)
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
         :type nonce: Optional[int]
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
@@ -264,7 +265,8 @@ class ERC20(BaseContract):
         :type recipient: ChecksumAddress
         :param amount: amount of the erc20 token to transfer
         :type amount: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce (optional, default is None)
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
         :type nonce: Optional[int]
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
@@ -304,7 +306,8 @@ class ERC20(BaseContract):
         :type spender: ChecksumAddress
         :param added_value: amount to increase the allowance by, in the integer representation of the erc20 token
         :type added_value: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce (optional, default is None)
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
         :type nonce: Optional[int]
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int
@@ -343,7 +346,8 @@ class ERC20(BaseContract):
         :type spender: ChecksumAddress
         :param subtracted_value: amount to decrease the allowance by, in the integer representation of the erc20 token
         :type subtracted_value: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce (optional, default is None)
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
         :type nonce: Optional[int]
         :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
         :type gas: int

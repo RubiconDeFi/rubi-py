@@ -21,7 +21,7 @@ To understand how this is all mapped into the `Network` instance please see: [ne
 └──...
 ```
 
-Note: the {network name} folder must map to the `NetworkName` enum found in [network.py](../rubi/network/network.py).
+Note: the {network name} folder must map to the `NetworkId` enum found in [network.py](../rubi/network/network.py).
 
 ### network.yaml
 

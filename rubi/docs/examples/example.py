@@ -5,8 +5,8 @@ from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
+from rubi import Client
 from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
-from rubi import Client, NetworkName
 
 # load from env file
 load_dotenv("../../local.env")
@@ -28,9 +28,9 @@ key = os.getenv("DEV_KEY")
 queue = Queue()
 
 # create client
-client = Client.from_network_name(
-    network_name=NetworkName.OPTIMISM_GOERLI,
+client = Client.from_http_node_url(
     http_node_url=http_node_url,
+    custom_token_addresses_file="custom_token_addresses.yaml",
     wallet=wallet,
     key=key,
     message_queue=queue

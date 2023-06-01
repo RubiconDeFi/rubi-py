@@ -110,7 +110,7 @@ class BaseContract:
         :type event_type: Type[BaseEvent]
         :param argument_filters: Optional filters that the node will filter events on (optional, default is None).
         :type argument_filters: Optional[Dict[str, Any]]
-        :param event_handler: Optional event handler function. Defaults to using the events default handler (optional, default is None).
+        :param event_handler: Optional event handler function. Defaults to using the events default handler.
         :type event_handler: Optional[Callable]
         :param poll_time: The time interval between each poll in seconds. Defaults to 2 seconds.
         :type poll_time: int
@@ -191,7 +191,8 @@ class BaseContract:
         :type nonce: Optional[int]
         :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction (optional, default is None).
+        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
+            (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: The transaction hash of the executed transaction.
         :rtype: str
@@ -240,7 +241,8 @@ class BaseContract:
         :type gas: int
         :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction (optional, default is None).
+        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
+            (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: The transaction parameters dictionary.
         :rtype: Dict

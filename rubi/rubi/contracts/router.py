@@ -254,7 +254,8 @@ class RubiconRouter(BaseContract):
         :type buy_amts_min: List[int]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
-        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce (optional, default is None).
+        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
+            (optional, default is None).
         :type nonce: Optional[int]
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int
@@ -301,7 +302,8 @@ class RubiconRouter(BaseContract):
         :type route: List[ChecksumAddress]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
-        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce (optional, default is None).
+        :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
+            (optional, default is None).
         :type nonce: Optional[int]
         :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
         :type gas: int

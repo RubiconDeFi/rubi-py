@@ -14,7 +14,6 @@ from rubi.contracts import (
     ERC20,
 )
 from rubi.network import (
-    NetworkName,
     Network,
 )
 from rubi.types import (
@@ -58,8 +57,8 @@ class Client:
         """constructor method."""
         self.network = network
 
-        self.wallet = self.network.w3.to_checksum_address(wallet) if wallet else wallet
-        self.key = key
+        self.wallet = self.network.w3.to_checksum_address(wallet) if wallet else wallet  # type: ChecksumAddress |  None
+        self.key = key  # type: str |  None
 
         self.market = RubiconMarket.from_network(network=self.network, wallet=self.wallet, key=self.key)
         self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=self.key)
@@ -67,23 +66,25 @@ class Client:
         self._pairs: Dict[str, Pair] = {}
         self._pair_orderbooks: Dict[str, OrderBook] = {}
 
-        self.message_queue = message_queue
+        self.message_queue = message_queue  # type: Queue | None
 
     @classmethod
-    def from_network_name(
+    def from_http_node_url(
         cls,
-        network_name: NetworkName,
         http_node_url: str,
+        custom_token_addresses_file: Optional[str] = None,
         message_queue: Optional[Queue] = None,
         wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
     ):
-        """Initialize a Client using a network name and http_node_url.
+        """Initialize a Client using a http_node_url.
 
-        :param network_name: Name of the network.
-        :type network_name: NetworkName
         :param http_node_url: URL of the HTTP node.
         :type http_node_url: str
+        :param custom_token_addresses_file: The name of a yaml file (relative to the current working directory) with
+            custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
+            (optional, default is None).
+        :type custom_token_addresses_file: Optional[str]
         :param message_queue: Optional message queue for processing events (optional, default is None).
         :type message_queue: Optional[Queue]
         :param wallet: Wallet address (optional, default is None).
@@ -91,7 +92,10 @@ class Client:
         :param key: Key for the wallet (optional, default is None).
         :type key: str
         """
-        network = Network.from_config(name=network_name, http_node_url=http_node_url)
+        network = Network.from_config(
+            http_node_url=http_node_url,
+            custom_token_addresses_file=custom_token_addresses_file
+        )
 
         return cls(
             network=network,
@@ -105,10 +109,10 @@ class Client:
     ######################################################################
 
     def add_pair(
-            self, pair_name: str, 
-            base_asset_allowance: Optional[Decimal] = None, 
-            quote_asset_allowance: Optional[Decimal] = None
-        ) -> None:
+        self, pair_name: str,
+        base_asset_allowance: Optional[Decimal] = None,
+        quote_asset_allowance: Optional[Decimal] = None
+    ) -> None:
         """Add a Pair to the Client. This method creates a Pair instance and adds it to the Client's internal
         _pairs dictionary. Additionally, this method updates the spender allowance of the Rubicon Market for both
         base asset and the quote asset.
@@ -145,7 +149,7 @@ class Client:
         )
 
         # only edit allowance if client has signing rights
-        if self.wallet is not None and self.key is not None and base_asset_allowance and quote_asset_allowance:
+        if self.wallet is not None and self.key is not None:
             self.update_pair_allowance(
                 pair_name=pair_name,
                 new_base_asset_allowance=base_asset_allowance,
@@ -163,8 +167,8 @@ class Client:
     def update_pair_allowance(
         self,
         pair_name: str,
-        new_base_asset_allowance: Decimal,
-        new_quote_asset_allowance: Decimal
+        new_base_asset_allowance: Optional[Decimal] = None,
+        new_quote_asset_allowance: Optional[Decimal] = None
     ) -> None:
         """Update the allowance for the base and quote assets of a pair if the current allowance is different from the
         new allowance. This method also updates the Pair data structure so that the allowance can be read without having
@@ -172,15 +176,15 @@ class Client:
 
         :param pair_name: Name of the pair.
         :type pair_name: str
-        :param new_base_asset_allowance: New allowance for the base asset.
-        :type new_base_asset_allowance: Decimal
-        :param new_quote_asset_allowance: New allowance for the quote asset.
-        :type new_quote_asset_allowance: Decimal
+        :param new_base_asset_allowance: New allowance for the base asset. (optional, default is None).
+        :type new_base_asset_allowance: Optional[Decimal]
+        :param new_quote_asset_allowance: New allowance for the quote asset. (optional, default is None).
+        :type new_quote_asset_allowance: Optional[Decimal]
         :raises PairDoesNotExistException: If the pair does not exist in the clients internal _pairs dict.
         """
         pair = self.get_pair(pair_name=pair_name)
 
-        if pair.current_base_asset_allowance != new_base_asset_allowance:
+        if new_base_asset_allowance and pair.current_base_asset_allowance != new_base_asset_allowance:
             self._update_asset_allowance(
                 asset=pair.base_asset,
                 spender=self.market.address,
@@ -188,7 +192,7 @@ class Client:
             )
             pair.update_base_asset_allowance(new_base_asset_allowance=new_base_asset_allowance)
 
-        if pair.current_base_asset_allowance != new_quote_asset_allowance:
+        if new_quote_asset_allowance and pair.current_base_asset_allowance != new_quote_asset_allowance:
             self._update_asset_allowance(
                 asset=pair.quote_asset,
                 spender=self.market.address,
@@ -333,7 +337,8 @@ class Client:
         :type pair_name: str
         :param event_type: Type of the event to listen for.
         :type event_type: Type[BaseEvent]
-        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters (optional, default is None).
+        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters
+            (optional, default is None).
         :type filters: Optional[Dict[str, Any]], optional
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
             self._default_event_handler (optional, default is None).
@@ -389,7 +394,8 @@ class Client:
     # TODO: would be cool if these methods could understand how much they are spending on gas (use TxReceipt)
     #  also need a way to return the order id for limit orders
     #  we could listen for the event and return the order id along with relevant gas spend information 
-    #  one thing we will need to be conscious of and figure out how to handle is the fact that gas is caclulated in a variety of ways depending upon the chain 
+    #  one thing we will need to be conscious of and figure out how to handle is the fact that gas is calculated in a
+    #  variety of ways depending upon the chain
 
     def place_market_order(self, transaction: Transaction) -> str:
         """Place a market order transaction by executing the specified transaction object. The transaction

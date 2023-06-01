@@ -84,14 +84,13 @@ Finally we are ready to instantiate a client
     from rubi import Client, NetworkName, Transaction, NewLimitOrder, OrderSide
 
     # instantiate the client
-    client = client = Client.from_network_name(
-        network_name=NetworkName.OPTIMISM_GOERLI,
+    client = client = Client.from_http_node_url(
         http_node_url=http_node_url,
         wallet=wallet,
         key=key
     )
 
-.. note:: In the above example we are creating a client using the ``from_network_name`` function. This uses the default network config that is managed by the Rubicon team. This config can be seen `here <https://github.com/RubiconDeFi/rubi-py/tree/master/rubi/network_config>`_. If you prefer you can instantiate your own ``Network`` instance and use that to instantiate the client.
+.. note:: In the above example we are creating a client using the ``from_http_node_url`` function. This fetches the chain id from the node and then maps this to default network config that is managed by the Rubicon team. This config can be seen `here <https://github.com/RubiconDeFi/rubi-py/tree/master/rubi/network_config>`_. If you prefer you can instantiate your own ``Network`` instance and use that to instantiate the client.
 
 .. note:: In the above example we are connecting to the optimism goerli testnet. Make sure the node you are using is an optimism goerli node.
 
@@ -143,3 +142,75 @@ The :ref:`rubi client <client>` will then be instantiated without signing rights
 the Rubicon contracts.
 
 That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.
+
+rubi client pairs and tokens
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :ref:`rubi client <client>` uses the notion of a ``pair`` to effectively translate from offers on the Rubicon
+protocol to the more understandable notions of bids and asks.
+
+
+Whenever you want to trade a specific set of tokens you will first need to add this pair to the client
+
+.. code-block:: python
+
+    # add the WETH/USDC pair to the client
+    # the base asset is WETH and the quote asset is USDC
+    client.add_pair(
+        pair_name="WETH/USDC",
+        base_asset_allowance=Decimal("1"),
+        quote_asset_allowance=Decimal("10000")
+    )
+
+If you add the ``WETH/USDC`` pair as in the above example then you are saying you want to think of trading ``WETH`` in
+terms of ``USDC``. In other words, all orders and the client orderbook will price ``WETH`` in terms of ``USDC``, so for
+example, if you wanted to create a new limit order you would say I want to sell ``1 WETH`` for ``2000 USDC``. It should
+be noted that there is no need to price assets in stable coin terms. In fact, being in defi it probably makes more sense
+to price things in terms of ``WETH`` ;).
+
+.. code-block:: python
+
+    client.add_pair(
+        pair_name="USDC/WETH",
+        base_asset_allowance=Decimal("1"),
+        quote_asset_allowance=Decimal("10000")
+    )
+
+By default when you instantiate a :ref:`rubi client <client>` you will only be able to create pairs from the tokens
+found in the ``token_addresses`` section of the ``network.yaml`` config for the chain you are connected to. This set of
+token addresses is vetted by the Rubicon team and intended to ensure that in interacting with the protocol users do not
+fall victim to scam coins. However, when instantiating the client you can provide an additional
+``custom_token_addresses_file`` parameter
+
+.. code-block:: python
+
+    client = Client.from_http_node_url(
+        http_node_url=http_node_url,
+        custom_token_addresses_file="custom_token_addresses.yaml",
+        wallet=wallet,
+        key=key
+    )
+
+
+This points to a yaml file (which is relative to the current working directory) containing token addresses in the
+following format
+
+.. code-block:: yaml
+
+    # Forrest coin and USDT on Optimism Goerli
+    F: 0x45fa7d7b6c954d17141586e1bd63d2e35d3e26de
+    USDT:  0xd70734ba8101ec28b38ab15e30dc9b60e3c6f433
+
+These additional tokens will then be appended to the valid tokens found in the ``network.yaml``.
+
+Additionally, it should be noted that you can override the addresses found in ``token_addresses`` section of the
+``network.yaml`` by adding the same key to the ``custom_token_addresses_file``.
+
+.. warning:: THIS IS SUPER RISKY. I HOPE YOU KNOW WHAT YOU'RE DOING IF YOU CHOOSE TO DO THIS.
+
+.. code-block:: yaml
+
+    USDC: 0xFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfake
+
+This will result in the client being instantiated with the address of
+``USDC`` as ``0xFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfake``.

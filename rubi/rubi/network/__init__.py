@@ -1,1 +1,1 @@
-from .network import NetworkName, Network, RubiconContracts, ContractRepr
+from .network import NetworkId, Network, RubiconContracts, ContractRepr

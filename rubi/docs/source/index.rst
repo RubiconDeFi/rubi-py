@@ -19,29 +19,15 @@ Check out the :doc:`quickstart` section for information on how to get going, inc
 Table of contents
 =================
 
-Intro
------
-
-* :doc:`quickstart`
-* :doc:`overview`
-
 .. toctree::
-   :maxdepth: 1
-   :hidden:
+   :maxdepth: 3
    :caption: Intro
 
    quickstart
    overview
 
-API
------
-
-* :doc:`client`
-* :doc:`rubi`
-
 .. toctree::
    :maxdepth: 1
-   :hidden:
    :caption: API
 
    client
