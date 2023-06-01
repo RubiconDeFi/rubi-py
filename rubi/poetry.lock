@@ -375,7 +375,7 @@ cython = ["cython"]
 
 [[package]]
 name = "dash"
-version = "2.10.1"
+version = "2.10.2"
 description = "A Python framework for building reactive web-apps. Developed by Plotly."
 category = "main"
 optional = false
@@ -385,9 +385,9 @@ python-versions = ">=3.6"
 dash-core-components = "2.0.0"
 dash-html-components = "2.0.0"
 dash-table = "5.0.0"
-Flask = ">=1.0.4,<=2.2.3"
+Flask = ">=1.0.4,<2.3.0"
 plotly = ">=5.0.0"
-Werkzeug = "<=2.2.3"
+Werkzeug = "<2.3.0"
 
 [package.extras]
 celery = ["celery[redis] (>=5.1.2)", "importlib-metadata (<5)", "redis (>=3.5.3)"]
@@ -718,7 +718,7 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.2.3)", "diff-cover (>=7.5)", "p
 
 [[package]]
 name = "flask"
-version = "2.2.3"
+version = "2.2.5"
 description = "A simple framework for building complex web applications."
 category = "main"
 optional = false
@@ -1290,11 +1290,11 @@ webpdf = ["pyppeteer (>=1,<1.1)"]
 
 [[package]]
 name = "nbformat"
-version = "5.8.0"
+version = "5.9.0"
 description = "The Jupyter Notebook format"
 category = "dev"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 
 [package.dependencies]
 fastjsonschema = "*"
@@ -1775,7 +1775,7 @@ python-versions = ">=3.7"
 name = "pyyaml"
 version = "6.0"
 description = "YAML parser and emitter for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -2416,7 +2416,7 @@ docs = ["sphinx"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "53d78b92bf8689669ef50f808511279ed5e1a100d85ec8e6cf515ad9f1793e99"
+content-hash = "ffd6afd58e245159ebc08decff2675e2b53ee566195d3ac582c9f94b8f593a6f"
 
 [metadata.files]
 aiohttp = [
@@ -3027,8 +3027,8 @@ cytoolz = [
     {file = "cytoolz-0.12.1.tar.gz", hash = "sha256:fc33909397481c90de3cec831bfb88d97e220dc91939d996920202f184b4648e"},
 ]
 dash = [
-    {file = "dash-2.10.1-py3-none-any.whl", hash = "sha256:17ae100dbb0531d31a75b5982ce79e60dc1eae6efb653fb3128f158c3d827415"},
-    {file = "dash-2.10.1.tar.gz", hash = "sha256:8933d6feed3a6ae67e6b70be1fe00f11ad594ce646faebfb4c38a0c4ddca8296"},
+    {file = "dash-2.10.2-py3-none-any.whl", hash = "sha256:f1b7132558bd2341e6cf7ca1e83e216d46bbb27a255ca962a0fa5561c6776953"},
+    {file = "dash-2.10.2.tar.gz", hash = "sha256:b99839890b44171da0e3668c2e607ef4b4f6948a6074c034693534ba52aa1d2b"},
 ]
 dash-core-components = [
     {file = "dash_core_components-2.0.0-py3-none-any.whl", hash = "sha256:52b8e8cce13b18d0802ee3acbc5e888cb1248a04968f962d63d070400af2e346"},
@@ -3139,8 +3139,8 @@ filelock = [
     {file = "filelock-3.12.0.tar.gz", hash = "sha256:fc03ae43288c013d2ea83c8597001b1129db351aad9c57fe2409327916b8e718"},
 ]
 flask = [
-    {file = "Flask-2.2.3-py3-none-any.whl", hash = "sha256:c0bec9477df1cb867e5a67c9e1ab758de9cb4a3e52dd70681f59fa40a62b3f2d"},
-    {file = "Flask-2.2.3.tar.gz", hash = "sha256:7eb373984bf1c770023fce9db164ed0c3353cd0b53f130f4693da0ca756a2e6d"},
+    {file = "Flask-2.2.5-py3-none-any.whl", hash = "sha256:58107ed83443e86067e41eff4631b058178191a355886f8e479e347fa1285fdf"},
+    {file = "Flask-2.2.5.tar.gz", hash = "sha256:edee9b0a7ff26621bd5a8c10ff484ae28737a2410d99b0bb9a6850c7fb977aa0"},
 ]
 fqdn = [
     {file = "fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014"},
@@ -3559,8 +3559,8 @@ nbconvert = [
     {file = "nbconvert-7.4.0.tar.gz", hash = "sha256:51b6c77b507b177b73f6729dba15676e42c4e92bcb00edc8cc982ee72e7d89d7"},
 ]
 nbformat = [
-    {file = "nbformat-5.8.0-py3-none-any.whl", hash = "sha256:d910082bd3e0bffcf07eabf3683ed7dda0727a326c446eeb2922abe102e65162"},
-    {file = "nbformat-5.8.0.tar.gz", hash = "sha256:46dac64c781f1c34dfd8acba16547024110348f9fc7eab0f31981c2a3dc48d1f"},
+    {file = "nbformat-5.9.0-py3-none-any.whl", hash = "sha256:8c8fa16d6d05062c26177754bfbfac22de644888e2ef69d27ad2a334cf2576e5"},
+    {file = "nbformat-5.9.0.tar.gz", hash = "sha256:e98ebb6120c3efbafdee2a40af2a140cadee90bb06dd69a2a63d9551fcc7f976"},
 ]
 nest-asyncio = [
     {file = "nest_asyncio-1.5.6-py3-none-any.whl", hash = "sha256:b9a953fb40dceaa587d109609098db21900182b16440652454a146cffb06e8b8"},
