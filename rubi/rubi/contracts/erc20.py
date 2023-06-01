@@ -2,6 +2,7 @@ import json
 import os
 from _decimal import Decimal
 from typing import Optional
+from pkg_resources import resource_stream
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
@@ -75,9 +76,7 @@ class ERC20(BaseContract):
         abi: ABI
 
         try:
-            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/ERC20.json"
-
-            with open(path) as f:
+            with resource_stream('rubi', "../network_config/ERC20.json") as f:
                 abi = json.load(f)
 
         except FileNotFoundError:
