@@ -22,9 +22,9 @@ class BaseContract:
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param wallet: a wallet address of the signer (optional)
+    :param wallet: a wallet address of the signer (optional, default is None)
     :type wallet: Optional[ChecksumAddress]
-    :param key: the private key of the signer (optional)
+    :param key: the private key of the signer (optional, default is None)
     :type key: Optional[str]
     """
 
@@ -71,9 +71,9 @@ class BaseContract:
         :type address: ChecksumAddress
         :param contract_abi: The ABI of the contract.
         :type contract_abi: ABI
-        :param wallet: The wallet address to use for interacting with the contract (optional).
+        :param wallet: The wallet address to use for interacting with the contract (optional, default is None).
         :type wallet: Optional[ChecksumAddress]
-        :param key: The private key of the wallet (optional).
+        :param key: The private key of the wallet (optional, default is None).
         :type key: Optional[str]
         :return: An instance of BaseContract.
         :rtype: BaseContract
@@ -108,9 +108,9 @@ class BaseContract:
         :type pair_name: str
         :param event_type: The type of event to poll for.
         :type event_type: Type[BaseEvent]
-        :param argument_filters: Optional filters that the node will filter events on.
+        :param argument_filters: Optional filters that the node will filter events on (optional, default is None).
         :type argument_filters: Optional[Dict[str, Any]]
-        :param event_handler: Optional event handler function. Defaults to using the events default handler.
+        :param event_handler: Optional event handler function. Defaults to using the events default handler (optional, default is None).
         :type event_handler: Optional[Callable]
         :param poll_time: The time interval between each poll in seconds. Defaults to 2 seconds.
         :type poll_time: int
@@ -187,11 +187,11 @@ class BaseContract:
         :type instantiated_contract_function: ContractFunction
         :param gas: The gas limit for the transaction.
         :type gas: int
-        :param nonce: Optional nonce value for the transaction.
+        :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[int]
-        :param max_fee_per_gas: Optional maximum fee per gas for the transaction.
+        :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
+        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: The transaction hash of the executed transaction.
         :rtype: str
@@ -234,13 +234,13 @@ class BaseContract:
         """Build transaction parameters Dict for a transaction. If a key is associated with a None value after building
         the Dict then this key will be removed before returning the dict.
 
-        :param nonce: Optional nonce value for the transaction.
+        :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[Nonce]
         :param gas: The gas limit for the transaction.
         :type gas: int
-        :param max_fee_per_gas: Optional maximum fee per gas for the transaction.
+        :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
+        :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
         :return: The transaction parameters dictionary.
         :rtype: Dict
