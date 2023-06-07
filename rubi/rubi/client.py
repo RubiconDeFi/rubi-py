@@ -12,6 +12,7 @@ from rubi.contracts import (
     RubiconMarket,
     RubiconRouter,
     ERC20,
+    TransactionReceipt
 )
 from rubi.network import (
     Network,
@@ -64,7 +65,6 @@ class Client:
         self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=self.key)
 
         self._pairs: Dict[str, Pair] = {}
-        self._pair_orderbooks: Dict[str, OrderBook] = {}
 
         self.message_queue = message_queue  # type: Queue | None
 
@@ -234,8 +234,6 @@ class Client:
         )
 
         del self._pairs[pair_name]
-        if self._pair_orderbooks.get(pair_name):
-            del self._pair_orderbooks[pair_name]
 
     ######################################################################
     # orderbook methods
@@ -306,8 +304,6 @@ class Client:
         while polling:
             try:
                 order_book = self.get_orderbook(pair_name=pair.name)
-
-                self._pair_orderbooks[pair.name] = order_book
 
                 self.message_queue.put(order_book)
             except PairDoesNotExistException:
@@ -391,13 +387,8 @@ class Client:
     ######################################################################
     # order methods
     ######################################################################
-    # TODO: would be cool if these methods could understand how much they are spending on gas (use TxReceipt)
-    #  also need a way to return the order id for limit orders
-    #  we could listen for the event and return the order id along with relevant gas spend information 
-    #  one thing we will need to be conscious of and figure out how to handle is the fact that gas is calculated in a
-    #  variety of ways depending upon the chain
 
-    def place_market_order(self, transaction: Transaction) -> str:
+    def place_market_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a market order transaction by executing the specified transaction object. The transaction
         object should contain a single order of type NewMarketOrder. The order is retrieved from the transaction and
         the corresponding market buy or sell method is called based on the order side.
@@ -439,7 +430,7 @@ class Client:
                     max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
                 )
 
-    def place_limit_order(self, transaction: Transaction) -> str:
+    def place_limit_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a limit order transaction by executing the specified transaction object. The transaction object should
         contain a single order of type NewLimitOrder.
 
@@ -480,7 +471,7 @@ class Client:
                     max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
                 )
 
-    def cancel_limit_order(self, transaction: Transaction) -> str:
+    def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
         should contain a single order of type NewCancelOrder.
 
@@ -503,7 +494,7 @@ class Client:
             max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
         )
 
-    def batch_place_limit_orders(self, transaction: Transaction) -> str:
+    def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Place multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit orders.
@@ -543,7 +534,7 @@ class Client:
             max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
         )
 
-    def batch_update_limit_orders(self, transaction: Transaction) -> str:
+    def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Update multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order updates.
@@ -586,7 +577,7 @@ class Client:
             max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
         )
 
-    def batch_cancel_limit_orders(self, transaction: Transaction) -> str:
+    def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Cancel multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order cancellations.
