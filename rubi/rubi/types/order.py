@@ -197,7 +197,7 @@ class Transaction:
         self,
         orders: List[BaseNewOrder],
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: int = 3500000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ):
