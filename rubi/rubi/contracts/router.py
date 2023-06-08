@@ -5,6 +5,7 @@ from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts.base_contract import BaseContract
+from rubi.contracts.types import TransactionReceipt
 from rubi.network import Network
 
 
@@ -242,7 +243,7 @@ class RubiconRouter(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Perform a multiple swaps for the specified payment amounts using the specified routes. Reverts with an
         exception if any of the swaps cannot achieve the buy_amt_min along the specified route.
 
@@ -265,8 +266,8 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: Transaction hash.
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
 
         multiswap = self.contract.functions.multiswap(routes, pay_amts, buy_amts_min, to)
@@ -290,7 +291,7 @@ class RubiconRouter(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Perform a swap operation with the specified payment amount using the specified route and paying out to the
         recipient. Reverts if the swap does not result in the buy_min_amount.
 
@@ -313,8 +314,8 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: Transaction hash.
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
 
         swap = self.contract.functions.swap(pay_amt, buy_amt_min, route, to)

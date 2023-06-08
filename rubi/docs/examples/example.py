@@ -51,11 +51,13 @@ limit_order = NewLimitOrder(
     price=Decimal("1914.13")
 )
 
-client.place_limit_order(
+transaction_result = client.place_limit_order(
     transaction=Transaction(
         orders=[limit_order]
     )
 )
+
+log.info(transaction_result)
 
 # Print events and order books
 while True:

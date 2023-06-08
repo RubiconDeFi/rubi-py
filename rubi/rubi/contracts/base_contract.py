@@ -11,7 +11,7 @@ from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
 
-from rubi.contracts.types.events import BaseEvent
+from rubi.contracts.types import BaseEvent, TransactionReceipt
 
 
 class BaseContract:
@@ -176,7 +176,7 @@ class BaseContract:
         nonce: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Default transaction handler for executing transactions against this contract. This function will build, sign
         and execute a transaction with reasonable defaults (mostly from the web3py library).
 
@@ -194,8 +194,8 @@ class BaseContract:
         :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
             (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: The transaction hash of the executed transaction.
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
         if not self.signing_permissions:
             raise Exception(f"cannot write transaction without signing rights. "
@@ -216,14 +216,10 @@ class BaseContract:
             transaction_dict=txn,
             private_key=self.key
         )
-        result = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
-        # If a user is not providing a nonce, wait for the transaction to either be confirmed or rejected before
-        # continuing
-        if nonce is None:
-            self._wait_for_transaction_receipt(transaction=signed_txn)
+        self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
-        return result.hex()
+        return self._wait_for_transaction_receipt(transaction=signed_txn)
 
     def _transaction_params(
         self,
@@ -261,14 +257,18 @@ class BaseContract:
 
         return {key: value for key, value in transaction.items() if value is not None}
 
-    # TODO: actually make use of the transaction receipt to update data structures. This can be useful for example
-    #  in getting the amount of gas and cost of gas of the transaction
-    def _wait_for_transaction_receipt(self, transaction: SignedTransaction) -> None:
+    def _wait_for_transaction_receipt(self, transaction: SignedTransaction) -> TransactionReceipt:
         """Wait for the transaction receipt and check if the transaction was successful.
 
         :param transaction: The signed transaction object.
         :type transaction: SignedTransaction
         :raises Exception: If the transaction fails.
         """
-        if self.w3.eth.wait_for_transaction_receipt(transaction.hash)['status'] == 0:
+        result = TransactionReceipt.from_tx_receipt(
+            tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
+        )
+
+        if result.status == 0:
             raise Exception(f"transaction {transaction.hash.hex()} failed")
+
+        return result

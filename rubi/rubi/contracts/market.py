@@ -5,6 +5,7 @@ from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts.base_contract import BaseContract
+from rubi.contracts.types import TransactionReceipt
 from rubi.network import Network
 
 
@@ -226,10 +227,10 @@ class RubiconMarket(BaseContract):
         owner: Optional[ChecksumAddress] = None,
         recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: int = 400000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
         :param pay_amt: the amount of the token being sold
@@ -262,8 +263,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
 
         if not self.signing_permissions:
@@ -291,7 +292,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Cancel an offer by offer id
 
         :param id: the id of the offer to cancel
@@ -307,8 +308,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
 
         cancel = self.contract.functions.cancel(id)
@@ -332,7 +333,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Batch the placement of a set of offers in one transaction
 
         :param pay_amts: the amounts of the token being sold
@@ -354,8 +355,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
         if not (len(pay_amts) == len(pay_gems) == len(buy_amts) == len(buy_gems)):
             raise Exception("mismatches lengths in pay_amts, pay_gems, buy_amts and buy_gems")
@@ -378,7 +379,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Cancel a set offer by offer id in a single transaction
 
         :param ids: the ids of the offers to cancel
@@ -394,8 +395,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
         cancels = self.contract.functions.cancel(ids)
 
@@ -420,7 +421,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Batch update a set of offers in a single transaction and return a list of new offer ids
 
         :param ids: the ids of the offers to cancel
@@ -444,8 +445,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
 
         batch_requote = self.contract.functions.batchRequote(ids, pay_amts, pay_gems, buy_amts, buy_gems)
@@ -469,7 +470,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
         min_fill_amount of the buy_gem token
 
@@ -492,8 +493,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
         sell_all_amount = self.contract.functions.sellAllAmount(pay_gem, pay_amt, buy_gem, min_fill_amount)
 
@@ -516,7 +517,7 @@ class RubiconMarket(BaseContract):
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
-    ) -> str:
+    ) -> TransactionReceipt:
         """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
         max_fill_amount of the pay_gem token
 
@@ -539,8 +540,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: transaction hash
-        :rtype: str
+        :return: An object representing the transaction receipt
+        :rtype: TransactionReceipt
         """
         buy_all_amount = self.contract.functions.sellAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount)
 
