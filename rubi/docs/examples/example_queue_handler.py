@@ -6,7 +6,7 @@ from typing import Union
 import requests
 from dotenv import load_dotenv
 
-from rubi import Client, ERC20, OrderBook, OrderEvent
+from rubi import Client, OrderBook, OrderEvent, EmitOfferEvent
 
 # load from env file
 load_dotenv("../../local.env")
@@ -25,7 +25,7 @@ wallet = os.getenv("DEV_WALLET")
 key = os.getenv("DEV_KEY")
 
 
-# Create handlers
+# Create order handler
 def on_order(order: OrderEvent) -> None:
     """This is a simple order event handler that checks if the offer is an ETH offer, and if so get the current ETH
     price from Coinbase."""
@@ -45,6 +45,7 @@ def on_order(order: OrderEvent) -> None:
             raise Exception("Error: Unable to retrieve price")
 
 
+# Create orderbook handler
 def on_orderbook(orderbook: OrderBook) -> None:
     """Handle new orderbook
     """
@@ -63,9 +64,12 @@ client = Client.from_http_node_url(
     message_queue=queue
 )
 
-# initialize ERC20 clients for the base and quote assets
-base_asset = ERC20.from_network(name='WETH', network=client.network)
-quote_asset = ERC20.from_network(name='USDC', network=client.network)
+# add pair
+client.add_pair(pair_name="WETH/USDC")
+
+# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
+client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
+client.start_orderbook_poller("WETH/USDC")
 
 while True:
     message: Union[OrderBook, OrderEvent] = queue.get(block=True)
