@@ -54,6 +54,15 @@ class BookSide:
         """
         return self.levels[0].price
 
+    def remove_liquidity_from_book(self, price: Decimal, size: Decimal):
+        for i, level in enumerate(self.levels):
+            if price == level.price:
+                if size == level.size:
+                    del self.levels[i]
+                else:
+                    self.levels[i] = BookLevel(price=price, size=level.size - size)
+                return
+
     @classmethod
     def from_rubicon_offers(
         cls,
@@ -177,6 +186,15 @@ class OrderBook:
         :rtype: Decimal
         """
         return (self.best_bid() + self.best_ask()) / 2
+
+    def spread(self) -> Decimal:
+        """Calculate the current bid ask spread of the order book.
+
+        :return: spread
+        :rtype: Decimal
+        """
+
+        return self.best_ask() - self.best_bid()
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)

@@ -1,6 +1,6 @@
 from _decimal import Decimal
 from enum import Enum
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Dict
 
 from eth_typing import ChecksumAddress
 
@@ -12,6 +12,22 @@ class OrderSide(Enum):
     """Enumeration representing the order side."""
     BUY = "BUY"
     SELL = "SELL"
+    NEUTRAL = "NEUTRAL"
+
+    def sign(self) -> int:
+        """
+        :return: Numerical value of the side.
+        :rtype: int
+        """
+        match self:
+            case OrderSide.NEUTRAL:
+                return 0
+
+            case OrderSide.BUY:
+                return 1
+
+            case OrderSide.SELL:
+                return -1
 
 
 class OrderType(Enum):
@@ -185,7 +201,7 @@ class Transaction:
     :type orders: List[BaseNewOrder]
     :param nonce: The nonce for the transaction (optional).
     :type nonce: int
-    :param gas: The gas limit for the transaction.
+    :param gas: The gas limit for the transaction (optional).
     :type gas: int
     :param max_fee_per_gas: The maximum fee per gas for the transaction (optional).
     :type max_fee_per_gas: int
@@ -197,7 +213,7 @@ class Transaction:
         self,
         orders: List[BaseNewOrder],
         nonce: Optional[int] = None,
-        gas: int = 3500000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ):
@@ -210,6 +226,21 @@ class Transaction:
         self.gas = gas
         self.max_fee_per_gas = max_fee_per_gas
         self.max_priority_fee_per_gas = max_priority_fee_per_gas
+
+    def args(self) -> Dict:
+        """Creates a dictionary of not None arguments to pass to contract functions.
+
+        :return: dictionary of arguments used to send transactions.
+        :rtype: Dict
+        """
+        args = {
+            "nonce": self.nonce,
+            "gas": self.gas,
+            "max_fee_per_gas": self.max_fee_per_gas,
+            "max_priority_fee_per_gas": self.max_priority_fee_per_gas
+        }
+
+        return {key: value for key, value in args.items() if value is not None}
 
 
 class OrderEvent:

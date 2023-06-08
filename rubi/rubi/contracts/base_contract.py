@@ -1,4 +1,5 @@
 import logging as log
+import time
 from threading import Thread
 from time import sleep
 from typing import Optional, Callable, Type, Dict, Any
@@ -217,6 +218,8 @@ class BaseContract:
             private_key=self.key
         )
 
+        log.info(f"SENDING TRANSACTION, nonce: {nonce}")
+        log.info(f"{time.time_ns()}")
         self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         return self._wait_for_transaction_receipt(transaction=signed_txn)
@@ -262,13 +265,12 @@ class BaseContract:
 
         :param transaction: The signed transaction object.
         :type transaction: SignedTransaction
-        :raises Exception: If the transaction fails.
         """
+        log.info("RECIEVED RESULT")
+        log.info(f"{time.time_ns()}")
+
         result = TransactionReceipt.from_tx_receipt(
             tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
         )
-
-        if result.status == 0:
-            raise Exception(f"transaction {transaction.hash.hex()} failed")
 
         return result
