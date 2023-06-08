@@ -266,11 +266,12 @@ class BaseContract:
         :param transaction: The signed transaction object.
         :type transaction: SignedTransaction
         """
-        log.info("RECIEVED RESULT")
-        log.info(f"{time.time_ns()}")
 
         result = TransactionReceipt.from_tx_receipt(
             tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
         )
+
+        log.info("RECEIVED RESULT")
+        log.info(f"{time.time_ns()}")
 
         return result
