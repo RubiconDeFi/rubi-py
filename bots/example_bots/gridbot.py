@@ -1,30 +1,25 @@
 import logging as log
-import os
-import signal
 import time
 from _decimal import Decimal
-from multiprocessing import Queue
 from typing import Dict, Optional, List, Tuple
 
-from dotenv import load_dotenv
 from rubi import (
     OrderEvent, OrderBook, Client, EmitOfferEvent, EmitTakeEvent, EmitCancelEvent, OrderType,
     NewLimitOrder, OrderSide, Transaction
 )
 
-from event_trading_framework import BaseEventTradingFramework
-from event_trading_framework.gas_tracker import GasTracker
-from event_trading_framework.transaction_manager import TransactionResult, TransactionStatus
-from event_trading_framework.types.inventory import Inventory
-from event_trading_framework.types.types import ActiveLimitOrder
-from example_bots.grid import Grid
+from event_trading_framework import BaseEventTradingFramework, TransactionResult, TransactionStatus
+from example_bots.helpers.gas_manager import GasManager
+from example_bots.helpers.inventory import Inventory
+from example_bots.types.grid_params import GridParams
+from example_bots.types.types import ActiveLimitOrder
 
 
 class GridBot(BaseEventTradingFramework):
     def __init__(
         self,
         pair_name: str,
-        grid: Grid,
+        grid_params: GridParams,
         min_order_size: Decimal,
         client: Client,
     ):
@@ -35,14 +30,14 @@ class GridBot(BaseEventTradingFramework):
         client.add_pair(pair_name=pair_name)
 
         # Setup gas tracker
-        self.gas_tracker = GasTracker(allowed_fluctuation=Decimal("0.5"), ema_multiplier=Decimal("0.05"))
+        self.gas_tracker = GasManager(allowed_fluctuation=Decimal("0.5"), ema_multiplier=Decimal("0.05"))
 
         # Strategy objects
         self.pair = client.get_pair(pair_name=pair_name)
-        self.inventory = Inventory(pair=self.pair, quote_asset_amount=grid.quote_asset_amount)
+        self.inventory = Inventory(pair=self.pair, quote_asset_amount=grid_params.quote_asset_amount)
 
         # Strategy variables
-        self.grid: Grid = grid
+        self.grid: GridParams = grid_params
         self.min_order_size: Decimal = min_order_size
 
         # allowed to trade
@@ -67,8 +62,7 @@ class GridBot(BaseEventTradingFramework):
         self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitCancelEvent)
 
     def on_orderbook(self, orderbook: OrderBook):
-        log.info("NEW ORDERBOOK")
-        log.info(f"{time.time_ns()}")
+        log.debug(f"NEW ORDERBOOK, timestamp: {time.time_ns()}")
         log.debug(orderbook)
 
         # set strategy orderbook
@@ -79,8 +73,7 @@ class GridBot(BaseEventTradingFramework):
             self.place_new_limit_orders(orders=self.construct_grid())
 
     def on_order(self, order: OrderEvent):
-        log.info("NEW ORDER EVENT")
-        log.info(f"{time.time_ns()}")
+        log.debug(f"NEW ORDER EVENT, timestamp: {time.time_ns()}")
         log.debug(order)
 
         match order.order_type:
@@ -101,8 +94,7 @@ class GridBot(BaseEventTradingFramework):
                 del self.active_limit_orders[order.limit_order_id]
 
     def on_transaction_result(self, result: TransactionResult):
-        log.info("NEW TRANSACTION RESULT")
-        log.info(f"{time.time_ns()}")
+        log.debug(f"NEW TRANSACTION RESULT, timestamp: {time.time_ns()}")
         log.debug(result)
 
         if result.transaction_receipt is None:
@@ -143,9 +135,9 @@ class GridBot(BaseEventTradingFramework):
             self.inventory.quote_asset_amount if side == OrderSide.BUY else self.inventory.base_asset_amount
         )
 
-        for i in range(grid.number_levels - 1, -1, -1):
-            price = grid.get_level_price(side=side, level=i)
-            size = grid.get_level_size(level=i, price=price)
+        for i in range(self.grid.number_levels - 1, -1, -1):
+            price = self.grid.get_level_price(side=side, level=i)
+            size = self.grid.get_level_size(level=i, price=price)
 
             if current_amount_available > size * price:
                 grid_levels.append((price, size))
@@ -156,7 +148,7 @@ class GridBot(BaseEventTradingFramework):
 
         orders_to_place = []
         for level in grid_levels:
-            if level[1] > self.min_order_size / grid.mid_price:
+            if level[1] > self.min_order_size / self.grid.mid_price:
                 orders_to_place.append(NewLimitOrder(
                     pair_name=self.pair.name,
                     order_side=side,
@@ -181,11 +173,10 @@ class GridBot(BaseEventTradingFramework):
         transaction = Transaction(orders=orders_to_place)
 
         if len(orders) == 1:
-            log.info(f"placing limit order: {orders}")
-            log.info(f"{time.time_ns()}")
+            log.debug(f"placing limit order: {orders}, timestamp: {time.time_ns()}")
             nonce = self.transaction_manager.place_transaction(self.client.place_limit_order, transaction)
         else:
-            log.debug(f"batch placing limit orders: {orders}")
+            log.debug(f"batch placing limit orders: {orders}, timestamp: {time.time_ns()}")
             nonce = self.transaction_manager.place_transaction(self.client.batch_place_limit_orders, transaction)
 
         self.pending_transactions[nonce] = transaction
@@ -212,51 +203,3 @@ class GridBot(BaseEventTradingFramework):
                     self.orderbook.bids.remove_liquidity_from_book(price=active_order.price, size=active_order.size)
                 case OrderSide.SELL:
                     self.orderbook.asks.remove_liquidity_from_book(price=active_order.price, size=active_order.size)
-
-
-if __name__ == "__main__":
-    # setup logging
-    log.basicConfig(level=log.INFO)
-
-    # load and set env variables
-    load_dotenv("local.env")
-
-    http_node_url = os.getenv("HTTP_NODE_URL")
-    wallet = os.getenv("DEV_WALLET")
-    key = os.getenv("DEV_KEY")
-
-    # Initialize strategy message queue
-    message_queue = Queue()
-
-    # Initialize rubicon client
-    rubicon_client = Client.from_http_node_url(
-        http_node_url=http_node_url,
-        message_queue=message_queue,
-        wallet=wallet,
-        key=key
-    )
-
-    # Setup Grid
-    grid = Grid(
-        starting_base_asset_amount=Decimal("0"),
-        starting_quote_asset_amount=Decimal("200"),
-        starting_mid_price=Decimal("1860"),
-        grid_spread_in_quote=Decimal("2"),
-        level_spread_multiplier=Decimal("0"),
-        number_levels=1,
-        level_allocation_multiplier=Decimal("0")
-    )
-
-    # Initialize grid bot strategy
-    grid_bot = GridBot(
-        pair_name="WETH/USDC",
-        grid=grid,
-        min_order_size=Decimal("20"),
-        client=rubicon_client,
-    )
-
-    # Shutdown bot on keyboard signal
-    signal.signal(signal.SIGINT, grid_bot.stop)
-
-    # Start grid bot strategy
-    grid_bot.start()

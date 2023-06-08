@@ -5,8 +5,9 @@ from typing import Union, Callable
 from rubi import OrderBook, OrderEvent, Transaction, TransactionReceipt
 from web3.types import Nonce
 
-from event_trading_framework.transaction_manager import TransactionResult, ThreadedTransactionManager
-from event_trading_framework.types.event_queues import FreshEventQueue, FIFOEventQueue
+from event_trading_framework.helpers import (
+    TransactionResult, ThreadedTransactionManager, FreshEventQueue, FIFOEventQueue
+)
 
 
 class BaseEventTradingFramework(ABC):
@@ -55,7 +56,7 @@ class BaseEventTradingFramework(ABC):
             else:
                 raise Exception("Unexpected message fetched from queue")
 
-    def stop(self):
+    def stop(self, **args):
         self.running = False
 
         self.orderbook_event_queue.stop()

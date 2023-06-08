@@ -1,9 +1,9 @@
 from _decimal import Decimal
 
-from event_trading_framework.transaction_manager import TransactionResult
+from event_trading_framework import TransactionResult
 
 
-class GasTracker:
+class GasManager:
 
     # TODO: add eth price to track gas price in dollar terms not in eth terms
     def __init__(self, allowed_fluctuation: Decimal, ema_multiplier: Decimal):

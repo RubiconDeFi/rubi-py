@@ -22,7 +22,7 @@ class Inventory:
         else:
             self.base_asset_average_price = (
                                                 price * size + (
-                                                    self.base_asset_average_price * self.base_asset_amount)
+                                                self.base_asset_average_price * self.base_asset_amount)
                                             ) / (self.base_asset_amount + size)
 
             self.base_asset_amount += size

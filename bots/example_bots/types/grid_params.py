@@ -3,7 +3,7 @@ from _decimal import Decimal
 from rubi import OrderSide
 
 
-class Grid:
+class GridParams:
 
     def __init__(
         self,

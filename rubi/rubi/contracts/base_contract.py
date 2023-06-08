@@ -218,8 +218,7 @@ class BaseContract:
             private_key=self.key
         )
 
-        log.info(f"SENDING TRANSACTION, nonce: {nonce}")
-        log.info(f"{time.time_ns()}")
+        log.debug(f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}")
         self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         return self._wait_for_transaction_receipt(transaction=signed_txn)
@@ -271,7 +270,6 @@ class BaseContract:
             tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
         )
 
-        log.info("RECEIVED RESULT")
-        log.info(f"{time.time_ns()}")
+        log.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
 
         return result

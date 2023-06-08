@@ -141,5 +141,9 @@ brom.py
 # ignore the rdb files
 .rdb
 
-#intellij
+# intellij
 .idea
+
+# logs
+.log
+.logs
