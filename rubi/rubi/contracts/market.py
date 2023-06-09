@@ -5,7 +5,7 @@ from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
 
@@ -330,7 +330,7 @@ class RubiconMarket(BaseContract):
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
         nonce: Optional[int] = None,
-        gas: int = 3500000,
+        gas: int = 800000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:

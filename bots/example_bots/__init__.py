@@ -1,2 +1,2 @@
-from .types import GridParams
+from .grid_types import GridParams
 from .gridbot import GridBot

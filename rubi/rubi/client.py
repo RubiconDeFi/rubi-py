@@ -12,19 +12,19 @@ from rubi.contracts import (
     RubiconMarket,
     RubiconRouter,
     ERC20,
-    TransactionReceipt
+    TransactionReceipt,
+    BaseEvent
 )
 from rubi.network import (
     Network,
 )
-from rubi.types import (
+from rubi.rubicon_types import (
     OrderSide,
     NewMarketOrder,
     NewLimitOrder,
     Pair,
     OrderBook,
     PairDoesNotExistException,
-    BaseEvent,
     OrderEvent,
     Transaction,
     BaseNewOrder,
@@ -192,7 +192,7 @@ class Client:
             )
             pair.update_base_asset_allowance(new_base_asset_allowance=new_base_asset_allowance)
 
-        if new_quote_asset_allowance and pair.current_base_asset_allowance != new_quote_asset_allowance:
+        if new_quote_asset_allowance and pair.current_quote_asset_allowance != new_quote_asset_allowance:
             self._update_asset_allowance(
                 asset=pair.quote_asset,
                 spender=self.market.address,

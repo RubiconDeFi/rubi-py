@@ -34,24 +34,24 @@ if __name__ == "__main__":
     # Setup Grid
     grid = GridParams(
         starting_base_asset_amount=Decimal("0"),
-        starting_quote_asset_amount=Decimal("200"),
-        starting_mid_price=Decimal("1860"),
-        grid_spread_in_quote=Decimal("2"),
-        level_spread_multiplier=Decimal("0"),
-        number_levels=1,
-        level_allocation_multiplier=Decimal("0")
+        starting_quote_asset_amount=Decimal("2000"),
+        starting_mid_price=Decimal("1"),
+        grid_spread_in_quote=Decimal("0.0002"),
+        level_spread_multiplier=Decimal("1"),
+        number_levels=3,
+        base_level_size=Decimal("200"),
+        min_order_size_in_quote=Decimal("100")
     )
 
     # Initialize grid bot strategy
     grid_bot = GridBot(
-        pair_name="WETH/USDC",
+        pair_name="USDT/USDC",
         grid_params=grid,
-        min_order_size=Decimal("20"),
         client=rubicon_client,
     )
 
     # Shutdown bot on keyboard signal
-    signal.signal(signal.SIGINT, grid_bot.stop)
+    signal.signal(signal.SIGINT, grid_bot.stop)  # noqa
 
     # Start grid bot strategy
     grid_bot.start()

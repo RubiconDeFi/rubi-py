@@ -14,6 +14,7 @@ class ActiveLimitOrder:
         order_type: OrderType,
         price: Decimal,
         size: Decimal,
+        filled_size: Decimal = Decimal("0")
     ):
         self.limit_order_id = limit_order_id
         self.limit_order_owner = limit_order_owner
@@ -22,6 +23,7 @@ class ActiveLimitOrder:
         self.order_type = order_type
         self.price = price
         self.size = size
+        self.filled_size = filled_size
 
     @classmethod
     def from_order_event(cls, order: OrderEvent):
@@ -39,9 +41,14 @@ class ActiveLimitOrder:
         )
 
     def is_full_take(self, pair: Pair, take_event: OrderEvent) -> bool:
-        return take_event.size == self.size or (
-            abs(take_event.size - self.size) < Decimal("1") / (10 ** pair.base_asset.decimal)
+        remaining_size = self.size - self.filled_size
+
+        return take_event.size >= remaining_size or (
+            abs(take_event.size - remaining_size) < Decimal("1") / (10 ** pair.base_asset.decimal)
         )
 
     def update_with_take(self, take_event: OrderEvent) -> None:
-        self.size -= take_event.size
+        self.filled_size -= take_event.size
+
+    def remaining_size(self) -> Decimal:
+        return self.size - self.filled_size

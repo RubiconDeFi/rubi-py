@@ -9,7 +9,7 @@ from web3.contract import Contract
 from web3.types import ABI
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
 
@@ -404,3 +404,14 @@ class ERC20(BaseContract):
             return 0
         else:
             return int(number * (10 ** self.decimal))
+
+    def max_approval_amount(self) -> Decimal:
+        """return the max uint256 token approval amount. Note: this is not very secure and if you give this approval you
+        should revoke it when you are done!
+
+        :return: the max approval amount of a uint256 token in Decimal representation
+        :rtype: Decimal
+        """
+        max_uint256 = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+        return self.to_decimal(number=int(max_uint256, base=16))

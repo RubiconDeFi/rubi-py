@@ -1,9 +1,9 @@
+import logging as log
 from abc import ABC, abstractmethod
 from multiprocessing import Queue
 from typing import Union, Callable
 
 from rubi import OrderBook, OrderEvent, Transaction, TransactionReceipt
-from web3.types import Nonce
 
 from event_trading_framework.helpers import (
     TransactionResult, ThreadedTransactionManager, FreshEventQueue, FIFOEventQueue
@@ -11,16 +11,16 @@ from event_trading_framework.helpers import (
 
 
 class BaseEventTradingFramework(ABC):
-    def __init__(self, event_queue: Queue, nonce: Nonce):
+    def __init__(self, event_queue: Queue, transaction_manager: ThreadedTransactionManager):
+        if event_queue is not transaction_manager.transaction_result_queue:
+            raise Exception("The transaction result queue and the event_queue should be the same queue.")
+
         self.event_queue = event_queue
 
         self.running = False
 
         # Initialize transaction manager
-        self.transaction_manager = ThreadedTransactionManager(
-            queue=event_queue,
-            current_nonce=nonce
-        )
+        self.transaction_manager = transaction_manager
 
         # Initialize message queues
         self.orderbook_event_queue = FreshEventQueue(message_handler=self.on_orderbook)
@@ -56,7 +56,7 @@ class BaseEventTradingFramework(ABC):
             else:
                 raise Exception("Unexpected message fetched from queue")
 
-    def stop(self, **args):
+    def stop(self, *args, **kwargs):
         self.running = False
 
         self.orderbook_event_queue.stop()

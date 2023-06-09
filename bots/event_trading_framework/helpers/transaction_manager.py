@@ -2,11 +2,10 @@ import logging as log
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, Future
 from enum import Enum
-from multiprocessing import Queue
 from threading import Lock, Semaphore, Thread
 from typing import Callable, Optional
 
-from rubi import Transaction, TransactionReceipt
+from rubi import Transaction, TransactionReceipt, Client
 from web3.types import Nonce
 
 
@@ -46,12 +45,13 @@ class TransactionResult:
 
 
 class ThreadedTransactionManager:
-    def __init__(self, queue: Queue, current_nonce: Nonce):
+    def __init__(self, client: Client):
         self.running = False
 
-        self.transaction_result_queue = queue
+        self.client = client
+        self.transaction_result_queue = client.message_queue
 
-        self.nonce = current_nonce
+        self.nonce = client.get_nonce()
         self.nonce_lock = Lock()
 
         self.transaction_notifier = Semaphore(value=0)
@@ -113,15 +113,21 @@ class ThreadedTransactionManager:
                 with self.nonce_lock:
                     log.error(e)
 
+                    # Due to transaction nonces this means that this transaction and all pending transactions after this
+                    # will have failed, so we may as well stop caring about them.
+                    self.nonce = first_pending_transaction.nonce
+
+                    # if the error has the message nonce too low then we have messed up significantly somehow, and we
+                    # should just reset.
+                    if hasattr(e, 'message'):
+                        if e.message == "nonce too low":
+                            self.nonce = self.client.get_nonce()
+
                     self.transaction_result_queue.put(TransactionResult(
                         status=TransactionStatus.FAILURE,
                         transaction=first_pending_transaction.transaction,
                         transaction_receipt=None
                     ))
-
-                    # Due to transaction nonces this means that this transaction and all pending transactions after this
-                    # will have failed, so we may as well stop caring about them
-                    self.nonce = first_pending_transaction.nonce
 
                     for pending_transaction in self.pending_transactions:
                         self.transaction_result_queue.put(TransactionResult(
