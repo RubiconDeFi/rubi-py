@@ -25,6 +25,7 @@ from rubi.contracts import (
 )
 from rubi.network import (
     Network,
+    
 )
 from rubi.types import (
     OrderSide,
@@ -317,68 +318,102 @@ def loadenv():
     return {"http_node_url": http_node_url, "wallet": wallet, "key": key}
 
 @pytest.fixture
+def networkFromConfig(loadenv):
+    # i dont think i need to add the token config but here it is incase "rubi/tests/custom_token_addresses.yaml", 
+    return Network.from_config(loadenv["http_node_url"])
+
+@pytest.fixture
 def createQueue():
     queue = Queue()
     return queue
 
-class TestClient:
-    
-    def test_init(self, loadenv, createQueue):
-        # this test requires me to set up the Network
-        client = Client()
-        # Test if the wallet attribute is set correctly when a valid wallet address is provided.
-        # Test if the key attribute is set correctly when a key is provided.
-        # Test if the market attribute is initialized with the correct values.
-        # Test if the router attribute is initialized with the correct values.
-        # Test if the _pairs attribute is initialized as an empty dictionary.
-        # Test if the message_queue attribute is set to None when no queue is provided.
-    
-    def test_from_http_node_url(self, loadenv, createQueue):
-        queue = createQueue()
+def test_from_http_node_url(loadenv, createQueue):
+
+        http_node_url = os.getenv("HTTP_NODE_URL")
+        wallet = os.getenv("DEV_WALLET")
+        key = os.getenv("DEV_KEY")
         
         client = Client.from_http_node_url(
-            http_node_url=loadenv["http_node_url"],
-            custom_token_addresses_file="rubi/tests/custom_token_addresses.yaml",
-            wallet=loadenv["wallet"],
-            key=loadenv["key"],
-            message_queue= queue
+            http_node_url=http_node_url,
+            wallet=wallet,
+            key=key
         )
-        # Test if a Client instance is created successfully.
-        # Test if the network attribute of the created instance is set correctly.
-        # Test if the message_queue attribute of the created instance is set to None when no queue is provided.
-        # Test if the wallet attribute of the created instance is set correctly when a valid wallet address is provided.
-        # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
-        # Test if the key attribute of the created instance is set correctly when a key is provided.
 
-class TestPairMethods:
-    def test_add_pair():
-        # adding pair with valid params
-        # addign pair with 0 base asset allowance
-        # adding pair with 0 quote asset allowance
-        # adding a pair with no signing rights 
-        return 0
+        print(client)
+        assert client
 
-    def test_get_pairs_list():
-        # get pairs when _pairs is empty
-        # get random pair when !empty
-        return 0
+#class TestClient:
     
-    def test_update_pair_allowance():
-        # update base and quote allowance
-        # update when no signing rights
-        # update allowance for pair that is not in dict
-        return 0
+    # def test_init(self, loadenv, networkFromConfig ,createQueue):
+    #     # this test requires me to set up the Network
+    #     client = Client(
+    #         network= networkFromConfig,
+    #         message_queue= createQueue,
+    #         wallet= loadenv["wallet"],
+    #         key=loadenv["key"]
+    #     )
+#         # Test if the wallet attribute is set correctly when a valid wallet address is provided.
+#         assert client.wallet == loadenv["wallet"]
+#         # Test if the key attribute is set correctly when a key is provided.
+#         assert client.key == loadenv["key"]
+#         # Test if the market/router have correct types and are init
+#         assert type(client.market) == RubiconMarket
+#         assert type(client.router) == RubiconRouter
+#         # Test if the _pairs attribute is initialized as an empty dictionary.
+#         assert len(client._pairs.keys()) == 0
+#         # Test if the message_queue attribute is set to None when no queue is provided.
+        
+    # def test_from_http_node_url(self, loadenv, createQueue):
+    #     queue = Queue
 
-    def test_get_pair():
-        # get existing pair
-        # get non existing pair
-        return 0
+    #     http_node_url = os.getenv("HTTP_NODE_URL")
+    #     wallet = os.getenv("DEV_WALLET")
+    #     key = os.getenv("DEV_KEY")
+        
+    #     client = Client.from_http_node_url(
+    #         http_node_url=http_node_url,
+    #         wallet=wallet,
+    #         key=key
+    #     )
+
+    #     print(client)
+    #     assert client
+#         # Test if a Client instance is created successfully.
+#         # Test if the network attribute of the created instance is set correctly.
+#         # Test if the message_queue attribute of the created instance is set to None when no queue is provided.
+#         # Test if the wallet attribute of the created instance is set correctly when a valid wallet address is provided.
+#         # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
+#         # Test if the key attribute of the created instance is set correctly when a key is provided.
+
+# class TestPairMethods:
+#     def test_add_pair():
+#         # adding pair with valid params
+#         # addign pair with 0 base asset allowance
+#         # adding pair with 0 quote asset allowance
+#         # adding a pair with no signing rights 
+#         return 0
+
+#     def test_get_pairs_list():
+#         # get pairs when _pairs is empty
+#         # get random pair when !empty
+#         return 0
     
-    def test_remove_pair():
-        # remove existing pair
-        # remove non existing pair
-        # maybe have some get pair tests in here as well
-        return 0
+#     def test_update_pair_allowance():
+#         # update base and quote allowance
+#         # update when no signing rights
+#         # update allowance for pair that is not in dict
+#         return 0
+
+#     def test_get_pair():
+#         # get existing pair
+#         # get non existing pair
+#         return 0
+    
+#     def test_remove_pair():
+#         # remove existing pair
+#         # remove non existing pair
+#         # maybe have some get pair tests in here as well
+#         return 0
 
 
 
