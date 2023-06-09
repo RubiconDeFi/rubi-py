@@ -350,4 +350,37 @@ class TestClient:
         # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
         # Test if the key attribute of the created instance is set correctly when a key is provided.
 
+class TestPairMethods:
+    def test_add_pair():
+        # adding pair with valid params
+        # addign pair with 0 base asset allowance
+        # adding pair with 0 quote asset allowance
+        # adding a pair with no signing rights 
+        return 0
+
+    def test_get_pairs_list():
+        # get pairs when _pairs is empty
+        # get random pair when !empty
+        return 0
+    
+    def test_update_pair_allowance():
+        # update base and quote allowance
+        # update when no signing rights
+        # update allowance for pair that is not in dict
+        return 0
+
+    def test_get_pair():
+        # get existing pair
+        # get non existing pair
+        return 0
+    
+    def test_remove_pair():
+        # remove existing pair
+        # remove non existing pair
+        # maybe have some get pair tests in here as well
+        return 0
+
+
+
+
 
