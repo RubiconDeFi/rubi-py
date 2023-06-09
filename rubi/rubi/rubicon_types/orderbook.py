@@ -2,7 +2,7 @@ from _decimal import Decimal
 from typing import List, Tuple
 
 from rubi import ERC20
-from rubi.types.order import OrderSide
+from rubi.rubicon_types.order import OrderSide
 
 
 class BookLevel:
