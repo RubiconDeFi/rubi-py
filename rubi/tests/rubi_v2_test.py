@@ -48,6 +48,8 @@ from dotenv import load_dotenv
 ################################################################
 #    Fixtures to spin up dummy chain instance
 #    TODO: Paths to files are hardcoded. Fix this
+#    Removed the w3 fixture due to calling issues
+#    The eth_tester fixture was removed is not needed...just call tester_provider.ethereum_tester
 ################################################################
 
 # set a fixture to return a tester provider intance 
@@ -62,15 +64,9 @@ def tester_provider():
     return eth_tester_provider
 
 # set a fixture to return the eth_tester object from the tester provider instance
-# TODO: This fixture is not needed. Just call tester_provider.ethereum_tester
 @pytest.fixture
 def eth_tester(tester_provider):
     return tester_provider.ethereum_tester
-
-# set a fixture to return a web3 instance instantiated from the tester provider
-@pytest.fixture
-def w3(tester_provider):
-    return Web3(tester_provider)
 
 # a function to add an account to the eth_tester object given the private key
 @pytest.fixture
@@ -309,6 +305,7 @@ def aid_contract(factory_contract, eth_tester, w3):
 
 ################################################################
 #    New fixtures based on v2
+#    Network requires a dummy yaml config that I added
 ################################################################
 
 # load in the test yaml configurations
@@ -322,7 +319,7 @@ def dummy_yaml_config():
 
 
 @pytest.fixture
-def networkInstance(tester_provider, w3, dummy_yaml_config):
+def networkInstance(tester_provider, dummy_yaml_config):
     tester_provider = tester_provider
     w3Instance = Web3(tester_provider)
     config_dict = dummy_yaml_config
@@ -339,7 +336,6 @@ def networkInstance(tester_provider, w3, dummy_yaml_config):
         rubicon=rubicon_dict,
         token_addresses=token_dict
     )
-
 
 
 class TestClient:
@@ -367,13 +363,6 @@ class TestClient:
         # Test if the message_queue attribute is set to None when no queue is provided.
         assert client.message_queue is None
         
-    
-        # Test if a Client instance is created successfully.
-        # Test if the network attribute of the created instance is set correctly.
-        # Test if the message_queue attribute of the created instance is set to None when no queue is provided.
-        # Test if the wallet attribute of the created instance is set correctly when a valid wallet address is provided.
-        # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
-        # Test if the key attribute of the created instance is set correctly when a key is provided.
 
 # class TestPairMethods:
 #     def test_add_pair():
