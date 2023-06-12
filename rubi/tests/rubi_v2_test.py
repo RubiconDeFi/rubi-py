@@ -1,5 +1,3 @@
-# pytest fixtures for the rubi-py client test
-
 # imports
 import os
 import json
@@ -47,7 +45,8 @@ from rubi import Client
 from dotenv import load_dotenv
 
 ################################################################
-#    Fixtures from old test - might be useful still
+#    Fixtures to spin up dummy chain instance
+#    TODO: Paths to files are hardcoded. Fix this
 ################################################################
 
 # set a fixture to return a tester provider intance 
@@ -62,6 +61,7 @@ def tester_provider():
     return eth_tester_provider
 
 # set a fixture to return the eth_tester object from the tester provider instance
+# TODO: This fixture is not needed. Just call tester_provider.ethereum_tester
 @pytest.fixture
 def eth_tester(tester_provider):
     return tester_provider.ethereum_tester
@@ -74,27 +74,25 @@ def w3(tester_provider):
 # a function to add an account to the eth_tester object given the private key
 @pytest.fixture
 def add_account(eth_tester):
-
     new = eth_tester.add_account('0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d241d')
     return {'address' : new, 'key': '0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d241d'}
 
 # a function to add another account to the eth_tester object given the private key
 @pytest.fixture
 def add_account_buyer(eth_tester):
-
     new = eth_tester.add_account('0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d2420')
     return {'address' : new, 'key': '0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d2420'}
 
 # set a fixture to return a RubiconMarket.sol instance
 @pytest.fixture
 def market_contract(eth_tester, w3):
-
     # set the test addresses
     deploy_address = eth_tester.get_accounts()[0]
     fee_address = eth_tester.get_accounts()[1]
 
     # load the contract abi and bytecode
-    path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/RubiconMarket.json"
+    #path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/RubiconMarket.json"
+    path = "/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/abis/RubiconMarket.json"
     with open(path, 'r') as f:
         contract_interface = json.load(f)
     f.close()
@@ -133,7 +131,8 @@ def erc20s(market_contract, add_account, add_account_buyer, eth_tester, w3):
     user_buyer = add_account_buyer['address']
 
     # load the contract abi and bytecode
-    path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/ERC20MockDecimals.json"
+    #path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/ERC20MockDecimals.json"
+    path = "/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/abis/ERC20MockDecimals.json"
     with open(path, 'r') as f:
         contract_interface = json.load(f)
     f.close()
@@ -206,7 +205,8 @@ def router_contract(market_contract, erc20s, eth_tester, w3):
     deploy_address = eth_tester.get_accounts()[0]
 
     # load the contract abi and bytecode
-    path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/RubiconRouter.json"
+    # path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/RubiconRouter.json"
+    path = "/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/abis/RubiconRouter.json"
     with open(path, 'r') as f:
         contract_interface = json.load(f)
     f.close()
@@ -242,7 +242,8 @@ def factory_contract(market_contract, eth_tester, w3):
     deploy_address = eth_tester.get_accounts()[0]
     
     # load the contract abi and bytecode
-    path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/MarketAidFactory.json"
+    path = "/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/abis/MarketAidFactory.json"
+    #path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/MarketAidFactory.json"
     with open(path, 'r') as f:
         contract_interface = json.load(f)
     f.close()
@@ -277,7 +278,8 @@ def aid_contract(factory_contract, eth_tester, w3):
     strategist_address = eth_tester.get_accounts()[2]
 
     # load the contract abi and bytecode
-    path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/MarketAid.json"
+    path = "/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/abis/MarketAid.json"
+    #path = f"{os.path.dirname(os.path.realpath(__file__))}/abis/MarketAid.json"
     with open(path, 'r') as f:
         contract_interface = json.load(f)
     f.close()
