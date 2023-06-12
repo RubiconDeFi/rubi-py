@@ -5,7 +5,7 @@ rpc_url: "https://goerli-rollup.arbitrum.io/rpc"
 explorer_url: "https://goerli-rollup-explorer.arbitrum.io"
 
 rubicon:
- market: 
+ market:
   address: "0x506407f25B746C39807c03A96DD595a6BE223211"
  router:
   address: "0x3AbA34a8C9616eA927225C045EEa5d5b51a7a6FC"
