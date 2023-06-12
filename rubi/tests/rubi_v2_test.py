@@ -2,6 +2,7 @@
 import os
 import json
 import pytest
+import yaml
 import logging as log
 from _decimal import Decimal
 from multiprocessing import Queue
@@ -310,82 +311,69 @@ def aid_contract(factory_contract, eth_tester, w3):
 #    New fixtures based on v2
 ################################################################
 
+# load in the test yaml configurations
 @pytest.fixture
-def loadenv():
-    load_dotenv(".env")
-    http_node_url = os.getenv("HTTP_NODE_URL")
-    wallet = os.getenv("DEV_WALLET")
-    key = os.getenv("DEV_KEY")
+def dummy_yaml_config():
+    # Load the YAML file
+    with open('/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/test_network_config/test_config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-    return {"http_node_url": http_node_url, "wallet": wallet, "key": key}
+    return{"rubicon_dict": config['rubicon'], "token_dict": config['token_addresses']}
 
-@pytest.fixture
-def networkFromConfig(loadenv):
-    # i dont think i need to add the token config but here it is incase "rubi/tests/custom_token_addresses.yaml", 
-    return Network.from_config(loadenv["http_node_url"])
 
 @pytest.fixture
-def createQueue():
-    queue = Queue()
-    return queue
+def networkInstance(tester_provider, w3, dummy_yaml_config):
+    tester_provider = tester_provider
+    w3Instance = Web3(tester_provider)
+    config_dict = dummy_yaml_config
+    rubicon_dict = config_dict['rubicon_dict']
+    token_dict = config_dict['token_dict']
+    return Network(
+        path='/Users/ishandhanani/Desktop/repos/rbkn/rubi-py/rubi/tests/test_network_config',
+        w3=w3Instance,
+        name='IshanChain',
+        chain_id=69420,
+        currency='ISH',
+        rpc_url='fakeurl.com',
+        explorer_url='fakerurl.com',
+        rubicon=rubicon_dict,
+        token_addresses=token_dict
+    )
 
-def test_from_http_node_url(loadenv, createQueue):
 
-        http_node_url = os.getenv("HTTP_NODE_URL")
-        wallet = os.getenv("DEV_WALLET")
-        key = os.getenv("DEV_KEY")
-        
-        client = Client.from_http_node_url(
-            http_node_url=http_node_url,
-            wallet=wallet,
-            key=key
-        )
 
-        print(client)
-        assert client
-
-#class TestClient:
+class TestClient:
     
-    # def test_init(self, loadenv, networkFromConfig ,createQueue):
-    #     # this test requires me to set up the Network
-    #     client = Client(
-    #         network= networkFromConfig,
-    #         message_queue= createQueue,
-    #         wallet= loadenv["wallet"],
-    #         key=loadenv["key"]
-    #     )
-#         # Test if the wallet attribute is set correctly when a valid wallet address is provided.
-#         assert client.wallet == loadenv["wallet"]
-#         # Test if the key attribute is set correctly when a key is provided.
-#         assert client.key == loadenv["key"]
-#         # Test if the market/router have correct types and are init
-#         assert type(client.market) == RubiconMarket
-#         assert type(client.router) == RubiconRouter
-#         # Test if the _pairs attribute is initialized as an empty dictionary.
-#         assert len(client._pairs.keys()) == 0
-#         # Test if the message_queue attribute is set to None when no queue is provided.
+    def test_init(self, add_account, networkInstance):
+        # this test requires me to set up the Network
+        account = add_account
+        ntwrk = networkInstance
+        client = Client(
+            network= ntwrk,
+            wallet= account['address'],
+            key=account['key']
+        )
+        # Test client creation
+        assert isinstance(client, Client)
+        # Test if the wallet attribute is set correctly when a valid wallet address is provided.
+        assert isinstance(client.wallet, str)
+        # Test if the key attribute is set correctly when a key is provided.
+        assert isinstance(client.key, str)
+        # Test if the market/router have correct types and are init
+        assert isinstance(client.market, RubiconMarket)
+        assert isinstance(client.router, RubiconRouter)
+        # Test if the _pairs attribute is initialized as an empty dictionary.
+        assert len(client._pairs.keys()) == 0
+        # Test if the message_queue attribute is set to None when no queue is provided.
+        assert client.message_queue is None
         
-    # def test_from_http_node_url(self, loadenv, createQueue):
-    #     queue = Queue
-
-    #     http_node_url = os.getenv("HTTP_NODE_URL")
-    #     wallet = os.getenv("DEV_WALLET")
-    #     key = os.getenv("DEV_KEY")
-        
-    #     client = Client.from_http_node_url(
-    #         http_node_url=http_node_url,
-    #         wallet=wallet,
-    #         key=key
-    #     )
-
-    #     print(client)
-    #     assert client
-#         # Test if a Client instance is created successfully.
-#         # Test if the network attribute of the created instance is set correctly.
-#         # Test if the message_queue attribute of the created instance is set to None when no queue is provided.
-#         # Test if the wallet attribute of the created instance is set correctly when a valid wallet address is provided.
-#         # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
-#         # Test if the key attribute of the created instance is set correctly when a key is provided.
+    
+        # Test if a Client instance is created successfully.
+        # Test if the network attribute of the created instance is set correctly.
+        # Test if the message_queue attribute of the created instance is set to None when no queue is provided.
+        # Test if the wallet attribute of the created instance is set correctly when a valid wallet address is provided.
+        # Test if the wallet attribute of the created instance is set to None when no wallet address is provided.
+        # Test if the key attribute of the created instance is set correctly when a key is provided.
 
 # class TestPairMethods:
 #     def test_add_pair():
