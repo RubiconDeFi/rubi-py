@@ -36,8 +36,9 @@ if __name__ == "__main__":
         starting_base_asset_amount=Decimal("0"),
         starting_quote_asset_amount=Decimal("2000"),
         starting_mid_price=Decimal("1"),
-        grid_spread_in_quote=Decimal("0.0002"),
-        level_spread_multiplier=Decimal("1"),
+        grid_spread_in_quote=Decimal("0.0004"),
+        grid_min_price_tick=Decimal("0.0001"),
+        level_spread_multiplier=Decimal("0.1"),
         number_levels=3,
         base_level_size=Decimal("200"),
         min_order_size_in_quote=Decimal("100")
