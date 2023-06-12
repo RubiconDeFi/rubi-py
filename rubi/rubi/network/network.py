@@ -40,7 +40,7 @@ class Network:
     ):
         """Initializes a Network instance.
 
-        :param path: The path to the network configuration.
+        :param path: The path to the network configuration folder.
         :type path: str
         :param w3: The Web3 instance connected to the network.
         :type w3: Web3
