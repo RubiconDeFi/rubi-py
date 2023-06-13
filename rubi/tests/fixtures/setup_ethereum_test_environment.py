@@ -185,7 +185,6 @@ def rubicon_router(
 # setup Network with the deployed coins
 ######################################################################
 
-# TODO this doesn't test the load from yaml function
 @fixture
 def test_network(
     ethereum_tester_provider: EthereumTesterProvider,
@@ -196,7 +195,6 @@ def test_network(
     eth: Contract,
     blz: Contract
 ) -> Network:
-    # TODO: think about a better way to load the abis as having a test_network_config folder and an abis folder is messy
     base_path = f"{os.path.dirname(os.path.abspath(__file__))}/../test_network_config"
 
     rubicon = {
