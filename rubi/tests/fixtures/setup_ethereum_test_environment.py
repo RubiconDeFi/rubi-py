@@ -8,9 +8,13 @@ from pytest import fixture
 from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
 
-from fixtures.helper.deploy_contract import deploy_erc20
+from tests.fixtures.helper.deploy_contract import deploy_erc20
 from rubi import Network, Client, ERC20
-from tests.fixtures.helper import deploy_contract
+from tests.fixtures.helper.deploy_contract import deploy_contract
+
+from rubi.rubicon_types.order import NewMarketOrder, OrderSide, NewLimitOrder
+
+from _decimal import Decimal
 
 
 ######################################################################
@@ -78,7 +82,7 @@ def rubicon_market(ethereum_tester_provider: EthereumTesterProvider, web3: Web3)
 
     # initialize rubicon market
     rubicon_market = web3.eth.contract(address=market_contract_address, abi=abi)
-    initialization_transaction = rubicon_market.functions.initialize(True, fee_address).transact()
+    initialization_transaction = rubicon_market.functions.initialize(fee_address).transact()
 
     try:
         web3.eth.wait_for_transaction_receipt(initialization_transaction, 180)
@@ -270,3 +274,8 @@ def eth_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
         wallet=account_1["address"],
         key=account_1["key"]
     )
+
+
+######################################################################
+# setup order types 
+######################################################################
