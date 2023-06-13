@@ -65,17 +65,17 @@ class TestClient:
         self,
         rubicon_market: Contract,
         test_client_for_account_1: Client,
-        cow_interface_for_account_1: ERC20,
-        eth_interface_for_account_1: ERC20
+        cow_erc20_for_account_1: ERC20,
+        eth_erc20_for_account_1: ERC20
     ):
         pair_name = "COW/ETH"
 
-        initial_cow_allowance = cow_interface_for_account_1.allowance(
-            owner=cow_interface_for_account_1.wallet,
+        initial_cow_allowance = cow_erc20_for_account_1.allowance(
+            owner=cow_erc20_for_account_1.wallet,
             spender=rubicon_market.address
         )
-        initial_eth_allowance = eth_interface_for_account_1.allowance(
-            owner=eth_interface_for_account_1.wallet,
+        initial_eth_allowance = eth_erc20_for_account_1.allowance(
+            owner=eth_erc20_for_account_1.wallet,
             spender=rubicon_market.address
         )
 
@@ -91,20 +91,20 @@ class TestClient:
             new_quote_asset_allowance=Decimal("100"),
         )
 
-        new_cow_allowance = cow_interface_for_account_1.allowance(
-            owner=cow_interface_for_account_1.wallet,
+        new_cow_allowance = cow_erc20_for_account_1.allowance(
+            owner=cow_erc20_for_account_1.wallet,
             spender=rubicon_market.address
         )
-        new_eth_allowance = eth_interface_for_account_1.allowance(
-            owner=eth_interface_for_account_1.wallet,
+        new_eth_allowance = eth_erc20_for_account_1.allowance(
+            owner=eth_erc20_for_account_1.wallet,
             spender=rubicon_market.address
         )
 
         assert new_cow_allowance != initial_cow_allowance
-        assert new_cow_allowance == cow_interface_for_account_1.to_integer(Decimal("12"))
+        assert new_cow_allowance == cow_erc20_for_account_1.to_integer(Decimal("12"))
 
         assert new_eth_allowance != initial_eth_allowance
-        assert new_eth_allowance == eth_interface_for_account_1.to_integer(Decimal("100"))
+        assert new_eth_allowance == eth_erc20_for_account_1.to_integer(Decimal("100"))
 
     def test_delete_pair(self, test_client_for_account_1: Client, cow: Contract, eth: Contract):
         pair_name = "COW/ETH"

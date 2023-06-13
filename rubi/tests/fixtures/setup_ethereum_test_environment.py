@@ -255,7 +255,7 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
 
 
 @fixture
-def cow_interface_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+def cow_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
     return ERC20.from_network(
         name="COW",
         network=test_network,
@@ -265,7 +265,7 @@ def cow_interface_for_account_1(test_network: Network, account_1: Dict) -> ERC20
 
 
 @fixture
-def eth_interface_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+def eth_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
     return ERC20.from_network(
         name="ETH",
         network=test_network,
