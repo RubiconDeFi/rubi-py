@@ -1,11 +1,12 @@
 import os
+from _decimal import Decimal
 from typing import Dict
 
 import yaml
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi import Network, Client, RubiconMarket, RubiconRouter
+from rubi import Network, Client, RubiconMarket, RubiconRouter, ERC20
 
 
 class TestNetwork:
@@ -53,8 +54,68 @@ class TestClient:
 
         test_client.add_pair(pair_name=pair_name)
 
-        assert len(test_client._pairs.keys()) == 1
+        assert len(test_client.get_pairs_list()) == 1
+        assert test_client.get_pairs_list()[0] == pair_name
 
         pair = test_client.get_pair(pair_name=pair_name)
         assert pair.base_asset.address == cow.address
         assert pair.quote_asset.address == eth.address
+
+    def test_update_pair_allowance(
+        self,
+        rubicon_market: Contract,
+        test_client_for_account_1: Client,
+        cow_interface_for_account_1: ERC20,
+        eth_interface_for_account_1: ERC20
+    ):
+        pair_name = "COW/ETH"
+
+        initial_cow_allowance = cow_interface_for_account_1.allowance(
+            owner=cow_interface_for_account_1.wallet,
+            spender=rubicon_market.address
+        )
+        initial_eth_allowance = eth_interface_for_account_1.allowance(
+            owner=eth_interface_for_account_1.wallet,
+            spender=rubicon_market.address
+        )
+
+        # in fixtures these are initialized with the max approval value
+        max_approval = 2 ** 256 - 1
+
+        assert initial_cow_allowance == max_approval
+        assert initial_eth_allowance == max_approval
+
+        test_client_for_account_1.update_pair_allowance(
+            pair_name=pair_name,
+            new_base_asset_allowance=Decimal("12"),
+            new_quote_asset_allowance=Decimal("100"),
+        )
+
+        new_cow_allowance = cow_interface_for_account_1.allowance(
+            owner=cow_interface_for_account_1.wallet,
+            spender=rubicon_market.address
+        )
+        new_eth_allowance = eth_interface_for_account_1.allowance(
+            owner=eth_interface_for_account_1.wallet,
+            spender=rubicon_market.address
+        )
+
+        assert new_cow_allowance != initial_cow_allowance
+        assert new_cow_allowance == cow_interface_for_account_1.to_integer(Decimal("12"))
+
+        assert new_eth_allowance != initial_eth_allowance
+        assert new_eth_allowance == eth_interface_for_account_1.to_integer(Decimal("100"))
+
+    def test_delete_pair(self, test_client_for_account_1: Client, cow: Contract, eth: Contract):
+        pair_name = "COW/ETH"
+
+        assert len(test_client_for_account_1.get_pairs_list()) == 1
+        assert test_client_for_account_1.get_pairs_list()[0] == pair_name
+
+        pair = test_client_for_account_1.get_pair(pair_name)
+        assert pair.base_asset.address == cow.address
+        assert pair.quote_asset.address == eth.address
+
+        test_client_for_account_1.remove_pair(pair_name)
+
+        assert len(test_client_for_account_1.get_pairs_list()) == 0

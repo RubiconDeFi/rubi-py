@@ -9,7 +9,7 @@ from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
 
 from fixtures.helper.deploy_contract import deploy_erc20
-from rubi import Network, Client
+from rubi import Network, Client, ERC20
 from tests.fixtures.helper import deploy_contract
 
 
@@ -229,11 +229,46 @@ def test_network(
 
 
 ######################################################################
-# setup Client
+# setup Client and rubi erc20 contracts
 ######################################################################
 
 @fixture
 def test_client(test_network: Network) -> Client:
     return Client(
         network=test_network
+    )
+
+
+@fixture
+def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
+    client = Client(
+        network=test_network,
+        wallet=account_1["address"],
+        key=account_1["key"]
+    )
+
+    pair_name = "COW/ETH"
+
+    client.add_pair(pair_name=pair_name)
+
+    return client
+
+
+@fixture
+def cow_interface_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+    return ERC20.from_network(
+        name="COW",
+        network=test_network,
+        wallet=account_1["address"],
+        key=account_1["key"]
+    )
+
+
+@fixture
+def eth_interface_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+    return ERC20.from_network(
+        name="ETH",
+        network=test_network,
+        wallet=account_1["address"],
+        key=account_1["key"]
     )
