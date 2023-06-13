@@ -2,7 +2,6 @@ import os
 from typing import Dict
 
 import yaml
-from pytest import mark
 from web3 import Web3
 from web3.contract import Contract
 
@@ -10,9 +9,7 @@ from rubi import Network, Client, RubiconMarket, RubiconRouter
 
 
 class TestNetwork:
-    @mark.usefixtures("test_network")
-    @mark.usefixtures("web3")
-    def test_init(self, test_network: Network, web3: Web3):
+    def test_init_from_yaml(self, test_network: Network, web3: Web3):
         path = f"{os.path.dirname(os.path.abspath(__file__))}/test_network_config"
         with open(f"{path}/test_config.yaml", 'r') as file:
             network_config = yaml.safe_load(file)
@@ -31,8 +28,6 @@ class TestNetwork:
 
 
 class TestClient:
-    @mark.usefixtures("account_1")
-    @mark.usefixtures("test_network")
     def test_init(self, account_1: Dict, test_network: Network):
         client = Client(
             network=test_network,
@@ -53,9 +48,6 @@ class TestClient:
         # Test if the message_queue attribute is set to None when no queue is provided.
         assert client.message_queue is None
 
-    @mark.usefixtures("test_client")
-    @mark.usefixtures("cow")
-    @mark.usefixtures("eth")
     def test_add_pair(self, test_client: Client, cow: Contract, eth: Contract):
         pair_name = "COW/ETH"
 
