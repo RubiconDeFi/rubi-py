@@ -121,7 +121,7 @@ class GridBot(BaseEventTradingFramework):
         #     self.allowed_to_place_new_orders = False
         #     # TODO: Cancel all current and pending orders
         #
-        # self.gas_tracker.add_transaction(transaction=result)
+        self.gas_tracker.add_transaction(transaction=result)
 
         match result.status:
             case TransactionStatus.SUCCESS:
