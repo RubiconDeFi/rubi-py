@@ -4,8 +4,8 @@ from typing import Optional, Union, List
 
 from eth_typing import ChecksumAddress
 
-from rubi.contracts.types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
-from rubi.types.pair import Pair
+from rubi.contracts.contract_types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
+from rubi.rubicon_types.pair import Pair
 
 
 class OrderSide(Enum):

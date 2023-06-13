@@ -11,7 +11,7 @@ from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
 
-from rubi.contracts.types import BaseEvent, TransactionReceipt
+from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
 
 
 class BaseContract:

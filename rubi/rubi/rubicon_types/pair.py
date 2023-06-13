@@ -1,4 +1,5 @@
 from _decimal import Decimal
+from typing import Optional
 
 from rubi import ERC20
 
@@ -13,9 +14,9 @@ class Pair:
     :type base_asset: ERC20
     :param quote_asset: Quote asset of the pair.
     :type quote_asset: ERC20
-    :param current_base_asset_allowance: The base asset spending allowance of the RubiconMarket contract.
+    :param current_base_asset_allowance: The base asset spending allowance of the RubiconMarket contract, Optional.
     :type current_base_asset_allowance: Decimal
-    :param current_quote_asset_allowance: The quote asset spending allowance of the RubiconMarket contract.
+    :param current_quote_asset_allowance: The quote asset spending allowance of the RubiconMarket contract, Optional.
     :type current_quote_asset_allowance: Decimal
     """
 
@@ -24,8 +25,8 @@ class Pair:
         name: str,
         base_asset: ERC20,
         quote_asset: ERC20,
-        current_base_asset_allowance: Decimal,
-        current_quote_asset_allowance: Decimal
+        current_base_asset_allowance: Optional[Decimal],
+        current_quote_asset_allowance: Optional[Decimal]
     ):
         self.name = name
 
@@ -41,7 +42,7 @@ class Pair:
             values=[self.base_asset.address, self.quote_asset.address]
         ).hex()
 
-        # TODO: think about structure of allowances on this class. Currently this only caters for the RubiconMarket
+        # TODO: think about structure of allowances on this class. Currently, this only caters for the RubiconMarket
         #  contract.
         self.current_base_asset_allowance = current_base_asset_allowance
         self.current_quote_asset_allowance = current_quote_asset_allowance

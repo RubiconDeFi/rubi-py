@@ -9,7 +9,7 @@ from web3.contract import Contract
 from web3.types import ABI
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
 
