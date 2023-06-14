@@ -16,6 +16,7 @@ from rubi.rubicon_types.order import NewMarketOrder, OrderSide, NewLimitOrder
 
 from _decimal import Decimal
 
+from multiprocessing import Queue
 
 ######################################################################
 # setup EthereumTesterProvider, Web3 instance
@@ -243,15 +244,15 @@ def test_client(test_network: Network) -> Client:
 
 @fixture
 def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
+    q = Queue()
     client = Client(
         network=test_network,
         wallet=account_1["address"],
-        key=account_1["key"]
+        key=account_1["key"],
+        message_queue=q
     )
 
     pair_name = "COW/ETH"
-
-    client.add_pair(pair_name=pair_name)
 
     return client
 
