@@ -234,3 +234,101 @@ class TestClient:
         orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
 
         assert round(orderbook.asks.levels[0].size, 4) == Decimal("0")
+
+    # sell market
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_place_sell_market_order(
+        self,
+        test_client_for_account_1: Client,
+        cow_erc20_for_account_1: ERC20,
+        eth_erc20_for_account_1: ERC20
+    ):
+        pair_name = "COW/ETH"
+
+        cow_amount_before_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
+        eth_amount_before_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
+
+        market_order = NewMarketOrder(
+            pair_name=pair_name,
+            order_side=OrderSide.SELL,
+            size=Decimal("1"),
+            worst_execution_price=Decimal("1")
+        )
+
+        transaction = Transaction(
+            orders=[market_order]
+        )
+
+        result = test_client_for_account_1.place_market_order(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.status == 1
+
+        cow_amount_after_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
+        eth_amount_after_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
+
+        # Check that account 2 had paid and received assets accounting for rounding
+        # received 1 COW
+        assert round(
+            cow_erc20_for_account_1.to_decimal(cow_amount_after_order - cow_amount_before_order), 4
+        ) == Decimal("-1")
+        # paid 1 ETH
+        assert round(
+            eth_erc20_for_account_1.to_decimal(eth_amount_after_order - eth_amount_before_order), 4
+        ) == Decimal("1")
+
+        # Check that offer is effectively no longer in rubicon market
+        orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+        print(orderbook)
+        assert round(orderbook.bids.levels[0].size, 4) == Decimal("0")
+
+    # sell limit
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_place_sell_limit_order(
+        self,
+        test_client_for_account_1: Client,
+        cow_erc20_for_account_1: ERC20,
+        eth_erc20_for_account_1: ERC20
+    ):
+        pair_name = "COW/ETH"
+
+        cow_amount_before_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
+        eth_amount_before_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
+
+        limit_order = NewLimitOrder(
+            pair_name="COW/ETH",
+            order_side=OrderSide.SELL,
+            size=Decimal("1"),
+            price=Decimal("1")
+        )
+
+        transaction = Transaction(
+            orders=[limit_order]
+        )
+
+        result = test_client_for_account_1.place_limit_order(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.status == 1
+
+        cow_amount_after_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
+        eth_amount_after_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
+
+        # Check that account 2 had paid and received assets accounting for rounding
+        # received 1 COW
+        assert round(
+            cow_erc20_for_account_1.to_decimal(cow_amount_after_order - cow_amount_before_order), 4
+        ) == Decimal("-1")
+        # paid 1 ETH
+        assert round(
+            eth_erc20_for_account_1.to_decimal(eth_amount_after_order - eth_amount_before_order), 4
+        ) == Decimal("1")
+
+        # Check that offer is effectively no longer in rubicon market
+        orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+        print(orderbook)
+        assert round(orderbook.bids.levels[0].size, 4) == Decimal("0")
