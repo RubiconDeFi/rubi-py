@@ -8,9 +8,13 @@ from pytest import fixture
 from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
 
-from rubi import Network, Client, ERC20, RubiconMarket
-from tests.fixtures.helper.deploy_contract import deploy_contract
 from tests.fixtures.helper.deploy_contract import deploy_erc20
+from rubi import Network, Client, ERC20
+from tests.fixtures.helper.deploy_contract import deploy_contract
+
+from rubi.rubicon_types.order import NewMarketOrder, OrderSide, NewLimitOrder
+
+from _decimal import Decimal
 
 from multiprocessing import Queue
 
@@ -228,39 +232,6 @@ def test_network(
 
 
 ######################################################################
-# setup rubi contracts for account 2
-######################################################################
-
-@fixture
-def rubicon_market_for_account_2(web3: Web3, rubicon_market: Contract, account_2: Dict) -> RubiconMarket:
-    return RubiconMarket(
-        w3=web3,
-        contract=rubicon_market,
-        wallet=account_2["address"],
-        key=account_2["key"]
-    )
-
-
-@fixture
-def add_account_2_offers_to_cow_eth_market(rubicon_market_for_account_2: RubiconMarket, cow: Contract, eth: Contract):
-    # COW/ETH bid
-    rubicon_market_for_account_2.offer(
-        pay_amt=1 * 10 ** 18,
-        pay_gem=eth.address,
-        buy_amt=1 * 10 ** 18,
-        buy_gem=cow.address
-    )
-
-    # COW/ETH ask
-    rubicon_market_for_account_2.offer(
-        pay_amt=1 * 10 ** 18,
-        pay_gem=cow.address,
-        buy_amt=2 * 10 ** 18,
-        buy_gem=eth.address
-    )
-
-
-######################################################################
 # setup Client and rubi erc20 contracts
 ######################################################################
 
@@ -304,3 +275,8 @@ def eth_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
         wallet=account_1["address"],
         key=account_1["key"]
     )
+
+
+######################################################################
+# setup order types 
+######################################################################
