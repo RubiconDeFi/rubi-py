@@ -1,5 +1,6 @@
 import logging as log
 import os
+from multiprocessing import Queue
 from typing import Dict
 
 from eth_tester import PyEVMBackend
@@ -272,8 +273,11 @@ def test_client(test_network: Network) -> Client:
 
 @fixture
 def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
+    message_queue = Queue()
+
     client = Client(
         network=test_network,
+        message_queue=message_queue,
         wallet=account_1["address"],
         key=account_1["key"]
     )
