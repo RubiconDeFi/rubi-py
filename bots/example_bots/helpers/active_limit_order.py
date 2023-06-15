@@ -1,7 +1,7 @@
 from _decimal import Decimal
 
 from eth_typing import ChecksumAddress
-from rubi import OrderType, OrderSide, OrderEvent, Pair
+from rubi import OrderType, OrderSide, OrderEvent
 
 
 class ActiveLimitOrder:
@@ -40,15 +40,11 @@ class ActiveLimitOrder:
             size=order.size
         )
 
-    def is_full_take(self, pair: Pair, take_event: OrderEvent) -> bool:
-        remaining_size = self.size - self.filled_size
-
-        return take_event.size >= remaining_size or (
-            abs(take_event.size - remaining_size) < Decimal("1") / (10 ** pair.base_asset.decimal)
-        )
+    def is_full_take(self, take_event: OrderEvent) -> bool:
+        return take_event.size >= self.remaining_size()
 
     def update_with_take(self, take_event: OrderEvent) -> None:
-        self.filled_size -= take_event.size
+        self.filled_size += take_event.size
 
     def remaining_size(self) -> Decimal:
         return self.size - self.filled_size

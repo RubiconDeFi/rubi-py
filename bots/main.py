@@ -7,7 +7,7 @@ from multiprocessing import Queue
 from dotenv import load_dotenv
 from rubi import Client
 
-from example_bots import GridParams, GridBot
+from example_bots import Grid, GridBot
 
 if __name__ == "__main__":
     # setup logging
@@ -32,22 +32,22 @@ if __name__ == "__main__":
     )
 
     # Setup Grid
-    grid = GridParams(
+    grid = Grid(
         starting_base_asset_amount=Decimal("0"),
         starting_quote_asset_amount=Decimal("2000"),
-        starting_mid_price=Decimal("1"),
-        grid_spread_in_quote=Decimal("0.0004"),
-        grid_min_price_tick=Decimal("0.0001"),
-        level_spread_multiplier=Decimal("0.1"),
-        number_levels=3,
-        base_level_size=Decimal("200"),
+        starting_base_asset_average_price=None,
+        fair_price=Decimal("0.9995"),
+        price_tick=Decimal("0.0001"),
+        top_edge=Decimal("1.002"),
+        bottom_edge=Decimal("0.9979"),
+        spread=Decimal("0.0004"),
         min_order_size_in_quote=Decimal("100")
     )
 
     # Initialize grid bot strategy
     grid_bot = GridBot(
-        pair_name="USDT/USDC",
-        grid_params=grid,
+        pair_name="DAI/USDC",
+        grid=grid,
         client=rubicon_client,
     )
 

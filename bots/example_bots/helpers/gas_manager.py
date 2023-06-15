@@ -2,7 +2,7 @@ from _decimal import Decimal
 
 from event_trading_framework import TransactionResult
 
-
+# TODO: this needs to be reworked as it currently isn't very useful
 class GasManager:
 
     # TODO: add eth price to track gas price in dollar terms not in eth terms

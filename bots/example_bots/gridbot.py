@@ -10,17 +10,15 @@ from rubi import (
 
 from event_trading_framework import BaseEventTradingFramework, TransactionResult, TransactionStatus, \
     ThreadedTransactionManager
-from example_bots.grid_types.active_limit_order import ActiveLimitOrder
-from example_bots.grid_types.grid_params import GridParams
-from example_bots.helpers.gas_manager import GasManager
-from example_bots.helpers.inventory_manager import Inventory
+from example_bots.helpers.active_limit_order import ActiveLimitOrder
+from example_bots.helpers.grid import Grid
 
 
 class GridBot(BaseEventTradingFramework):
     def __init__(
         self,
         pair_name: str,
-        grid_params: GridParams,
+        grid: Grid,
         client: Client,
     ):
         # Setup client
@@ -36,22 +34,16 @@ class GridBot(BaseEventTradingFramework):
         )
 
         # Initialise transaction manager
-        transaction_manager = ThreadedTransactionManager(
-            client=client
-        )
+        transaction_manager = ThreadedTransactionManager(client=client)
 
         # Instantiate framework
         super().__init__(event_queue=client.message_queue, transaction_manager=transaction_manager)
 
-        # Setup gas tracker
-        self.gas_tracker = GasManager(allowed_fluctuation=Decimal("0.5"), ema_multiplier=Decimal("0.05"))
-
         # Strategy objects
         self.pair = client.get_pair(pair_name=pair_name)
-        self.inventory = Inventory(pair=self.pair, quote_asset_amount=grid_params.quote_asset_amount)
 
         # Strategy variables
-        self.grid: GridParams = grid_params
+        self.grid: Grid = grid
 
         # allowed to trade
         self.allowed_to_place_new_orders: bool = False
@@ -75,6 +67,9 @@ class GridBot(BaseEventTradingFramework):
         self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitTakeEvent)
         self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitCancelEvent)
 
+        # set allowed_to_place_new_orders to True
+        self.allowed_to_place_new_orders = True
+
     def on_orderbook(self, orderbook: OrderBook):
         log.debug(f"NEW ORDERBOOK, timestamp: {time.time_ns()}")
         log.debug(orderbook)
@@ -83,7 +78,10 @@ class GridBot(BaseEventTradingFramework):
         self.orderbook = orderbook
 
         # construct and place grid
-        self.place_new_limit_orders(orders=self.construct_grid())
+        if self.allowed_to_place_new_orders:
+            self.place_new_limit_orders(orders=self.construct_grid())
+        else:
+            log.info("Not currently allowed to place new orders")
 
     def on_order(self, order: OrderEvent):
         log.debug(f"NEW ORDER EVENT, timestamp: {time.time_ns()}")
@@ -95,9 +93,9 @@ class GridBot(BaseEventTradingFramework):
             case OrderType.LIMIT_TAKEN:
                 taken_order = self.active_limit_orders[order.limit_order_id]
 
-                self.inventory.add_trade(order_side=order.order_side, price=order.price, size=order.size)
+                self.grid.add_trade(order_side=order.order_side, price=order.price, size=order.size)
 
-                if taken_order.is_full_take(pair=self.pair, take_event=order):
+                if taken_order.is_full_take(take_event=order):
                     log.info(f"Limit order {order.limit_order_id} fully taken")
                     del self.active_limit_orders[order.limit_order_id]
                 else:
@@ -115,13 +113,7 @@ class GridBot(BaseEventTradingFramework):
             del self.pending_transactions[result.nonce]
             return
 
-        # TODO: figure out gas tracking
-        # if not self.gas_tracker.is_acceptable_cost(transaction=result):
-        #     log.warning("Significant deviation ema gas cost. Pausing trading")
-        #     self.allowed_to_place_new_orders = False
-        #     # TODO: Cancel all current and pending orders
-        #
-        self.gas_tracker.add_transaction(transaction=result)
+        # TODO: gas tracking should be done here
 
         match result.status:
             case TransactionStatus.SUCCESS:
@@ -146,12 +138,14 @@ class GridBot(BaseEventTradingFramework):
         grid_levels: [Tuple[int, int]] = []
 
         current_amount_available = (
-            self.inventory.quote_asset_amount if side == OrderSide.BUY else self.inventory.base_asset_amount
+            self.grid.quote_asset_amount if side == OrderSide.BUY else self.grid.base_asset_amount
         )
 
-        for i in range(self.grid.number_levels - 1, -1, -1):
-            price = self.grid.get_level_price(side=side, level=i)
-            size = self.grid.get_level_size(level=i)
+        ideal_grid_levels = self.grid.ideal_bids if OrderSide.BUY else self.grid.ideal_asks
+
+        for level in reversed(ideal_grid_levels):
+            price = level.price
+            size = level.size
 
             if current_amount_available > size * price:
                 grid_levels.append((price, size))
