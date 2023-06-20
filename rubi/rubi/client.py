@@ -380,13 +380,17 @@ class Client:
         :type event_data: EventData
         """
         raw_event = event_type(block_number=event_data["blockNumber"], **event_data["args"])
-
+        # print(event_data)
+        # print(raw_event)
         if raw_event.client_filter(wallet=self.wallet):
             pair = self._pairs.get(pair_name)
 
             order_event = OrderEvent.from_event(pair=pair, event=raw_event, wallet=self.wallet)
 
             self.message_queue.put(order_event)
+        # if raw event instsance of fee event 
+            # create fee event object similar to order event object
+            # else do order event
 
     ######################################################################
     # order methods

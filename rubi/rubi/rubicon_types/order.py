@@ -4,7 +4,7 @@ from typing import Optional, Union, List
 
 from eth_typing import ChecksumAddress
 
-from rubi.contracts.contract_types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent
+from rubi.contracts.contract_types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent, EmitDeleteEvent
 from rubi.rubicon_types.pair import Pair
 
 
@@ -21,6 +21,7 @@ class OrderType(Enum):
 
     # Only used for events coming from the RubiconMarket
     LIMIT_TAKEN = "LIMIT_TAKEN"
+    LIMIT_DELETED = "LIMIT_DELETED"
     CANCEL = "CANCEL"
 
 
@@ -328,6 +329,26 @@ class OrderEvent:
                     base_amt=event.take_amt,
                     quote_amt=event.give_amt
                 )
+        elif isinstance(event, EmitDeleteEvent):
+            if pair.bid_identifier == event.pair:
+                return cls._build_order(
+                    event=event,
+                    pair=pair,
+                    side=OrderSide.BUY if wallet == event.maker else OrderSide.SELL,
+                    order_type=OrderType.LIMIT_DELETED if wallet == event.maker else OrderType.MARKET,
+                    base_amt=event.give_amt,
+                    quote_amt=event.take_amt
+                )
+            else:
+                return cls._build_order(
+                    event=event,
+                    pair=pair,
+                    side=OrderSide.SELL if wallet == event.maker else OrderSide.BUY,
+                    order_type=OrderType.LIMIT_DELETED if wallet == event.maker else OrderType.MARKET,
+                    base_amt=event.take_amt,
+                    quote_amt=event.give_amt
+                )
+
         else:
             Exception(f"{event.__class__} cannot be converted into an OrderEvent")
 

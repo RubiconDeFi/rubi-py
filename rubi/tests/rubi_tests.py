@@ -205,14 +205,18 @@ class TestClient:
         assert round(
             cow_erc20_for_account_1.to_decimal(cow_amount_after_order - cow_amount_before_order), 4
         ) == Decimal("1")
+        print(cow_amount_after_order - cow_amount_before_order)
         # paid 2 ETH
         assert round(
             eth_erc20_for_account_1.to_decimal(eth_amount_after_order - eth_amount_before_order), 4
         ) == Decimal("-2")
+        print(eth_amount_after_order - eth_amount_before_order)
 
         # Check that offer is effectively no longer in rubicon market
         orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+        print(orderbook)
 
+        # Not accounting for fees
         assert round(orderbook.asks.levels[0].size, 4) == Decimal("0")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
@@ -683,7 +687,7 @@ class TestClient:
 
         message_queue = test_client_for_account_1.message_queue
 
-        # Create a market order that fills the fixture ordre
+        # Create a market order that fills the fixture order
         market_order = NewMarketOrder(
             pair_name=pair_name,
             order_side=OrderSide.BUY,
@@ -775,19 +779,24 @@ class TestClient:
         assert message.price == Decimal("1.5")
         assert round(message.size, 4) == Decimal("0.5")
 
-    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    @mark.usefixtures("add_multiple_acc2_offers_to_cow_eth_market")
     # broken - hits an error because the order is not completely removed (rounding)
-    def test_emit_delete_event_poller(self, test_client_for_account_1: Client):
+    def test_emit_delete_event_poller(self, test_client_for_account_1: Client, test_client_for_account_2: Client):
         pair_name = "COW/ETH"
 
-        test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitDeleteEvent)
-        message_queue = test_client_for_account_1.message_queue
+        #test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitDeleteEvent)
+        test_client_for_account_2.start_event_poller(pair_name=pair_name, event_type=EmitDeleteEvent)
+        message_queue = test_client_for_account_2.message_queue
+
+        # Confirming the 2 fixture asks in the market
+        ask_orders_in_market = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
+        print(ask_orders_in_market)
 
         market_order = NewMarketOrder(
             pair_name=pair_name,
             order_side=OrderSide.BUY,
-            size=Decimal("1"),
-            worst_execution_price=Decimal("2")
+            size=Decimal("3"),
+            worst_execution_price=Decimal("3")
         )
 
         transaction = Transaction(
@@ -801,24 +810,59 @@ class TestClient:
         # Check that transaction was a success
         assert result.status == 1
 
-        # Check that offer is effectively no longer in rubicon market
-        orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
-        print(orderbook)
+        # Check that 1 ask was filled and the other is partially remaining
+        ask_orders_after_market_buy = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
+        print(ask_orders_after_market_buy)
+        assert ask_orders_after_market_buy < ask_orders_in_market
 
         # Get message from message queue put there by event poller (Delete event)
         message = message_queue.get(block=True)
         print(message)
 
-        # # Check that the message is for the filled market order
+        # Check that the message is for the filled market order
         # assert isinstance(message, OrderEvent)
         # assert message.order_type == OrderType.MARKET
         # assert message.order_side == OrderSide.BUY
         # assert message.price == Decimal("2")
         # assert round(message.size, 4) == Decimal("1")
 
-    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    @mark.usefixtures("add_multiple_acc2_offers_to_cow_eth_market")
     #broken hits an error for fee
     def test_emit_fee_event_poller(self, test_client_for_account_1: Client):
-        assert 1 == 0
+        pair_name = "COW/ETH"
+
+        test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitFeeEvent)
+        message_queue = test_client_for_account_1.message_queue
+
+        # Confirming the 2 fixture asks in the market
+        ask_orders_in_market = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
+        print(ask_orders_in_market)
+
+        market_order = NewMarketOrder(
+            pair_name=pair_name,
+            order_side=OrderSide.BUY,
+            size=Decimal("3"),
+            worst_execution_price=Decimal("3")
+        )
+
+        transaction = Transaction(
+            orders=[market_order]
+        )
+
+        result = test_client_for_account_1.place_market_order(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.status == 1
+
+        # Check that 1 ask was filled and the other is partially remaining - fee should be paid after it is taken off
+        ask_orders_after_market_buy = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
+        print(ask_orders_after_market_buy)
+        assert ask_orders_after_market_buy < ask_orders_in_market
+
+        # Get message from message queue put there by event poller (Delete event)
+        message = message_queue.get(block=True)
+        print(message)
 
     

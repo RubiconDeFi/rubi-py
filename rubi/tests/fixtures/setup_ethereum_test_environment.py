@@ -1,5 +1,6 @@
 import logging as log
 import os
+from _decimal import Decimal
 from multiprocessing import Queue
 from typing import Dict
 
@@ -259,6 +260,21 @@ def add_account_2_offers_to_cow_eth_market(rubicon_market_for_account_2: Rubicon
         buy_gem=eth.address
     )
 
+@fixture 
+def add_multiple_acc2_offers_to_cow_eth_market(rubicon_market_for_account_2: RubiconMarket, cow: Contract, eth: Contract):
+    rubicon_market_for_account_2.offer(
+        pay_amt=2 * 10 ** 18,
+        pay_gem=cow.address,
+        buy_amt=1 * 10 ** 18,
+        buy_gem=eth.address
+    )
+
+    rubicon_market_for_account_2.offer(
+        pay_amt=1 * 10 ** 18,
+        pay_gem=cow.address,
+        buy_amt=1 * 10 ** 18,
+        buy_gem=eth.address
+    )
 
 ######################################################################
 # setup Client and rubi erc20 contracts
@@ -280,6 +296,23 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
         message_queue=message_queue,
         wallet=account_1["address"],
         key=account_1["key"]
+    )
+
+    pair_name = "COW/ETH"
+
+    client.add_pair(pair_name=pair_name)
+
+    return client
+
+@fixture 
+def test_client_for_account_2(test_network: Network, account_2: Dict) -> Client:
+    message_queue = Queue()
+
+    client = Client(
+        network=test_network,
+        message_queue=message_queue,
+        wallet=account_2["address"],
+        key=account_2["key"]
     )
 
     pair_name = "COW/ETH"
