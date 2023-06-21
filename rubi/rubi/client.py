@@ -422,10 +422,7 @@ class Client:
                     buy_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.quote_asset.address,
                     max_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
-                    nonce=transaction.nonce,
-                    gas=transaction.gas,
-                    max_fee_per_gas=transaction.max_fee_per_gas,
-                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                    **transaction.args(),
                 )
             case OrderSide.SELL:
                 return self.market.sell_all_amount(
@@ -433,10 +430,7 @@ class Client:
                     pay_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.quote_asset.address,
                     min_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
-                    nonce=transaction.nonce,
-                    gas=transaction.gas,
-                    max_fee_per_gas=transaction.max_fee_per_gas,
-                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                    **transaction.args(),
                 )
 
     def place_limit_order(self, transaction: Transaction) -> TransactionReceipt:
@@ -463,10 +457,7 @@ class Client:
                     pay_gem=pair.quote_asset.address,
                     buy_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.base_asset.address,
-                    nonce=transaction.nonce,
-                    gas=transaction.gas,
-                    max_fee_per_gas=transaction.max_fee_per_gas,
-                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                    **transaction.args(),
                 )
             case OrderSide.SELL:
                 return self.market.offer(
@@ -474,10 +465,7 @@ class Client:
                     pay_gem=pair.base_asset.address,
                     buy_amt=pair.quote_asset.to_integer(order.price * order.size),
                     buy_gem=pair.quote_asset.address,
-                    nonce=transaction.nonce,
-                    gas=transaction.gas,
-                    max_fee_per_gas=transaction.max_fee_per_gas,
-                    max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+                    **transaction.args(),
                 )
 
     def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
@@ -497,10 +485,7 @@ class Client:
 
         return self.market.cancel(
             id=order.order_id,
-            nonce=transaction.nonce,
-            gas=transaction.gas,
-            max_fee_per_gas=transaction.max_fee_per_gas,
-            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+            **transaction.args(),
         )
 
     def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
@@ -537,10 +522,7 @@ class Client:
             pay_gems=pay_gems,
             buy_amts=buy_amts,
             buy_gems=buy_gems,
-            nonce=transaction.nonce,
-            gas=transaction.gas,
-            max_fee_per_gas=transaction.max_fee_per_gas,
-            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+            **transaction.args(),
         )
 
     def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
@@ -575,15 +557,13 @@ class Client:
                     buy_amts.append(pair.quote_asset.to_integer(order.price * order.size))
                     buy_gems.append(pair.quote_asset.address)
 
-        return self.market.batch_offer(
+        return self.market.batch_requote(
+            ids=order_ids,
             pay_amts=pay_amts,
             pay_gems=pay_gems,
             buy_amts=buy_amts,
             buy_gems=buy_gems,
-            nonce=transaction.nonce,
-            gas=transaction.gas,
-            max_fee_per_gas=transaction.max_fee_per_gas,
-            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+            **transaction.args(),
         )
 
     def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
@@ -603,10 +583,7 @@ class Client:
 
         return self.market.batch_cancel(
             ids=order_ids,
-            nonce=transaction.nonce,
-            gas=transaction.gas,
-            max_fee_per_gas=transaction.max_fee_per_gas,
-            max_priority_fee_per_gas=transaction.max_priority_fee_per_gas
+            **transaction.args(),
         )
 
     ######################################################################
