@@ -8,11 +8,13 @@ from typing import Union, List, Optional, Dict, Type, Any, Callable
 from eth_typing import ChecksumAddress
 from web3.types import EventData
 
+from rubi import FeeEvent
 from rubi.contracts import (
     RubiconMarket,
     RubiconRouter,
     ERC20,
-    TransactionReceipt
+    TransactionReceipt,
+    EmitFeeEvent
 )
 from rubi.network import (
     Network,
@@ -380,17 +382,16 @@ class Client:
         :type event_data: EventData
         """
         raw_event = event_type(block_number=event_data["blockNumber"], **event_data["args"])
-        # print(event_data)
-        # print(raw_event)
+
         if raw_event.client_filter(wallet=self.wallet):
             pair = self._pairs.get(pair_name)
 
-            order_event = OrderEvent.from_event(pair=pair, event=raw_event, wallet=self.wallet)
+            if isinstance(raw_event, EmitFeeEvent):
+                event = FeeEvent.from_event(pair=pair, event=raw_event)
+            else:
+                event = OrderEvent.from_event(pair=pair, event=raw_event, wallet=self.wallet)
 
-            self.message_queue.put(order_event)
-        # if raw event instsance of fee event 
-            # create fee event object similar to order event object
-            # else do order event
+            self.message_queue.put(event)
 
     ######################################################################
     # order methods

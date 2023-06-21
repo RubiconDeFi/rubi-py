@@ -1,6 +1,5 @@
 import logging as log
 import os
-from _decimal import Decimal
 from multiprocessing import Queue
 from typing import Dict
 
@@ -86,6 +85,14 @@ def rubicon_market(ethereum_tester_provider: EthereumTesterProvider, web3: Web3)
         web3.eth.wait_for_transaction_receipt(initialization_transaction, 180)
     except Exception as e:
         log.warning('market contract failed to initialize: ', e)
+
+    # set maker fee to 1 bip
+    add_maker_fee_transaction = rubicon_market.functions.setMakerFee(10).transact()
+
+    try:
+        web3.eth.wait_for_transaction_receipt(add_maker_fee_transaction, 180)
+    except Exception as e:
+        log.warning('market contract failed to set maker fee: ', e)
 
     return rubicon_market
 
@@ -244,7 +251,7 @@ def rubicon_market_for_account_2(web3: Web3, rubicon_market: Contract, account_2
 
 @fixture
 def add_account_2_offers_to_cow_eth_market(rubicon_market_for_account_2: RubiconMarket, cow: Contract, eth: Contract):
-    # COW/ETH bid
+    # COW/ETH bids
     rubicon_market_for_account_2.offer(
         pay_amt=1 * 10 ** 18,
         pay_gem=eth.address,
@@ -252,7 +259,7 @@ def add_account_2_offers_to_cow_eth_market(rubicon_market_for_account_2: Rubicon
         buy_gem=cow.address
     )
 
-    # COW/ETH ask
+    # COW/ETH asks
     rubicon_market_for_account_2.offer(
         pay_amt=1 * 10 ** 18,
         pay_gem=cow.address,
@@ -260,19 +267,10 @@ def add_account_2_offers_to_cow_eth_market(rubicon_market_for_account_2: Rubicon
         buy_gem=eth.address
     )
 
-@fixture 
-def add_multiple_acc2_offers_to_cow_eth_market(rubicon_market_for_account_2: RubiconMarket, cow: Contract, eth: Contract):
-    rubicon_market_for_account_2.offer(
-        pay_amt=2 * 10 ** 18,
-        pay_gem=cow.address,
-        buy_amt=1 * 10 ** 18,
-        buy_gem=eth.address
-    )
-
     rubicon_market_for_account_2.offer(
         pay_amt=1 * 10 ** 18,
         pay_gem=cow.address,
-        buy_amt=1 * 10 ** 18,
+        buy_amt=3 * 10 ** 18,
         buy_gem=eth.address
     )
 
@@ -304,7 +302,8 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
 
     return client
 
-@fixture 
+
+@fixture
 def test_client_for_account_2(test_network: Network, account_2: Dict) -> Client:
     message_queue = Queue()
 

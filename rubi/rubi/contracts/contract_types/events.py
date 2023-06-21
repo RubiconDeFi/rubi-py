@@ -325,7 +325,8 @@ class EmitFeeEvent(BaseMarketEvent):
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "fee_to": wallet}
+        #filters = {"pair": [bid_identifier, ask_identifier], "feeTo": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -355,9 +356,10 @@ class EmitDeleteEvent(BaseMarketEvent):
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {}
-        # "pair": [bid_identifier, ask_identifier], "maker": wallet
+        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+
         return {key: value for key, value in filters.items() if value is not None}
+
 
 ######################################################################
 # router events

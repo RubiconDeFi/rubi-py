@@ -9,7 +9,8 @@ from web3.contract import Contract
 
 from rubi import (
     Network, Client, RubiconMarket, RubiconRouter, ERC20, NewMarketOrder, OrderSide, Transaction, NewLimitOrder,
-    EmitOfferEvent, OrderEvent, OrderType, NewCancelOrder, EmitCancelEvent, EmitTakeEvent, EmitDeleteEvent, EmitFeeEvent
+    EmitOfferEvent, OrderEvent, OrderType, NewCancelOrder, EmitCancelEvent, EmitTakeEvent, EmitDeleteEvent,
+    EmitFeeEvent, OrderBook, FeeEvent
 )
 
 
@@ -153,10 +154,36 @@ class TestClient:
 
         # Check that the account 2 offers are in the book
         assert len(orderbook.bids.levels) == 1
-        assert len(orderbook.asks.levels) == 1
+        assert len(orderbook.asks.levels) == 2
 
         bid = orderbook.bids.levels[0]
         ask = orderbook.asks.levels[0]
+
+        assert bid.price == Decimal("1")
+        assert bid.size == Decimal("1")
+        assert ask.price == Decimal("2")
+        assert ask.size == Decimal("1")
+
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_orderbook_poller(
+        self,
+        test_client_for_account_1: Client
+    ):
+        pair_name = "COW/ETH"
+
+        test_client_for_account_1.start_orderbook_poller(pair_name=pair_name)
+
+        message_queue = test_client_for_account_1.message_queue
+
+        message = message_queue.get(block=True)
+
+        # Check that the account 2 offers are in the book
+        assert isinstance(message, OrderBook)
+        assert len(message.bids.levels) == 1
+        assert len(message.asks.levels) == 2
+
+        bid = message.bids.levels[0]
+        ask = message.asks.levels[0]
 
         assert bid.price == Decimal("1")
         assert bid.size == Decimal("1")
@@ -205,16 +232,13 @@ class TestClient:
         assert round(
             cow_erc20_for_account_1.to_decimal(cow_amount_after_order - cow_amount_before_order), 4
         ) == Decimal("1")
-        print(cow_amount_after_order - cow_amount_before_order)
         # paid 2 ETH
         assert round(
             eth_erc20_for_account_1.to_decimal(eth_amount_after_order - eth_amount_before_order), 4
         ) == Decimal("-2")
-        print(eth_amount_after_order - eth_amount_before_order)
 
         # Check that offer is effectively no longer in rubicon market
         orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
-        print(orderbook)
 
         # Not accounting for fees
         assert round(orderbook.asks.levels[0].size, 4) == Decimal("0")
@@ -345,7 +369,7 @@ class TestClient:
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
         eth_amount_after_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
 
-        # 1 COW being held in escrow for the Limit Order
+        # 0.5 COW being held in escrow for the Limit Order
         assert round(
             cow_erc20_for_account_1.to_decimal(cow_amount_after_order - cow_amount_before_order), 4
         ) == Decimal("-0.5")
@@ -457,7 +481,7 @@ class TestClient:
         assert round(orderbook.bids.levels[0].size, 4) == Decimal("0")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_cancel_buy_limit_order(
+    def test_cancel_limit_order(
         self,
         test_client_for_account_1: Client,
         cow_erc20_for_account_1: ERC20,
@@ -465,16 +489,13 @@ class TestClient:
     ):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
-        
         test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitOfferEvent)
         message_queue = test_client_for_account_1.message_queue
 
         limit_order = NewLimitOrder(
             pair_name="COW/ETH",
             order_side=OrderSide.BUY,
-            size=Decimal("0.5"),
+            size=Decimal("1"),
             price=Decimal("1.5")
         )
 
@@ -492,14 +513,20 @@ class TestClient:
         # Get limit order ID from message queue 
         limit_order_id = message_queue.get(block=True).limit_order_id
         
-        # ID should be 3 as it's the 3rd order in the market 
+        # ID should be 4 as it's the 4th order in the market
         assert isinstance(limit_order_id, int)
-        assert limit_order_id == 3
+        assert limit_order_id == 4
 
-        # Cancel the buy limit order
+        orderbook_before_cancel = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+
+        # Check that the order is in the orderbook
+        assert len(orderbook_before_cancel.bids.levels) == 2
+        assert orderbook_before_cancel.bids.levels[0].price == Decimal("1.5")
+        assert orderbook_before_cancel.bids.levels[0].size == Decimal("1")
+
+        # Cancel the limit order
         cancel_limit_order = NewCancelOrder(
             pair_name=pair_name,
-            order_side=OrderSide.BUY,
             order_id=limit_order_id
         )
 
@@ -514,77 +541,11 @@ class TestClient:
         # Check that cancel txn was a success
         assert cancel_result.status == 1
 
-        # Check balances are the same after the cancel removes funds from escrow
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
+        orderbook_after_cancel = test_client_for_account_1.get_orderbook(pair_name=pair_name)
 
-        assert cow_amount_before_order == cow_amount_after_order
-        assert eth_amount_before_order == eth_amount_after_order
-    
-    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_cancel_sell_limit_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20
-    ):
-        pair_name = "COW/ETH"
-
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
-
-        test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitOfferEvent)
-        message_queue = test_client_for_account_1.message_queue
-
-        limit_order = NewLimitOrder(
-            pair_name="COW/ETH",
-            order_side=OrderSide.SELL,
-            size=Decimal("0.5"),
-            price=Decimal("1.5")
-        )
-
-        transaction = Transaction(
-            orders=[limit_order]
-        )
-
-        result = test_client_for_account_1.place_limit_order(
-            transaction=transaction
-        )
-
-        # Check that transaction was a success
-        assert result.status == 1
-
-        # Get limit order ID from message queue 
-        limit_order_id = message_queue.get(block=True).limit_order_id
-        
-        # ID should be 3 as it's the 3rd order in the market 
-        assert isinstance(limit_order_id, int)
-        assert limit_order_id == 3
-
-        # Cancel the buy limit order
-        cancel_limit_order = NewCancelOrder(
-            pair_name=pair_name,
-            order_side=OrderSide.SELL,
-            order_id=limit_order_id
-        )
-
-        cancel_transaction = Transaction(
-            orders=[cancel_limit_order]
-        )
-
-        cancel_result = test_client_for_account_1.cancel_limit_order(
-            transaction=cancel_transaction
-        )
-
-        # Check that cancel txn was a success
-        assert cancel_result.status == 1
-
-        # Check balances are the same after the cancel removes funds from escrow
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
-
-        assert cow_amount_before_order == cow_amount_after_order
-        assert eth_amount_before_order == eth_amount_after_order
+        # Check that the order is in the orderbook
+        assert len(orderbook_after_cancel.bids.levels) == 1
+        assert orderbook_after_cancel.bids.levels[0].price != Decimal("1.5")
     
     ######################################################################
     # batch order tests
@@ -602,9 +563,6 @@ class TestClient:
 
         cow_amount_before_order = cow_erc20_for_account_1.balance_of(cow_erc20_for_account_1.wallet)
         eth_amount_before_order = eth_erc20_for_account_1.balance_of(eth_erc20_for_account_1.wallet)
-
-        print(cow_amount_before_order)
-        print(eth_amount_before_order)
 
         limit_order_1 = NewLimitOrder(
             pair_name="COW/ETH",
@@ -637,8 +595,7 @@ class TestClient:
 
         assert orderbook.bids.levels[0].size == Decimal("0.5")
         assert orderbook.bids.levels[0].price == Decimal("1.5")
-    
-    
+
     ######################################################################
     # event poller tests
     ######################################################################
@@ -744,9 +701,9 @@ class TestClient:
         # Get limit order ID from message queue 
         limit_order_id = message_queue.get(block=True).limit_order_id
         
-        # ID should be 3 as it's the 3rd order in the market 
+        # ID should be 4 as it's the 4th order in the market
         assert isinstance(limit_order_id, int)
-        assert limit_order_id == 3
+        assert limit_order_id == 4
 
         # Start cancel order polling
         test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitCancelEvent)
@@ -754,7 +711,6 @@ class TestClient:
         # Cancel the buy limit order
         cancel_limit_order = NewCancelOrder(
             pair_name=pair_name,
-            order_side=OrderSide.BUY,
             order_id=limit_order_id
         )
 
@@ -779,24 +735,24 @@ class TestClient:
         assert message.price == Decimal("1.5")
         assert round(message.size, 4) == Decimal("0.5")
 
-    @mark.usefixtures("add_multiple_acc2_offers_to_cow_eth_market")
-    # broken - hits an error because the order is not completely removed (rounding)
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_emit_delete_event_poller(self, test_client_for_account_1: Client, test_client_for_account_2: Client):
         pair_name = "COW/ETH"
 
-        #test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitDeleteEvent)
         test_client_for_account_2.start_event_poller(pair_name=pair_name, event_type=EmitDeleteEvent)
+
         message_queue = test_client_for_account_2.message_queue
 
-        # Confirming the 2 fixture asks in the market
-        ask_orders_in_market = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
-        print(ask_orders_in_market)
+        # Confirm there are two asks in the market
+        orderbook_before_order = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+
+        assert len(orderbook_before_order.asks.levels) == 2
 
         market_order = NewMarketOrder(
             pair_name=pair_name,
             order_side=OrderSide.BUY,
-            size=Decimal("3"),
-            worst_execution_price=Decimal("3")
+            size=Decimal("1.5"),
+            worst_execution_price=Decimal("4")
         )
 
         transaction = Transaction(
@@ -811,38 +767,29 @@ class TestClient:
         assert result.status == 1
 
         # Check that 1 ask was filled and the other is partially remaining
-        ask_orders_after_market_buy = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
-        print(ask_orders_after_market_buy)
-        assert ask_orders_after_market_buy < ask_orders_in_market
+        orderbook_after_order = test_client_for_account_1.get_orderbook(pair_name=pair_name)
+
+        assert len(orderbook_after_order.asks.levels) == 1
 
         # Get message from message queue put there by event poller (Delete event)
         message = message_queue.get(block=True)
-        print(message)
 
-        # Check that the message is for the filled market order
-        # assert isinstance(message, OrderEvent)
-        # assert message.order_type == OrderType.MARKET
-        # assert message.order_side == OrderSide.BUY
-        # assert message.price == Decimal("2")
-        # assert round(message.size, 4) == Decimal("1")
+        # Check that the message is for the deleted limit order
+        assert isinstance(message, OrderEvent)
+        assert message.order_type == OrderType.LIMIT_DELETED
 
-    @mark.usefixtures("add_multiple_acc2_offers_to_cow_eth_market")
-    #broken hits an error for fee
-    def test_emit_fee_event_poller(self, test_client_for_account_1: Client):
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_emit_fee_event_poller(self, test_client_for_account_1: Client, test_client_for_account_2: Client):
         pair_name = "COW/ETH"
 
-        test_client_for_account_1.start_event_poller(pair_name=pair_name, event_type=EmitFeeEvent)
-        message_queue = test_client_for_account_1.message_queue
-
-        # Confirming the 2 fixture asks in the market
-        ask_orders_in_market = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
-        print(ask_orders_in_market)
+        test_client_for_account_2.start_event_poller(pair_name=pair_name, event_type=EmitFeeEvent)
+        message_queue = test_client_for_account_2.message_queue
 
         market_order = NewMarketOrder(
             pair_name=pair_name,
             order_side=OrderSide.BUY,
-            size=Decimal("3"),
-            worst_execution_price=Decimal("3")
+            size=Decimal("1"),
+            worst_execution_price=Decimal("2")
         )
 
         transaction = Transaction(
@@ -856,13 +803,15 @@ class TestClient:
         # Check that transaction was a success
         assert result.status == 1
 
-        # Check that 1 ask was filled and the other is partially remaining - fee should be paid after it is taken off
-        ask_orders_after_market_buy = len(test_client_for_account_1.get_orderbook(pair_name=pair_name).asks.levels)
-        print(ask_orders_after_market_buy)
-        assert ask_orders_after_market_buy < ask_orders_in_market
-
-        # Get message from message queue put there by event poller (Delete event)
+        # Get message from message queue put there by event poller (Fee event)
         message = message_queue.get(block=True)
-        print(message)
+
+        # Check that fee was paid to account 2
+        assert isinstance(message, FeeEvent)
+        assert message.fee_to == test_client_for_account_2.wallet
+        assert message.fee_asset == "ETH"
+
+        # taker pay maker is 1 bip and price is 2 ETH
+        assert round(message.fee, 4) == Decimal("2") * Decimal("0.0001")
 
     
