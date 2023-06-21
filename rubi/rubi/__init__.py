@@ -1,4 +1,4 @@
 from .network import *
 from .contracts import *
-from .types import *
+from .rubicon_types import *
 from .client import Client
