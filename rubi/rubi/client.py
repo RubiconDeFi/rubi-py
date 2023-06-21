@@ -8,7 +8,6 @@ from typing import Union, List, Optional, Dict, Type, Any, Callable
 from eth_typing import ChecksumAddress
 from web3.types import EventData
 
-from rubi import FeeEvent
 from rubi.contracts import (
     RubiconMarket,
     RubiconRouter,
@@ -27,6 +26,7 @@ from rubi.rubicon_types import (
     OrderBook,
     PairDoesNotExistException,
     BaseEvent,
+    FeeEvent,
     OrderEvent,
     Transaction,
     BaseNewOrder,

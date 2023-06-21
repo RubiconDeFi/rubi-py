@@ -5,45 +5,64 @@ This testing suite covers the rubi-py sdk's entire codebase. Our testing coverag
 ## Installation and Setup:
 
 To run the entire test suite, execute the following command in your terminal:
+
 ```shell 
     pytest rubi_tests.py
 ```
 
-To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to adding pairs, you can use:
+To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to
+adding pairs, you can use:
+
 ```shell
     pytest rubi_tests.py -k add_pair
 ```
 
 To view more detailed output during the test run, you can use the -v flag for a verbose mode:
+
 ```shell
     pytest rubi_tests.py -v
 ```
 
+## Test coverage
 
-## Code coverage and tests
+To run and generate test coverage, and then view the report on coverage run:
+
+```shell
+    coverage run -m pytest -v rubi_tests.py && coverage report -m
+```
+
+To generate an html view of coverage run:
+
+```shell
+    coverage run -m pytest -v rubi_tests.py && coverage html && open htmlcov/index.html
+```
+
+### Coverage report
 
 
-| Class         | Function                            | Tests                                                                                                   |
-|---------------|-------------------------------------|---------------------------------------------------------------------------------------------------------|
-| TestNetwork   | test_init_from_yaml                 | - Checks if network attributes are set correctly                                                        |
-| TestClient    | test_init                           | - Checks if client attributes are set correctly                                                         |
-|               |                                     | - Checks if market and router attributes are initialized correctly                                      |
-|               |                                     | - Checks if _pairs attribute is initialized as an empty dictionary                                      |
-|               |                                     | - Checks if message_queue attribute is set to None when no queue is provided                          |
-| TestClient    | test_add_pair                       | - Checks if pair is added to the client's pairs list                                                     |
-|               |                                     | - Checks if the added pair has the correct base and quote assets                                        |
-| TestClient    | test_update_pair_allowance          | - Checks if base and quote asset allowances are updated correctly                                       |
-| TestClient    | test_delete_pair                    | - Checks if pair is removed from the client's pairs list                                                 |
-| TestClient    | test_get_orderbook                  | - Checks if the orderbook is retrieved correctly for the given pair name                                |
-| TestClient    | test_place_buy_market_order         | - Checks if a buy market order is placed successfully                                                   |
-|               |                                     | - Checks if the account's balances are updated correctly after placing the order                       |
-|               |                                     | - Checks if the offer is no longer in the orderbook after placing the order                            |
-| TestClient    | test_place_buy_limit_order          | - Checks if a buy limit order is placed successfully                                                    |
-|               |                                     | - Checks if the account's balances are updated correctly after placing the order                       |
-|               |                                     | - Checks if the offer is no longer in the orderbook after placing the order                            |
-| TestClient    | test_place_sell_market_order        | - Checks if a sell market order is placed successfully                                                  |
-|               |                                     | - Checks if the account's balances are updated correctly after placing the order                       |
-|               |                                     | - Checks if the offer is no longer in the orderbook after placing the order                            |
-| TestClient    | test_place_sell_limit_order         | - Checks if a sell limit order is placed successfully                                                   |
-|               |                                     | - Checks if the account's balances are updated correctly after placing the order                       |
-|               |                                     | - Checks if the offer is no longer in the orderbook after placing the order                            |
+| Name                                                                |    Stmts |    Miss |   Cover |
+|---------------------------------------------------------------------|---------:|--------:|--------:|
+| rubi-py/rubi/rubi/\_\_init\_\_.py                                   |        4 |       0 |    100% |
+| rubi-py/rubi/rubi/client.py                                         |      168 |      24 |     86% |
+| rubi-py/rubi/rubi/contracts/\_\_init\_\_.py                         |        5 |       0 |    100% |
+| rubi-py/rubi/rubi/contracts/base\_contract.py                       |       64 |       7 |     89% |
+| rubi-py/rubi/rubi/contracts/contract\_types/\_\_init\_\_.py         |        2 |       0 |    100% |
+| rubi-py/rubi/rubi/contracts/contract\_types/events.py               |      134 |      18 |     87% |
+| rubi-py/rubi/rubi/contracts/contract\_types/transaction\_reciept.py |       25 |       2 |     92% |
+| rubi-py/rubi/rubi/contracts/erc20.py                                |       63 |      14 |     78% |
+| rubi-py/rubi/rubi/contracts/market.py                               |       60 |      12 |     80% |
+| rubi-py/rubi/rubi/contracts/router.py                               |       35 |      11 |     69% |
+| rubi-py/rubi/rubi/network/\_\_init\_\_.py                           |        1 |       0 |    100% |
+| rubi-py/rubi/rubi/network/network.py                                |       69 |      28 |     59% |
+| rubi-py/rubi/rubi/rubicon\_types/\_\_init\_\_.py                    |        3 |       0 |    100% |
+| rubi-py/rubi/rubi/rubicon\_types/order.py                           |      121 |      21 |     83% |
+| rubi-py/rubi/rubi/rubicon\_types/orderbook.py                       |       55 |      12 |     78% |
+| rubi-py/rubi/rubi/rubicon\_types/pair.py                            |       19 |       1 |     95% |
+| \_\_init\_\_.py                                                     |        0 |       0 |    100% |
+| conftest.py                                                         |        2 |       0 |    100% |
+| fixtures/\_\_init\_\_.py                                            |        1 |       0 |    100% |
+| fixtures/helper/\_\_init\_\_.py                                     |        1 |       0 |    100% |
+| fixtures/helper/deploy\_contract.py                                 |       33 |       2 |     94% |
+| fixtures/setup\_ethereum\_test\_environment.py                      |      112 |       6 |     95% |
+| rubi\_tests.py                                                      |      326 |       0 |    100% |
+| **TOTAL**                                                           | **1303** | **158** | **88%** |
