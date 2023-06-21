@@ -42,7 +42,7 @@ class Grid:
 
         # Grid Parameters
         self.fair_price = fair_price
-        self.current_mid_price = fair_price
+        self.inventory_based_mid_price = fair_price
         self.price_tick = price_tick
         self.top_edge = top_edge
         self.bottom_edge = bottom_edge
@@ -54,8 +54,6 @@ class Grid:
 
         self.ideal_bids: List[GridLevel] = self._construct_ideal_side(OrderSide.BUY)
         self.ideal_asks: List[GridLevel] = self._construct_ideal_side(OrderSide.SELL)
-
-
 
     ######################################################################
     # inventory functions
@@ -75,21 +73,37 @@ class Grid:
 
             self.quote_asset_amount -= size * price
 
+        self._update_mid_price()
+
     ######################################################################
     # grid functions
     ######################################################################
 
-    def _construct_ideal_side(self, side: OrderSide) -> List[GridLevel]:
-        half_grid_size = (self.base_asset_amount * self.fair_price + self.quote_asset_amount) / 2
+    def _update_mid_price(self):
+        total_grid_size = self.base_asset_amount * self.fair_price + self.quote_asset_amount
 
+        inventory_percent = self.quote_asset_amount / total_grid_size
+
+        if inventory_percent <= Decimal("0.5"):
+            self.inventory_based_mid_price = self._round_to_grid_tick(
+                inventory_percent * 2 * (self.fair_price - self.bottom_edge) + self.bottom_edge
+            )
+        else:
+            self.inventory_based_mid_price = self._round_to_grid_tick(
+                (inventory_percent - Decimal("0.5")) * 2 * (self.top_edge - self.fair_price) + self.fair_price
+            )
+
+    def _construct_ideal_side(self, side: OrderSide) -> List[GridLevel]:
         if side == OrderSide.BUY:
+            grid_side_size = self.quote_asset_amount
             number_levels = round((self.fair_price - self.bottom_edge) / self.price_tick)
         else:
+            grid_side_size = self.base_asset_amount * self.fair_price
             number_levels = round((self.top_edge - self.fair_price) / self.price_tick)
 
-        levels_between_order = math.ceil(number_levels / (half_grid_size / self.min_order_size_in_quote))
+        levels_between_order = math.ceil(number_levels / (grid_side_size / self.min_order_size_in_quote))
 
-        size_in_quote = half_grid_size / (Decimal(number_levels) / levels_between_order)
+        size_in_quote = grid_side_size / (Decimal(number_levels) / levels_between_order)
 
         side_levels = []
         for i in range(1, number_levels):
