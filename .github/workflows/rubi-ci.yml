@@ -64,7 +64,11 @@ jobs:
           poetry install --no-interaction --no-root
       
       # Installing rubi itself
-      - run: poetry install --no-interaction
+      - run: |
+          cd rubi
+          poetry install --no-interaction
       
       # Run the default verbose test command
-      - run: poetry run test
+      - run: |
+          cd rubi
+          poetry run test
