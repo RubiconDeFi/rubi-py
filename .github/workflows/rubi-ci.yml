@@ -60,8 +60,8 @@ jobs:
       - if: steps.cache-deps.outputs.cache-hit != 'true'
         name: Install rubi
         run: |
-        cd rubi
-        poetry install --no-interaction --no-root
+          cd rubi
+          poetry install --no-interaction --no-root
       
       # Installing rubi itself
       - run: poetry install --no-interaction
