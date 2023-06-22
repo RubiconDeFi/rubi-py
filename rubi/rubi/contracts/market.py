@@ -376,7 +376,7 @@ class RubiconMarket(BaseContract):
         self,
         ids: List[int],
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: int = 800000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -398,7 +398,7 @@ class RubiconMarket(BaseContract):
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-        cancels = self.contract.functions.cancel(ids)
+        cancels = self.contract.functions.batchCancel(ids)
 
         return self._default_transaction_handler(
             instantiated_contract_function=cancels,
@@ -418,7 +418,7 @@ class RubiconMarket(BaseContract):
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: int = 800000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -543,7 +543,7 @@ class RubiconMarket(BaseContract):
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-        buy_all_amount = self.contract.functions.sellAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount)
+        buy_all_amount = self.contract.functions.buyAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount)
 
         return self._default_transaction_handler(
             instantiated_contract_function=buy_all_amount,
