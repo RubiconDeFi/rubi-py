@@ -3,9 +3,12 @@ import sys
 
 def test(args=sys.argv):
     os.chdir("tests")
-    selector_flag = args[1]
-    test_name = args[2]
-    os.system(f"pytest rubi_tests.py -v {selector_flag} {test_name}")
+    if(len(args) > 1):
+        selector_flag = args[1]
+        test_name = args[2]
+        os.system(f"pytest rubi_tests.py -v {selector_flag} {test_name}")
+    else:
+        os.system("pytest rubi_tests.py -v")
 
 def test_with_coverage():
     os.chdir("tests")
