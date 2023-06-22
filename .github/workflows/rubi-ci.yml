@@ -1,4 +1,4 @@
-# Run this job on pushes to main and for PRs to master
+# Run this job on PRs and pushes to master
 
 name: CI for rubi-py`
 
@@ -7,9 +7,6 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
-
-# permissions:
-#   contents: read
 
 jobs:
   test:
@@ -54,9 +51,6 @@ jobs:
       # Install dependancies. The --no-root flag installs all deps 
       # except for the project itself because we don't want to cache 
       # old versions of rubi when we update
-      # - run: poetry install --no-interaction --no-root
-      # - if: steps.cache-deps.outputs.cache-hit != 'true'
-
       - if: steps.cache-deps.outputs.cache-hit != 'true'
         name: Install rubi
         run: |

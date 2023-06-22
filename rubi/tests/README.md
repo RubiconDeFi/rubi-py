@@ -12,8 +12,7 @@ To run the entire test suite, execute the following command in your terminal:
     poetry run test
 ```
 
-To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to
-adding pairs, you can use:
+To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to adding pairs, you can use:
 
 ```shell
     poetry run test -k test_add_pair
@@ -30,7 +29,7 @@ To run and generate test coverage, and then view the report on coverage run:
 To generate an html view of coverage run:
 
 ```shell
-    generate_coverage_report
+    poetry run generate_coverage_report
 ```
 
 ### Coverage report
