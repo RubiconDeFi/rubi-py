@@ -433,7 +433,7 @@ class Client:
                     buy_gem=pair.base_asset.address,
                     buy_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.quote_asset.address,
-                    max_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
+                    max_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price * order.size),
                     **transaction.args()
                 )
             case OrderSide.SELL:
@@ -441,7 +441,7 @@ class Client:
                     pay_gem=pair.base_asset.address,
                     pay_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.quote_asset.address,
-                    min_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price),
+                    min_fill_amount=pair.quote_asset.to_integer(order.worst_execution_price * order.size),
                     **transaction.args()
                 )
 

@@ -20,6 +20,22 @@ if __name__ == "__main__":
     wallet = os.getenv("DEV_WALLET")
     key = os.getenv("DEV_KEY")
 
+    # Setup Grid
+    grid = Grid(
+        starting_base_asset_amount=Decimal("1000"),
+        starting_quote_asset_amount=Decimal("1000"),
+        starting_base_asset_average_price=None,
+        fair_price=Decimal("1"),
+        price_tick=Decimal("0.01"),
+        grid_range=Decimal("0.2"),
+        spread=Decimal("0.02"),
+        min_order_size_in_quote=Decimal("100")
+    )
+
+    o = grid.get_desired_orders()
+
+    print(o)
+
     # Initialize strategy message queue
     message_queue = Queue()
 
@@ -31,22 +47,9 @@ if __name__ == "__main__":
         key=key
     )
 
-    # Setup Grid
-    grid = Grid(
-        starting_base_asset_amount=Decimal("0"),
-        starting_quote_asset_amount=Decimal("2000"),
-        starting_base_asset_average_price=None,
-        fair_price=Decimal("0.9995"),
-        price_tick=Decimal("0.0001"),
-        top_edge=Decimal("1.002"),
-        bottom_edge=Decimal("0.9979"),
-        spread=Decimal("0.0004"),
-        min_order_size_in_quote=Decimal("100")
-    )
-
     # Initialize grid bot strategy
     grid_bot = GridBot(
-        pair_name="DAI/USDC",
+        pair_name="USDT/USDC",
         grid=grid,
         client=rubicon_client,
     )

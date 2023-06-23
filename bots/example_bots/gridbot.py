@@ -1,11 +1,11 @@
 import logging as log
 import time
 from _decimal import Decimal
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List
 
 from rubi import (
     OrderEvent, OrderBook, Client, EmitOfferEvent, EmitTakeEvent, EmitCancelEvent, OrderType,
-    NewLimitOrder, OrderSide, Transaction
+    NewLimitOrder, OrderSide, Transaction, NewCancelOrder
 )
 
 from event_trading_framework import BaseEventTradingFramework, TransactionResult, TransactionStatus, \
@@ -70,6 +70,12 @@ class GridBot(BaseEventTradingFramework):
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
 
+    def on_shutdown(self):
+        self.cancel_all_active_orders()
+
+        # Wait for all orders to be cancelled
+        time.sleep(10)
+
     def on_orderbook(self, orderbook: OrderBook):
         log.debug(f"NEW ORDERBOOK, timestamp: {time.time_ns()}")
         log.debug(orderbook)
@@ -130,39 +136,34 @@ class GridBot(BaseEventTradingFramework):
     ######################################################################
 
     def construct_grid(self):
-        grid_orders = self.construct_grid_side(side=OrderSide.BUY) + self.construct_grid_side(side=OrderSide.SELL)
+        desired_bids, desired_asks = self.grid.get_desired_orders()
 
-        return grid_orders
-
-    def construct_grid_side(self, side: OrderSide) -> Optional[List[NewLimitOrder]]:
-        grid_levels: [Tuple[int, int]] = []
-
-        current_amount_available = (
-            self.grid.quote_asset_amount if side == OrderSide.BUY else self.grid.base_asset_amount
-        )
-
-        ideal_grid_levels = self.grid.ideal_bids if OrderSide.BUY else self.grid.ideal_asks
-
-        for level in reversed(ideal_grid_levels):
-            price = level.price
-            size = level.size
-
-            if current_amount_available > size * price:
-                grid_levels.append((price, size))
-                current_amount_available -= size * price
-            else:
-                grid_levels.append((price, current_amount_available))
-                break
+        bid_amount_available = self.grid.quote_asset_amount
+        ask_amount_available = self.grid.base_asset_amount
 
         orders_to_place = []
-        for level in grid_levels:
-            if level[1] * level[0] >= self.grid.min_order_size_in_quote:
-                orders_to_place.append(NewLimitOrder(
-                    pair_name=self.pair.name,
-                    order_side=side,
-                    size=level[1],
-                    price=level[0]
-                ))
+
+        for bid in desired_bids:
+            if bid_amount_available > bid.size * bid.price:
+                if bid.price * bid.size >= self.grid.min_order_size_in_quote:
+                    orders_to_place.append(NewLimitOrder(
+                        pair_name=self.pair.name,
+                        order_side=OrderSide.BUY,
+                        size=bid.size,
+                        price=bid.price
+                    ))
+                bid_amount_available -= bid.size
+
+        for ask in desired_asks:
+            if ask_amount_available > ask.size:
+                if ask.price * ask.size >= self.grid.min_order_size_in_quote:
+                    orders_to_place.append(NewLimitOrder(
+                        pair_name=self.pair.name,
+                        order_side=OrderSide.SELL,
+                        size=ask.size,
+                        price=ask.price
+                    ))
+                ask_amount_available -= ask.size
 
         return orders_to_place
 
@@ -181,12 +182,35 @@ class GridBot(BaseEventTradingFramework):
 
         transaction = Transaction(orders=orders_to_place)
 
-        if len(orders) == 1:
-            log.debug(f"placing limit order: {orders}, timestamp: {time.time_ns()}")
+        if len(transaction.orders) == 1:
+            log.debug(f"placing limit order: {transaction.orders}, timestamp: {time.time_ns()}")
             nonce = self.transaction_manager.place_transaction(self.client.place_limit_order, transaction)
         else:
-            log.debug(f"batch placing limit orders: {orders}, timestamp: {time.time_ns()}")
+            log.debug(f"batch placing limit orders: {transaction.orders}, timestamp: {time.time_ns()}")
             nonce = self.transaction_manager.place_transaction(self.client.batch_place_limit_orders, transaction)
+
+        self.pending_transactions[nonce] = transaction
+
+    def cancel_all_active_orders(self) -> None:
+        orders_to_cancel: List[NewCancelOrder] = list(
+            map(
+                lambda order_id: NewCancelOrder(pair_name=self.pair.name, order_id=order_id),
+                self.active_limit_orders.keys()
+            )
+        )
+
+        if orders_to_cancel is None or len(orders_to_cancel) == 0:
+            log.debug("no orders to cancel")
+            return
+
+        transaction = Transaction(orders=orders_to_cancel)
+
+        if len(transaction.orders) == 1:
+            log.debug(f"cancelling limit order: {transaction.orders}, timestamp: {time.time_ns()}")
+            nonce = self.transaction_manager.place_transaction(self.client.cancel_limit_order, transaction)
+        else:
+            log.debug(f"batch cancelling limit orders: {transaction.orders}, timestamp: {time.time_ns()}")
+            nonce = self.transaction_manager.place_transaction(self.client.batch_cancel_limit_orders, transaction)
 
         self.pending_transactions[nonce] = transaction
 

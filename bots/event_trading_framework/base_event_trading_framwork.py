@@ -1,4 +1,3 @@
-import logging as log
 from abc import ABC, abstractmethod
 from multiprocessing import Queue
 from typing import Union, Callable
@@ -56,8 +55,14 @@ class BaseEventTradingFramework(ABC):
             else:
                 raise Exception("Unexpected message fetched from queue")
 
+    @abstractmethod
+    def on_shutdown(self):
+        raise NotImplementedError()
+
     def stop(self, *args, **kwargs):
         self.running = False
+
+        self.on_shutdown()
 
         self.orderbook_event_queue.stop()
         self.order_event_queue.stop()
