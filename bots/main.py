@@ -22,8 +22,8 @@ if __name__ == "__main__":
 
     # Setup Grid
     grid = Grid(
-        starting_base_asset_amount=Decimal("1000"),
-        starting_quote_asset_amount=Decimal("1000"),
+        starting_base_asset_amount=Decimal("600"),
+        starting_quote_asset_amount=Decimal("1400"),
         starting_base_asset_average_price=None,
         fair_price=Decimal("1"),
         price_tick=Decimal("0.01"),
@@ -32,9 +32,8 @@ if __name__ == "__main__":
         min_order_size_in_quote=Decimal("100")
     )
 
-    o = grid.get_desired_orders()
-
-    print(o)
+    debug = grid.get_desired_orders()
+    log.debug(debug)
 
     # Initialize strategy message queue
     message_queue = Queue()

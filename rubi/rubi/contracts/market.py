@@ -376,7 +376,7 @@ class RubiconMarket(BaseContract):
         self,
         ids: List[int],
         nonce: Optional[int] = None,
-        gas: int = 800000,
+        gas: int = 3500000,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:

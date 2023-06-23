@@ -87,6 +87,7 @@ class Grid:
         desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
         desired_bids.reverse()
         desired_asks = list(map(lambda level: level.ask, self.desired_grid[self.current_grid_index:]))
+        desired_asks.reverse()
 
         return desired_bids, desired_asks
 
