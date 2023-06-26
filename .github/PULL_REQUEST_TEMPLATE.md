@@ -1,8 +1,8 @@
 # rubi-py PR
 
-**Note - please make sure the title of your PR follows semantic versioning** 
-**Ex. fix/feat/refactor: description** 
-**For a breaking change, that will bump an entire version, please use !. Ex. refactor!: description** 
+- Note - **please make sure the title of your PR follows semantic versioning** 
+- Ex. fix/feat/refactor: description 
+- For a breaking change, that will bump an entire version, please use !. Ex. refactor!: description 
 
 ## Description
 
