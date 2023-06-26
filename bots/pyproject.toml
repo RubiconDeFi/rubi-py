@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 python-dotenv = "1.0.0"
+pyyaml = "6.0.0"
 #rubi = "2.0.4"
 
 

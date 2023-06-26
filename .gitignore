@@ -148,3 +148,6 @@ brom.py
 # logs
 .log
 .logs
+
+# bot config
+bot_config.yaml

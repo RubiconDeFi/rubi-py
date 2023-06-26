@@ -4,6 +4,7 @@ import signal
 from _decimal import Decimal
 from multiprocessing import Queue
 
+import yaml
 from dotenv import load_dotenv
 from rubi import Client
 
@@ -12,6 +13,10 @@ from example_bots import Grid, GridBot
 if __name__ == "__main__":
     # setup logging
     log.basicConfig(level=log.INFO)
+
+    # load the bot config
+    with open("bot_config.yaml") as file:
+        grid_config = yaml.safe_load(file)
 
     # load and set env variables
     load_dotenv("local.env")
@@ -22,14 +27,14 @@ if __name__ == "__main__":
 
     # Setup Grid
     grid = Grid(
-        starting_base_asset_amount=Decimal("600"),
-        starting_quote_asset_amount=Decimal("1400"),
+        starting_base_asset_amount=Decimal(grid_config["starting_base_asset_amount"]),
+        starting_quote_asset_amount=Decimal(grid_config["starting_quote_asset_amount"]),
         starting_base_asset_average_price=None,
-        fair_price=Decimal("1"),
-        price_tick=Decimal("0.01"),
-        grid_range=Decimal("0.2"),
-        spread=Decimal("0.02"),
-        min_order_size_in_quote=Decimal("100")
+        fair_price=Decimal(grid_config["fair_price"]),
+        price_tick=Decimal(grid_config["price_tick"]),
+        grid_range=Decimal(grid_config["grid_range"]),
+        spread=Decimal(grid_config["spread"]),
+        min_order_size_in_quote=Decimal(grid_config["min_order_size_in_quote"])
     )
 
     debug = grid.get_desired_orders()
