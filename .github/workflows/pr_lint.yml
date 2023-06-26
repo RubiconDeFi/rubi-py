@@ -17,8 +17,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
     
-    - uses: marocchino/sticky-pull-request-comment@v2
-        if: always() && (steps.lint_pr_title.outputs.error_message != null)
+      - if: always() && (steps.lint_pr_title.outputs.error_message != null)
+      - name: display error comment
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: pr-title-lint-error
           message: |
