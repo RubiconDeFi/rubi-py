@@ -2,14 +2,14 @@
 # Adapted from: https://github.com/amannn/action-semantic-pull-request
 # Semantic versioning follows: https://www.conventionalcommits.org/
 
-name: "Lint PR title"
+name: PR title linting
 
 # Currently I have this set to only PRs made into this repo
 # As we accept community PRs through forks -> need to change this for
 # https://github.com/amannn/action-semantic-pull-request#event-triggers
 on:
   pull_request:
-    branches: [ "testcicdflow" ]
+    branches: ["testcicdflow"]
     types:
       - opened
       - edited
@@ -33,10 +33,9 @@ jobs:
         with:
           header: pr-title-lint-error
           message: |
-            Hey there and thank you for opening this pull request! 👋🏼
-            
-            We require pull request titles to follow the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) and it looks like your proposed title needs to be adjusted.
-
+            Hey there and thank you for opening this pull request! 👋🏼 
+            We require pull request titles to follow the conventional commit standard 
+            and it looks like your proposed title needs to be adjusted.
             Details:
             
             ```
