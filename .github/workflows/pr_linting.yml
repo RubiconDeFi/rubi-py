@@ -19,7 +19,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  main:
+  linter:
     name: Lint PR title
     runs-on: ubuntu-latest
     steps:
