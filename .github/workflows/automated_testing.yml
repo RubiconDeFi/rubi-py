@@ -6,7 +6,7 @@ on:
   # push: #not sure if i need this
     # branches: [ "master" ] # not sure if i need this
   pull_request:
-    branches: [ "testcicddev" ]
+    branches: [ "testcicdflow" ]
 
 jobs:
   test:

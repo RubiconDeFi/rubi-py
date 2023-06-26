@@ -9,7 +9,7 @@ name: "Lint PR title"
 # https://github.com/amannn/action-semantic-pull-request#event-triggers
 on:
   pull_request:
-    branches: [ "testcicddev" ]
+    branches: [ "testcicdflow" ]
     types:
       - opened
       - edited
