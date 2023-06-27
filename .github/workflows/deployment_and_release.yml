@@ -1,0 +1,70 @@
+#to initiate testing -> i will make pushes to test pypi from a different branch
+
+name: Deployment to PyPi and Github releases for rubi-py
+
+on:
+  push:
+    branches: ["test-cd-flow"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install poetry 
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install dependancies
+        run: |
+          cd rubi
+          poetry install
+      - name: Run PyTest checks 
+        run: |
+          cd rubi
+          poetry run test
+
+  release: 
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install poetry 
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install dependancies
+        run: |
+          cd rubi
+          poetry install
+      - name: Prepare GH release  
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          # the semantic-release publish creates the github release
+          run: |
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            poetry run semantic-release publish
+      # test pypi deployment
+
+
+
+
+
