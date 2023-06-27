@@ -4,18 +4,23 @@ This testing suite covers the rubi-py sdk's entire codebase. Our testing coverag
 
 ## Installation and Setup:
 
-Note: To run tests via poetry, you will need to be on Python 3.10.X. You can check this by running `python --version` or `python3 --version`.
-
 To run the entire test suite, execute the following command in your terminal:
 
 ```shell 
-    poetry run test
+    pytest rubi_tests.py
 ```
 
-To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to adding pairs, you can use:
+To run specific tests, you can use the -k flag followed by the name of the test. For example, to run tests related to
+adding pairs, you can use:
 
 ```shell
-    poetry run test -k test_add_pair
+    pytest rubi_tests.py -k add_pair
+```
+
+To view more detailed output during the test run, you can use the -v flag for a verbose mode:
+
+```shell
+    pytest rubi_tests.py -v
 ```
 
 ## Test coverage
@@ -23,13 +28,13 @@ To run specific tests, you can use the -k flag followed by the name of the test.
 To run and generate test coverage, and then view the report on coverage run:
 
 ```shell
-    poetry run test_with_coverage
+    coverage run -m pytest -v rubi_tests.py && coverage report -m
 ```
 
 To generate an html view of coverage run:
 
 ```shell
-    poetry run generate_coverage_report
+    coverage run -m pytest -v rubi_tests.py && coverage html && open htmlcov/index.html
 ```
 
 ### Coverage report
