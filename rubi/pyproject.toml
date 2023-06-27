@@ -25,7 +25,6 @@ pyyaml = "6.0.0"
 python-dotenv = "0.21.1"
 ipykernel = "6.23.1"
 jupyter = "1.0.0"
-python-semantic-release = "^7.34.6"
 
 [tool.poetry.extras]
 docs = ["sphinx"]
@@ -38,14 +37,3 @@ build-backend = "poetry.core.masonry.api"
 test = "scripts:test"
 test_with_coverage = "scripts:test_with_coverage"
 generate_coverage_report = "scripts:test_coverage_html"
-
-[tool.semantic_release]
-version_toml = "pyproject.toml:tool.poetry.version"
-branch = "master"
-changelog_file = "../CHANGELOG.md"
-build_command = "poetry build"
-dist_path = "../dist/"
-upload_to_release = false 
-upload_to_pypi = false
-remove_dist = false
-patch_without_tag = true
