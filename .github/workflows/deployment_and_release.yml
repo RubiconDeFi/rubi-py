@@ -34,7 +34,7 @@ jobs:
 
   release: 
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-and-test.result == "success"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
