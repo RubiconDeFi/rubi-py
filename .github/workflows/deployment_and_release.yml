@@ -55,13 +55,13 @@ jobs:
           cd rubi
           poetry install
       - name: Prepare GH release
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
           # the semantic-release publish creates the github release
-          run: |
-            git config user.name github-actions
-            git config user.email github-actions@github.com
-            poetry run semantic-release publish
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          poetry run semantic-release publish
       # test pypi deployment
 
 
