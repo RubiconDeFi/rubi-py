@@ -190,7 +190,7 @@ class Client:
         """
         pair = self.get_pair(pair_name=pair_name)
 
-        if new_base_asset_allowance and pair.current_base_asset_allowance != new_base_asset_allowance:
+        if new_base_asset_allowance is not None and pair.current_base_asset_allowance != new_base_asset_allowance:
             self._update_asset_allowance(
                 asset=pair.base_asset,
                 spender=self.market.address,
@@ -198,7 +198,7 @@ class Client:
             )
             pair.update_base_asset_allowance(new_base_asset_allowance=new_base_asset_allowance)
 
-        if new_quote_asset_allowance and pair.current_quote_asset_allowance != new_quote_asset_allowance:
+        if new_quote_asset_allowance is not None and pair.current_quote_asset_allowance != new_quote_asset_allowance:
             self._update_asset_allowance(
                 asset=pair.quote_asset,
                 spender=self.market.address,

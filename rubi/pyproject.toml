@@ -10,7 +10,7 @@ include = ["network_config/**/*"]
 [tool.poetry.dependencies]
 python = "^3.10"
 sphinx = "7.0.1"
-web3 = "6.4.0"
+web3 = "6.5.0"
 hexbytes = "0.3.0"
 attributedict = "0.3.0"
 eth-abi = "4.0.0"

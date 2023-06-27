@@ -1,3 +1,4 @@
+from _decimal import Decimal
 from typing import Optional
 
 from eth_typing import BlockNumber, ChecksumAddress
@@ -22,7 +23,7 @@ class TransactionReceipt:
         l1_fee: Optional[int] = None,
         l1_gas_price: Optional[int] = None,
         l1_gas_used: Optional[int] = None,
-        l1_fee_scalar: Optional[int] = None
+        l1_fee_scalar: Optional[Decimal] = None
     ):
         self.block_number = block_number
         self.contract_address = contract_address
@@ -53,7 +54,7 @@ class TransactionReceipt:
             l1_fee=None if tx_receipt.get("l1Fee") is None else int(tx_receipt.get("l1Fee"), 16),
             l1_gas_price=None if tx_receipt.get("l1GasPrice") is None else int(tx_receipt.get("l1GasPrice"), 16),
             l1_gas_used=None if tx_receipt.get("l1GasUsed") is None else int(tx_receipt.get("l1GasUsed"), 16),
-            l1_fee_scalar=None if tx_receipt.get("l1FeeScalar") is None else int(tx_receipt.get("l1FeeScalar"), 16)
+            l1_fee_scalar=None if tx_receipt.get("l1FeeScalar") is None else Decimal(tx_receipt.get("l1FeeScalar"))
         )
 
     def __repr__(self):

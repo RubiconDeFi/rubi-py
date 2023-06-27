@@ -1073,7 +1073,7 @@ py-evm = "0.7.0a2"
 pytest = "7.3.1"
 pyyaml = "6.0.0"
 subgrounds = {version = "1.6.0", extras = ["dash"]}
-web3 = "6.4.0"
+web3 = "6.5.0"
 
 [package.extras]
 docs = ["sphinx (==7.0.1)"]
@@ -1255,7 +1255,7 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 
 [[package]]
 name = "web3"
-version = "6.4.0"
+version = "6.5.0"
 description = "web3.py"
 category = "dev"
 optional = false
@@ -1277,7 +1277,7 @@ requests = ">=2.16.0"
 websockets = ">=10.0.0"
 
 [package.extras]
-dev = ["black (>=22.1.0)", "build (>=0.9.0)", "bumpversion", "eth-tester[py-evm] (==v0.9.0-b.1)", "flake8 (==3.8.3)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "importlib-metadata (<5.0)", "ipfshttpclient (==0.8.0a2)", "isort (>=5.11.0)", "mypy (==0.910)", "pluggy (==0.13.1)", "py-geth (>=3.11.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1)", "pytest-mock (>=1.10)", "pytest-watch (>=4.2)", "pytest-xdist (>=1.29)", "setuptools (>=38.6.0)", "sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=3.18.0)", "tqdm (>4.32)", "twine (>=1.13)", "types-protobuf (==3.19.13)", "types-requests (>=2.26.1)", "types-setuptools (>=57.4.4)", "when-changed (>=0.3.0)"]
+dev = ["black (>=22.1.0)", "build (>=0.9.0)", "bumpversion", "eth-tester[py-evm] (==v0.9.0-b.1)", "flake8 (==3.8.3)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "importlib-metadata (<5.0)", "ipfshttpclient (==0.8.0a2)", "isort (>=5.11.0)", "mypy (==0.910)", "py-geth (>=3.11.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1)", "pytest-mock (>=1.10)", "pytest-watch (>=4.2)", "pytest-xdist (>=1.29)", "setuptools (>=38.6.0)", "sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=3.18.0)", "tqdm (>4.32)", "twine (>=1.13)", "types-protobuf (==3.19.13)", "types-requests (>=2.26.1)", "types-setuptools (>=57.4.4)", "when-changed (>=0.3.0)"]
 docs = ["sphinx (>=5.3.0)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
 ipfs = ["ipfshttpclient (==0.8.0a2)"]
 linter = ["black (>=22.1.0)", "flake8 (==3.8.3)", "isort (>=5.11.0)", "mypy (==0.910)", "types-protobuf (==3.19.13)", "types-requests (>=2.26.1)", "types-setuptools (>=57.4.4)"]
@@ -2675,8 +2675,8 @@ virtualenv = [
     {file = "virtualenv-20.23.1.tar.gz", hash = "sha256:8ff19a38c1021c742148edc4f81cb43d7f8c6816d2ede2ab72af5b84c749ade1"},
 ]
 web3 = [
-    {file = "web3-6.4.0-py3-none-any.whl", hash = "sha256:c86889b9c0b8f9f5ce5f5f0bb9f9bfc551cf775aeaf903964ddf28d303b85c62"},
-    {file = "web3-6.4.0.tar.gz", hash = "sha256:b9fcc2372e7cac27d96621c169be40174eccbb93346bba2ab45ad791140d47fe"},
+    {file = "web3-6.5.0-py3-none-any.whl", hash = "sha256:a6e9f6e4e13d75a5a3726d10b1be91cde5951446e8a6f0efdaee1695b5011472"},
+    {file = "web3-6.5.0.tar.gz", hash = "sha256:ebbce3caa0b50015d15a07f17d2a280abbb94a52c6994babb90f3a5482c97712"},
 ]
 websockets = [
     {file = "websockets-11.0.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3ccc8a0c387629aec40f2fc9fdcb4b9d5431954f934da3eaf16cdc94f67dbfac"},

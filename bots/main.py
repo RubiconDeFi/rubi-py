@@ -22,8 +22,8 @@ if __name__ == "__main__":
     load_dotenv("local.env")
 
     http_node_url = os.getenv("HTTP_NODE_URL")
-    wallet = os.getenv("DEV_WALLET")
-    key = os.getenv("DEV_KEY")
+    wallet = os.getenv("PROD_WALLET")
+    key = os.getenv("PROD_KEY")
 
     # Setup Grid
     grid = Grid(
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # Initialize grid bot strategy
     grid_bot = GridBot(
-        pair_name="USDT/USDC",
+        pair_name=grid_config["pair_name"],
         grid=grid,
         client=rubicon_client,
     )
