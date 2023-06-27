@@ -54,7 +54,7 @@ jobs:
         run: |
           cd rubi
           poetry install
-      - name: Prepare GH release  
+      - name: Prepare GH release
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
           # the semantic-release publish creates the github release
