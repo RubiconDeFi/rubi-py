@@ -25,6 +25,7 @@ pyyaml = "6.0.0"
 python-dotenv = "0.21.1"
 ipykernel = "6.23.1"
 jupyter = "1.0.0"
+python-semantic-release = "^7.34.6"
 
 [tool.poetry.extras]
 docs = ["sphinx"]
@@ -37,3 +38,6 @@ build-backend = "poetry.core.masonry.api"
 test = "scripts:test"
 test_with_coverage = "scripts:test_with_coverage"
 generate_coverage_report = "scripts:test_coverage_html"
+
+[tool.semantic_release]
+version_variable = "pyproject.toml:version"
