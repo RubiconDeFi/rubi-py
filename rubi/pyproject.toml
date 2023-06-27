@@ -20,6 +20,7 @@ py-evm = "0.7.0a2"
 eth-utils = "2.1.0"
 subgrounds = { version = "1.6.0", extras = ["dash"] }
 pyyaml = "6.0.0"
+python-semantic-release = "^7.34.6"
 
 [tool.poetry.group.dev.dependencies]
 python-dotenv = "0.21.1"
@@ -32,3 +33,8 @@ docs = ["sphinx"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+test = "scripts:test"
+test_with_coverage = "scripts:test_with_coverage"
+generate_coverage_report = "scripts:test_coverage_html"
