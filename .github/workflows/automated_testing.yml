@@ -3,10 +3,8 @@
 name: Automated testing for PRs
 
 on:
-  # push: #not sure if i need this
-    # branches: [ "master" ] # not sure if i need this
   pull_request:
-    branches: [ "testcicdflow" ]
+    branches: [ "master" ]
 
 jobs:
   test:
