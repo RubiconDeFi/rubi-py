@@ -36,6 +36,7 @@ class Grid:
         price_tick: Decimal,
         grid_range: Decimal,
         spread: Decimal,
+        min_level_size_in_base: Decimal,
         # Order
         min_order_size_in_base: Decimal,
         # Transaction
@@ -54,12 +55,14 @@ class Grid:
         self.price_tick = price_tick
         self.grid_range = grid_range
         self.spread = spread
-
-        self.min_order_size_in_base = min_order_size_in_base
+        self.min_level_size_in_base = min_level_size_in_base
 
         # Grid
         self.desired_grid: List[GridLevel] = self._construct_grid()
         self.current_grid_index: int = self._calculate_grid_index()
+
+        # Order
+        self.min_order_size_in_base = min_order_size_in_base
 
         # Transaction
         self.min_transaction_size_in_base = min_transaction_size_in_base
@@ -120,8 +123,8 @@ class Grid:
 
         ask_side = self._construct_grid_side(OrderSide.SELL)
 
-        bid_price = self._round_to_grid_tick(self.fair_price - self.spread / Decimal("2"))
-        ask_price = self._round_to_grid_tick(self.fair_price + self.spread / Decimal("2"))
+        bid_price = self.round_to_grid_tick(self.fair_price - self.spread / Decimal("2"))
+        ask_price = self.round_to_grid_tick(self.fair_price + self.spread / Decimal("2"))
 
         middle_level = GridLevel(
             bid=DesiredOrder(
@@ -143,11 +146,11 @@ class Grid:
     def _construct_grid_side(self, side: OrderSide) -> List[GridLevel]:
         half_size_in_base = (self.base_asset_amount + self.quote_asset_amount / self.fair_price) / Decimal("2")
 
-        capital_restricted_number_of_levels = half_size_in_base / self.min_order_size_in_base
+        capital_restricted_number_of_levels = half_size_in_base / self.min_level_size_in_base
 
         edge = self.fair_price - side.sign() * self.grid_range / 2
 
-        price = self._round_to_grid_tick(
+        price = self.round_to_grid_tick(
             self.fair_price - (side.sign() * self.spread) / 2
         ) - side.sign() * self.price_tick
 
@@ -164,7 +167,7 @@ class Grid:
             case OrderSide.BUY:
                 while price >= edge:
                     size = level_size if (
-                        i % skip_capital == 0 and remaining_capital >= self.min_order_size_in_base
+                        i % skip_capital == 0 and remaining_capital >= self.min_level_size_in_base
                     ) else Decimal("0")
 
                     grid_side_levels.append(
@@ -188,7 +191,7 @@ class Grid:
             case OrderSide.SELL:
                 while price <= edge:
                     size = level_size if (
-                        i % skip_capital == 0 and remaining_capital > self.min_order_size_in_base
+                        i % skip_capital == 0 and remaining_capital > self.min_level_size_in_base
                     ) else Decimal("0")
 
                     grid_side_levels.append(
@@ -217,7 +220,7 @@ class Grid:
     # helper functions
     ######################################################################
 
-    def _round_to_grid_tick(self, number: Decimal) -> Decimal:
+    def round_to_grid_tick(self, number: Decimal) -> Decimal:
         if self.price_tick < Decimal("1"):
             rounded = round(number / self.price_tick) * self.price_tick
         else:

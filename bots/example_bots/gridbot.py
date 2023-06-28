@@ -144,26 +144,26 @@ class GridBot(BaseEventTradingFramework):
         orders_to_place = []
 
         for bid in desired_bids:
-            if bid_amount_available >= bid.size * bid.price:
-                if bid.size >= self.grid.min_order_size_in_base:
-                    orders_to_place.append(NewLimitOrder(
-                        pair_name=self.pair.name,
-                        order_side=OrderSide.BUY,
-                        size=bid.size,
-                        price=bid.price
-                    ))
-                bid_amount_available -= bid.size * bid.price
+            size = min(bid_amount_available / bid.price, bid.size)
+            if size >= self.grid.min_order_size_in_base:
+                orders_to_place.append(NewLimitOrder(
+                    pair_name=self.pair.name,
+                    order_side=OrderSide.BUY,
+                    size=size,
+                    price=bid.price
+                ))
+            bid_amount_available -= size * bid.price
 
         for ask in desired_asks:
-            if ask_amount_available >= ask.size:
-                if ask.size >= self.grid.min_order_size_in_base:
-                    orders_to_place.append(NewLimitOrder(
-                        pair_name=self.pair.name,
-                        order_side=OrderSide.SELL,
-                        size=ask.size,
-                        price=ask.price
-                    ))
-                ask_amount_available -= ask.size
+            size = min(ask_amount_available, ask.size)
+            if size >= self.grid.min_order_size_in_base:
+                orders_to_place.append(NewLimitOrder(
+                    pair_name=self.pair.name,
+                    order_side=OrderSide.SELL,
+                    size=size,
+                    price=ask.price
+                ))
+            ask_amount_available -= size
 
         return orders_to_place
 
@@ -226,21 +226,33 @@ class GridBot(BaseEventTradingFramework):
     def _is_active_or_pending_order(self, order: NewLimitOrder) -> bool:
         for active_order in self.active_limit_orders.values():
             if (
-                order.order_side == active_order.order_side and
-                abs(order.price - round(active_order.price, 18)) < self.allowed_order_price_differential and
-                abs(order.size - round(active_order.size, 18)) < self.allowed_order_size_differential
+                order.order_side == active_order.order_side
+                and abs(
+                    order.price - self.grid.round_to_grid_tick(active_order.price)
+                ) < self.allowed_order_price_differential
             ):
-                return True
+                if order.size >= active_order.size:
+                    order.size = order.size - active_order.size
+
+                    if order.size < self.grid.min_order_size_in_base:
+                        return True
+                else:
+                    return True
 
         for pending_transactions in self.pending_transactions.values():
             for pending_order in pending_transactions.orders:
                 if (
                     isinstance(pending_order, NewLimitOrder) and
                     order.order_side == pending_order.order_side and
-                    abs(order.price - pending_order.price) < self.allowed_order_price_differential and
-                    abs(order.size - pending_order.size) < self.allowed_order_size_differential
+                    abs(order.price - pending_order.price) < self.allowed_order_price_differential
                 ):
-                    return True
+                    if order.size >= pending_order.size:
+                        order.size = order.size - pending_order.size
+
+                    if order.size < self.grid.min_order_size_in_base:
+                        return True
+                    else:
+                        return True
 
         return False
 

@@ -122,7 +122,7 @@ class BaseContract:
 
         thread = Thread(
             target=self._start_default_event_poller,
-            args=(pair_name, event_type, event_filter, handler, poll_time),
+            args=(pair_name, event_type, self.contract, argument_filters, event_filter, handler, poll_time),
             daemon=True
         )
         thread.start()
@@ -131,6 +131,8 @@ class BaseContract:
     def _start_default_event_poller(
         pair_name: str,
         event_type: Type[BaseEvent],
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]],
         event_filter: LogFilter,
         event_handler: Callable,
         poll_time: int
@@ -156,6 +158,11 @@ class BaseContract:
                     event_handler(pair_name, event_type, event_data)
             except Exception as e:
                 log.error(e)
+
+                # The filter has been deleted by the node and needs to be recreated
+                if "filter not found" in str(e):
+                    event_filter = event_type.create_event_filter(contract=contract, argument_filters=argument_filters)
+                    log.info(f"event filter for: {event_type} has been recreated")
 
                 # TODO: this is a hack to detect if a PairDoesNotExistException is raised and polling should stop.
                 #  Currently an additional except PairDoesNotExistException as e: cannot be added as this causes a
