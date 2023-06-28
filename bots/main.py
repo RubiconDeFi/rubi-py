@@ -34,7 +34,8 @@ if __name__ == "__main__":
         price_tick=Decimal(grid_config["price_tick"]),
         grid_range=Decimal(grid_config["grid_range"]),
         spread=Decimal(grid_config["spread"]),
-        min_order_size_in_quote=Decimal(grid_config["min_order_size_in_quote"])
+        min_order_size_in_base=Decimal(grid_config["min_order_size_in_base"]),
+        min_transaction_size_in_base=Decimal(grid_config["min_transaction_size_in_base"])
     )
 
     debug = grid.get_desired_orders()

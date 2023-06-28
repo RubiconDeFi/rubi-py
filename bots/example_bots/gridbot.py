@@ -144,19 +144,19 @@ class GridBot(BaseEventTradingFramework):
         orders_to_place = []
 
         for bid in desired_bids:
-            if bid_amount_available > bid.size * bid.price:
-                if bid.price * bid.size >= self.grid.min_order_size_in_quote:
+            if bid_amount_available >= bid.size * bid.price:
+                if bid.size >= self.grid.min_order_size_in_base:
                     orders_to_place.append(NewLimitOrder(
                         pair_name=self.pair.name,
                         order_side=OrderSide.BUY,
                         size=bid.size,
                         price=bid.price
                     ))
-                bid_amount_available -= bid.size
+                bid_amount_available -= bid.size * bid.price
 
         for ask in desired_asks:
-            if ask_amount_available > ask.size:
-                if ask.price * ask.size >= self.grid.min_order_size_in_quote:
+            if ask_amount_available >= ask.size:
+                if ask.size >= self.grid.min_order_size_in_base:
                     orders_to_place.append(NewLimitOrder(
                         pair_name=self.pair.name,
                         order_side=OrderSide.SELL,
@@ -181,6 +181,11 @@ class GridBot(BaseEventTradingFramework):
             return
 
         transaction = Transaction(orders=orders_to_place)
+
+        transaction_amount = sum(map(lambda order: order.size, transaction.orders))
+        if self.grid.min_transaction_size_in_base > transaction_amount:
+            # Do not send a transaction which does not meet the min transaction size
+            return
 
         if len(transaction.orders) == 1:
             log.debug(f"placing limit order: {transaction.orders}, timestamp: {time.time_ns()}")
