@@ -4,11 +4,12 @@ name: Deployment to PyPi and Github releases for rubi-py
 
 on:
   push:
-    branches: ["test-cd-flow"]
+    branches: ["master"]
 
 jobs:
   release: 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' # && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
         with:
@@ -32,12 +33,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
           # the semantic-release publish creates the github release
         run: |
+          cd rubi
           git config user.name github-actions
           git config user.email github-actions@github.com
           poetry run semantic-release publish
       # test pypi deployment
-
-
-
-
-
