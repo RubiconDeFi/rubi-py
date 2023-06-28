@@ -41,6 +41,7 @@ class TransactionReceipt:
 
     @classmethod
     def from_tx_receipt(cls, tx_receipt: TxReceipt) -> "TransactionReceipt":
+
         return cls(
             block_number=tx_receipt["blockNumber"],
             contract_address=tx_receipt["contractAddress"],
