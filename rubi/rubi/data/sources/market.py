@@ -1,485 +1,161 @@
+import logging as log
 from subgrounds import Subgrounds
 from subgrounds.pagination import ShallowStrategy
+from typing import Union, List, Optional, Dict, Type, Any, Callable
 
-from rubi.data.sources.helper import networks
+from rubi.network import (
+    Network,
+)
 
 class MarketData: 
-    """this class acts as an access point to a variety of data from the RubiconMarket.sol contract. it acts as a data processing layer built using the subgrounds library and the subgraphs maintained at the follwing repo: https://github.com/RubiconDeFi/rubi-subgraphs
+    """This class represents the RubiconV2 Subgraph, which contains data primarily related to the RubiconMarket.sol contract.
+    If a Network object is not passed in instantiation then this class will only be used to query data related to the subgraph.
+    
+    :param subgrounds: a Subgrounds instance 
+    :type subgrounds: Subgrounds
+    param subgraph_url: a RubiconV2 Subgraph url endpoint that should be utilized for this class
+    :type subgraph_url: str
+    :param network: a Network object, native to the package
+    :type network: Network
     """
 
-    def __init__(self, subgrounds, chain_id):
-        """constructor method
+    def __init__(
+        self, 
+        subgrounds: Subgrounds,
+        subgraph_url: str,
+        network: Optional[Network] = None
+    ): 
+        """constructor method"""
+        self.sg = subgrounds
+        self.subgraph_url = subgraph_url
+        self.network = network # type: Network | None
+
+        # initialize the subgraph 
+        try: 
+            self.data = self.sg.load_subgraph(self.subgraph_url)
+            # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
+        except: 
+            # TODO: not sure exactly what error we should be throwing here, this is if the url does not work 
+            raise ValueError(f"subgraph_url: {subgraph_url} failed when attempting to load.")
         
-        :param subgrounds: the subgrounds object
-        :type subgrounds: Subgrounds
-        :param chain_id: the chain id of the network that is of interest
-        :type chain_id: int
-        """
-        self.network = networks[chain_id]()
-        self.subgrounds = subgrounds
-        self.rubicon_market_light = self.subgrounds.load_subgraph(self.network.rubicon_market_light)
-        self.boiler_plate = self.subgrounds.load_subgraph(self.network.boiler_plate)
+    @classmethod
+    def from_network(
+        cls,
+        subgrounds: Subgrounds, 
+        network: Network
+    ): 
+        
+        """Initialize a MarketData object using a Network object."""
+        return cls(
+            subgrounds=subgrounds,
+            subgraph_url=network.market_data_url,
+            network=network
+        )
+    
+    #####################################
+    # Subgraph Query Methods (raw data) #
+    #####################################
 
-    ######################################################################
-    # data collection 
-    ######################################################################
+    # TODO: refractor using a decorator to handle the parameter validation
+    def get_offers_raw(
+        self, 
+        maker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pay_gem: Optional[str] = None,
+        buy_gem: Optional[str] = None,
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000,
+        order_by: Optional[str] = 'timestamp',
+        order_direction: Optional[str] = 'desc'
+        ): 
+        """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
-    def get_offers(self, maker = None, pair = None, filled = None, cancelled = None, live = None, pay_gem = None, buy_gem = None, start_time = None, end_time = None, first = 1000000000): 
-        """returns a dataframe of all offers placed on the market contract. allows for the following filters: 
-
-        :param maker: the address of the maker of the offer, defaults to None
-        :type maker: str, optional
-        :param pair: the address of the pair of the offer, defaults to None. direction of the pair matters and corresponds to the array passed in the following order: [pay_gem, buy_gem]. defaults to None
-        :type pair: array, optional
-        :param filled: whether the offer has been filled, defaults to None
-        :type filled: bool, optional
-        :param cancelled: whether the offer has been cancelled, defaults to None
-        :type cancelled: bool, optional
-        :param live: whether the offer is live, defaults to None
-        :type live: bool, optional
-        :param pay_gem: the address of the pay_gem of the offer, defaults to None
-        :type pay_gem: str, optional
-        :param buy_gem: the address of the buy_gem of the offer, defaults to None
-        :type buy_gem: str, optional
-        :param start_time: the start time of the offer, defaults to None. in unix time
-        :type start_time: int, optional
-        :param end_time: the end time of the offer, defaults to None. in unix time
-        :type end_time: int, optional
-        """
-
-        # set the offer entity 
-        Offer = self.rubicon_market_light.Offer
-
-        # create the synthetic fields for the offer entity
-        Offer.pay_amt_formatted = Offer.pay_amt / 10 ** Offer.pay_gem.decimals
-        Offer.buy_amt_formatted = Offer.buy_amt / 10 ** Offer.buy_gem.decimals
-        Offer.paid_amt_formatted = Offer.paid_amt / 10 ** Offer.pay_gem.decimals
-        Offer.bought_amt_formatted = Offer.bought_amt / 10 ** Offer.buy_gem.decimals
-
-        # for each of the filters, add the filter to the where clause
-        # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
-        where = []
-        if maker:
-            maker = maker.lower()
-            where.append(Offer.maker == maker)
-        # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if pair:
-            pair[0] = pair[0].lower()
-            pair[1] = pair[1].lower()
-            where.append(Offer.pay_gem == pair[0])
-            where.append(Offer.buy_gem == pair[1])
-        if filled:
-            where.append(Offer.filled == filled)
-        if cancelled:
-            where.append(Offer.cancelled == cancelled)
-        if live:
-            where.append(Offer.live == live)
-        if pay_gem:
-            pay_gem = pay_gem.lower()
-            where.append(Offer.pay_gem == pay_gem)
-        if buy_gem:
-            buy_gem = buy_gem.lower()
-            where.append(Offer.buy_gem == buy_gem)
-        if start_time:
-            where.append(Offer.timestamp >= start_time)
-        if end_time:
-            where.append(Offer.timestamp <= end_time)
-
-        # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided
-        # TODO: help a frend, this would be a good pr to add to the subgrounds library :)
-        if where == []:
-            offers = self.rubicon_market_light.Query.offers(first = first)
-        else:
-            offers = self.rubicon_market_light.Query.offers(first = first, where = where)
-
-        field_paths = [
-            offers.id,
-            offers.pay_gem.symbol,
-            offers.pay_amt_formatted,
-            offers.paid_amt_formatted,
-            offers.buy_gem.symbol,
-            offers.buy_amt_formatted,
-            offers.bought_amt_formatted,
-            offers.maker.id,
-            offers.transaction.id,
-            offers.transaction.timestamp,
-            offers.pay_gem.id,
-            offers.buy_gem.id,
-            offers.pay_amt,
-            offers.buy_amt,
-            offers.paid_amt, 
-            offers.bought_amt
-        ]  
-
-        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy) 
-
-        return df
-
-    def get_filled_offers(self, maker = None, taker = None, pair = None, filled = None, cancelled = None, live = None, pay_gem = None, buy_gem = None, start_time = None, end_time = None, first = 1000000000):
-        """returns a dataframe of offers that have received fill with each row corresponding to the take event on the offer. allows for the following filters:
-
-        :param maker: the address of the maker of the offer, defaults to None
-        :type maker: str, optional
-        :param taker: the address of the taker of the offer, defaults to None
-        :type taker: str, optional
-        :param pair: the address of the pair of the offer, defaults to None. direction of the pair matters and corresponds to the array passed in the following order: [pay_gem, buy_gem]. defaults to None
-        :type pair: array, optional
-        :param filled: whether the offer has been filled, defaults to None
-        :type filled: bool, optional
-        :param cancelled: whether the offer has been cancelled, defaults to None
-        :type cancelled: bool, optional
-        :param live: whether the offer is live, defaults to None
-        :type live: bool, optional
-        :param pay_gem: the address of the pay_gem of the offer, defaults to None
-        :type pay_gem: str, optional
-        :param buy_gem: the address of the buy_gem of the offer, defaults to None
-        :type buy_gem: str, optional
-        :param start_time: the start time of the offer, defaults to None. in unix time
-        :type start_time: int, optional
-        :param end_time: the end time of the offer, defaults to None. in unix time
-        :type end_time: int, optional
+        :param maker: the address of the maker of the offer
+        :type maker: str
+        :param from_address: the address that originated the transaction that created the offer
+        :type from_address: str
+        :param pay_gem: the address of the token that the maker is offering
+        :type pay_gem: str
+        :param buy_gem: the address of the token that the maker is requesting
+        :type buy_gem: str
+        :param open: whether or not the offer is still active
+        :type open: bool
+        :param start_time: the timestamp of the earliest offer to return
+        :type start_time: int
+        :param end_time: the timestamp of the latest offer to return
+        :type end_time: int
+        :param first: the number of offers to return
+        :type first: int
+        :param order_by: the field to order the offers by (default: timestamp, options: timestamp, price) TODO: expand this list
+        :type order_by: str
+        :param order_direction: the direction to order the offers by (default: desc, options: asc, desc)
+        :return: a dataframe of offers placed on the market contract
+        :rtype: pd.DataFrame 
         """
 
         # set the offer entity 
-        Offer = self.rubicon_market_light.Offer
-        Take = self.rubicon_market_light.Take
+        Offer = self.data.Offer
 
-        # create the synthetic fields for the offer entity
-        Offer.pay_amt_formatted = Offer.pay_amt / 10 ** Offer.pay_gem.decimals
-        Offer.buy_amt_formatted = Offer.buy_amt / 10 ** Offer.buy_gem.decimals
-        Offer.paid_amt_formatted = Offer.paid_amt / 10 ** Offer.pay_gem.decimals
-        Offer.bought_amt_formatted = Offer.bought_amt / 10 ** Offer.buy_gem.decimals
+        # set the order_by parameter
+        if order_by.lower() not in ('timestamp', 'price'):
+            raise ValueError("Invalid order_by, must be 'timestamp' or 'price'")
+        elif order_by.lower() == 'timestamp':
+            order_by = Offer.timestamp
+        elif order_by.lower() == 'price':
+            order_by = Offer.price
 
-        Take.pay_amt_formatted = Take.pay_amt / 10 ** Take.pay_gem.decimals
-        Take.buy_amt_formatted = Take.buy_amt / 10 ** Take.buy_gem.decimals
+        # set the order_direction parameter
+        if order_direction.lower() not in ('asc', 'desc'):
+            raise ValueError("Invalid order_direction, must be 'asc' or 'desc'")
+        else: 
+            order_direction = order_direction.lower()
 
-        # for each of the filters, add the filter to the where clause
-        # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
-        where = []
-        if maker:
-            maker = maker.lower()
-            where.append(Offer.maker == maker)
-        # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if taker: 
-            taker = taker.lower()
-            where.append(Offer.takes.taker.id == taker)
-        if pair:
-            pair[0] = pair[0].lower()
-            pair[1] = pair[1].lower()
-            where.append(Offer.pay_gem == pair[0])
-            where.append(Offer.buy_gem == pair[1])
-        if filled:
-            where.append(Offer.filled == filled)
-        if cancelled:
-            where.append(Offer.cancelled == cancelled)
-        if live:
-            where.append(Offer.live == live)
-        if pay_gem:
-            pay_gem = pay_gem.lower()
-            where.append(Offer.pay_gem == pay_gem)
-        if buy_gem:
-            buy_gem = buy_gem.lower()
-            where.append(Offer.buy_gem == buy_gem)
-        if start_time:
-            where.append(Offer.timestamp >= start_time)
-        if end_time:
-            where.append(Offer.timestamp <= end_time)
+        # build the list of where conditions
+        where = [
+            Offer.maker == maker.lower() if maker else None,
+            # TODO: rename the subgraph field from 'from' to 'from_address' to avoid python keyword conflict (https://github.com/RubiconDeFi/rubi-subgraphs/issues/11)
+            # Offer.from == from_address.lower() if from_address else None,
+            Offer.pay_gem == pay_gem.lower() if pay_gem else None,
+            Offer.buy_gem == buy_gem.lower() if buy_gem else None,
+            Offer.live == open if open is not None else None,
+            Offer.timestamp >= start_time if start_time else None,
+            Offer.timestamp <= end_time if end_time else None
+        ]
+        where = [condition for condition in where if condition is not None]
 
-        if where == []:
-            offers = self.rubicon_market_light.Query.offers(first = first)
-        else:
-            offers = self.rubicon_market_light.Query.offers(first = first, where = where)
+        offers = self.data.Query.offers(
+            orderBy = order_by,
+            orderDirection = order_direction,
+            first=first,
+            where = where if where else {}
+        )
 
-        field_paths = [
+        fields = [
             offers.id,
-            offers.pay_gem.symbol,
-            offers.pay_amt_formatted,
-            offers.paid_amt_formatted,
-            offers.buy_gem.symbol,
-            offers.buy_amt_formatted,
-            offers.bought_amt_formatted,
+            offers.timestamp,
+            offers.index,
             offers.maker.id,
-            offers.transaction.id,
-            offers.transaction.timestamp,
-            offers.pay_gem.id,
-            offers.buy_gem.id,
+            # offers.from.id,
+            offers.pay_gem,
+            offers.buy_gem,
             offers.pay_amt,
             offers.buy_amt,
-            offers.paid_amt, 
+            offers.paid_amt,
             offers.bought_amt,
-
-            offers.takes.pay_gem.symbol,
-            offers.takes.pay_amt_formatted,
-            offers.takes.buy_gem.symbol,
-            offers.takes.buy_amt_formatted,
-            offers.takes.taker.id,
-            offers.takes.transaction.id,
-            offers.takes.timestamp, 
-            offers.takes.pay_gem.id,
-            offers.takes.buy_gem.id,
-            offers.takes.pay_amt,
-            offers.takes.buy_amt
+            offers.price,
+            offers.open,
+            offers.removed_timestamp,
+            offers.removed_block,
+            offers.transaction.id,
+            offers.transaction.block_number,
+            offers.transaction.block_index
         ]
 
-        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy) 
+        df = self.sg.query_df(
+            fields,
+            pagination_strategy=ShallowStrategy
+        )
 
         return df
-
-
-    def get_trades(self, taker = None, maker = None, pair = None, pay_gem = None, buy_gem = None, start_time = None, end_time = None, first = 1000000000): 
-        """returns a dataframe of all trades on the market contract. allows for the following filters: 
-
-        :param taker: the address of the taker of the trade, defaults to None
-        :type taker: str, optional
-        :param maker: the address of the maker of the offer, defaults to None
-        :type maker: str, optional
-        :param pair: the address of the pair of the offer, defaults to None. direction of the pair matters and corresponds to the array passed in the following order: [pay_gem, buy_gem]. defaults to None
-        :type pair: array, optional
-        :param filled: whether the offer has been filled, defaults to None
-        :type filled: bool, optional
-        :param cancelled: whether the offer has been cancelled, defaults to None
-        :type cancelled: bool, optional
-        :param live: whether the offer is live, defaults to None
-        :type live: bool, optional
-        :param pay_gem: the address of the pay_gem of the offer, defaults to None
-        :type pay_gem: str, optional
-        :param buy_gem: the address of the buy_gem of the offer, defaults to None
-        :type buy_gem: str, optional
-        :param start_time: the start time of the offer, defaults to None. in unix time
-        :type start_time: int, optional
-        :param end_time: the end time of the offer, defaults to None. in unix time
-        :type end_time: int, optional
-        """
-
-        # set the trade entity 
-        Take = self.rubicon_market_light.Take
-
-        # create the synthetic fields for the trade entity
-        Take.pay_amt_formatted = Take.pay_amt / 10 ** Take.pay_gem.decimals
-        Take.buy_amt_formatted = Take.buy_amt / 10 ** Take.buy_gem.decimals
-
-        # for each of the filters, add the filter to the where clause
-        where = []
-        if taker:
-            taker = taker.lower()
-            where.append(Take.taker == taker)
-        if maker:
-            maker = maker.lower()
-            where.append(Take.maker == maker)
-        # TODO: this should be modified to return all offers for a given pair, not just the given direction
-        if pair:
-            pair[0] = pair[0].lower()
-            pair[1] = pair[1].lower()
-            where.append(Take.pay_gem == pair[0])
-            where.append(Take.buy_gem == pair[1])
-        if pay_gem:
-            pay_gem = pay_gem.lower()
-            where.append(Take.pay_gem == pay_gem)
-        if buy_gem:
-            buy_gem = buy_gem.lower()
-            where.append(Take.buy_gem == buy_gem)
-        if start_time:
-            where.append(Take.timestamp >= start_time)
-        if end_time:
-            where.append(Take.timestamp <= end_time)
-
-        # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided
-        # TODO: help a frend, this would be a good pr to add to the subgrounds library :)
-        if where == []:
-            takes = self.rubicon_market_light.Query.takes(first = first)
-        else:
-            takes = self.rubicon_market_light.Query.takes(first = first, where = where)
-
-        field_paths = [
-            takes.id,
-            takes.pay_gem.symbol,
-            takes.pay_amt_formatted,
-            takes.buy_gem.symbol,
-            takes.buy_amt_formatted,
-            takes.taker.id,
-            takes.transaction.id,
-            takes.transaction.timestamp,
-            takes.pay_gem.id,
-            takes.buy_gem.id,
-            takes.pay_amt,
-            takes.buy_amt,
-            takes.offer.id, 
-            takes.offer.maker.id
-        ]  
-
-        df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy) 
-
-        return df
-
-    def get_detailed_offers(self, maker = None, pair = None, filled = None, cancelled = None, live = None, pay_gem = None, buy_gem = None, start_time = None, end_time = None, first = 1000000000): 
-            """returns a dataframe of all offers placed on the market contract with price data. allows for the following filters:
-            
-            :param maker: the address of the maker of the offer, defaults to None
-            :type maker: str, optional
-            :param pair: the address of the pair of the offer, defaults to None. direction of the pair matters and corresponds to the array passed in the following order: [pay_gem, buy_gem]. defaults to None
-            :type pair: array, optional
-            :param filled: whether the offer has been filled, defaults to None
-            :type filled: bool, optional
-            :param cancelled: whether the offer has been cancelled, defaults to None
-            :type cancelled: bool, optional
-            :param live: whether the offer is live, defaults to None
-            :type live: bool, optional
-            :param pay_gem: the address of the pay_gem of the offer, defaults to None
-            :type pay_gem: str, optional
-            :param buy_gem: the address of the buy_gem of the offer, defaults to None
-            :type buy_gem: str, optional
-            :param start_time: the start time of the offer, defaults to None. in unix time
-            :type start_time: int, optional
-            :param end_time: the end time of the offer, defaults to None. in unix time
-            :type end_time: int, optional
-            """
-
-            # set the offer entity 
-            Offer = self.boiler_plate.Offer
-
-            # for each of the filters, add the filter to the where clause
-            # TODO: there is most likely a more elegant way to do the lower case conversion of the variables, probably using a decorator?
-            where = []
-            if maker:
-                maker = maker.lower()
-                where.append(Offer.maker == maker)
-            # TODO: this should be modified to return all offers for a given pair, not just the given direction
-            if pair:
-                pair[0] = pair[0].lower()
-                pair[1] = pair[1].lower()
-                where.append(Offer.pay_gem == pair[0])
-                where.append(Offer.buy_gem == pair[1])
-            if filled:
-                where.append(Offer.filled == filled)
-            if cancelled:
-                where.append(Offer.cancelled == cancelled)
-            if live:
-                where.append(Offer.live == live)
-            if pay_gem:
-                pay_gem = pay_gem.lower()
-                where.append(Offer.pay_gem == pay_gem)
-            if buy_gem:
-                buy_gem = buy_gem.lower()
-                where.append(Offer.buy_gem == buy_gem)
-            if start_time:
-                where.append(Offer.timestamp >= start_time)
-            if end_time:
-                where.append(Offer.timestamp <= end_time)
-
-            if where == []:
-                offers = self.boiler_plate.Query.offers(first = first)
-            else:
-                offers = self.boiler_plate.Query.offers(first = first, where = where)
-
-            field_paths = [
-                offers.id,
-                offers.pay_gem.id,
-                offers.pay_amt_formatted,
-                offers.pay_amt_usd,
-                offers.buy_gem.id,
-                offers.buy_amt_formatted,
-                offers.buy_amt_usd,
-                offers.bought_amt_formatted,
-                offers.maker.id,
-                offers.transaction.id,
-                offers.transaction.timestamp,
-                offers.pay_amt,
-                offers.buy_amt,
-                offers.paid_amt, 
-                offers.paid_amt_formatted,
-                offers.paid_amt_usd,
-                offers.bought_amt,
-                offers.bought_amt_formatted,
-                offers.bought_amt_usd,
-                offers.filled,
-                offers.cancelled,
-                offers.live,
-                offers.removed_timestamp
-            ]  
-
-            df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy) 
-
-            return df
-
-    def get_detailed_trades(self, taker = None, maker = None, pair = None, pay_gem = None, buy_gem = None, start_time = None, end_time = None, first = 1000000000): 
-            """returns a dataframe of all trades on the market contract with price data. allows for the following filters: 
-
-            :param taker: the address of the taker of the trade, defaults to None
-            :type taker: str, optional
-            :param maker: the address of the maker of the offer, defaults to None
-            :type maker: str, optional
-            :param pair: the address of the pair of the offer, defaults to None. direction of the pair matters and corresponds to the array passed in the following order: [pay_gem, buy_gem]. defaults to None
-            :type pair: array, optional
-            :param filled: whether the offer has been filled, defaults to None
-            :type filled: bool, optional
-            :param cancelled: whether the offer has been cancelled, defaults to None
-            :type cancelled: bool, optional
-            :param live: whether the offer is live, defaults to None
-            :type live: bool, optional
-            :param pay_gem: the address of the pay_gem of the offer, defaults to None
-            :type pay_gem: str, optional
-            :param buy_gem: the address of the buy_gem of the offer, defaults to None
-            :type buy_gem: str, optional
-            :param start_time: the start time of the offer, defaults to None. in unix time
-            :type start_time: int, optional
-            :param end_time: the end time of the offer, defaults to None. in unix time
-            :type end_time: int, optional
-            """
-
-            # set the trade entity 
-            Take = self.boiler_plate.Take
-
-            # for each of the filters, add the filter to the where clause
-            where = []
-            if taker:
-                taker = taker.lower()
-                where.append(Take.taker == taker)
-            if maker:
-                maker = maker.lower()
-                where.append(Take.maker == maker)
-            # TODO: this should be modified to return all offers for a given pair, not just the given direction
-            if pair:
-                pair[0] = pair[0].lower()
-                pair[1] = pair[1].lower()
-                where.append(Take.pay_gem == pair[0])
-                where.append(Take.buy_gem == pair[1])
-            if pay_gem:
-                pay_gem = pay_gem.lower()
-                where.append(Take.pay_gem == pay_gem)
-            if buy_gem:
-                buy_gem = buy_gem.lower()
-                where.append(Take.buy_gem == buy_gem)
-            if start_time:
-                where.append(Take.timestamp >= start_time)
-            if end_time:
-                where.append(Take.timestamp <= end_time)
-
-            # TODO: this is a current limit of the subgrounds library, it does not support querying all as a funtion option, so a large number must be provided
-            # TODO: help a frend, this would be a good pr to add to the subgrounds library :)
-            if where == []:
-                takes = self.boiler_plate.Query.takes(first = first)
-            else:
-                takes = self.boiler_plate.Query.takes(first = first, where = where)
-
-            field_paths = [
-                takes.id,
-                takes.pay_gem.id,
-                takes.pay_amt_formatted,
-                takes.pay_amt_usd,
-                takes.pay_gem_price,
-                takes.buy_gem.id,
-                takes.buy_amt_formatted,
-                takes.buy_amt_usd,
-                takes.buy_gem_price,
-                takes.taker.id,
-                takes.transaction.id,
-                takes.transaction.timestamp,
-                takes.pay_amt,
-                takes.buy_amt,
-                takes.offer.id, 
-                takes.offer.maker.id
-            ]  
-
-            df = self.subgrounds.query_df(field_paths, pagination_strategy=ShallowStrategy) 
-
-            return df

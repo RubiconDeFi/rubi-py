@@ -230,6 +230,7 @@ def test_network(
         currency='ISH',
         rpc_url='https://ishan.io/rpc',
         explorer_url='https://ishanexplorer.io',
+        market_data_url='https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet',
         rubicon=rubicon,
         token_addresses=token_addresses
     )

@@ -33,6 +33,7 @@ class Network:
         currency: str,
         rpc_url: str,
         explorer_url: str,
+        market_data_url: str,
         rubicon: dict,
         token_addresses: dict,
         # optional custom token config file from the user
@@ -54,6 +55,7 @@ class Network:
         :type rpc_url: str
         :param explorer_url: The URL of the network explorer.
         :type explorer_url: str
+        :param market_data_url: the URL of the market data subgraph (RubiconV2)
         :param rubicon: Dictionary containing Rubicon contract parameters.
         :type rubicon: dict
         :param token_addresses: Dictionary containing token addresses on the network.
@@ -70,6 +72,8 @@ class Network:
         self.currency = currency
         self.rpc_url = rpc_url
         self.explorer_url = explorer_url
+        # TODO: currently we are utilizing just a single url, we should switch to a dictionary as the number of subgraphs we support grows
+        self.market_data_url = market_data_url
         self.rubicon = RubiconContracts(path=path, w3=self.w3, **rubicon)
 
         checksummed_token_addresses: dict[str, ChecksumAddress] = {}

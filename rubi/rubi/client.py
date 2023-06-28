@@ -34,6 +34,10 @@ from rubi.rubicon_types import (
     UpdateLimitOrder
 )
 
+from rubi.data import (
+    Data
+)
+
 
 class Client:
     """This class is a client for Rubicon. It aims to provide a simple and understandable interface when interacting
@@ -69,6 +73,8 @@ class Client:
         self._pairs: Dict[str, Pair] = {}
 
         self.message_queue = message_queue  # type: Queue | None
+
+        self.data = Data.from_network(network=self.network)
 
     @classmethod
     def from_http_node_url(
@@ -585,6 +591,27 @@ class Client:
             ids=order_ids,
             **transaction.args(),
         )
+    
+    ######################################################################
+    # data methods (raw data) TODO: once we have cleanly formatted data functions, we can switch to only exposing those
+    ######################################################################
+
+    def get_offers(
+        self, 
+        maker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pay_gem: Optional[str] = None,
+        buy_gem: Optional[str] = None,
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000,
+        order_by: Optional[str] = 'timestamp',
+        order_direction: Optional[str] = 'desc'
+    ):
+        
+        df = self.data.market.get_offers_raw(maker, from_address, pay_gem, buy_gem, open, start_time, end_time, first, order_by, order_direction)
+        return df
 
     ######################################################################
     # helper methods
