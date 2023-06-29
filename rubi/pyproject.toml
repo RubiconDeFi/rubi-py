@@ -32,3 +32,8 @@ docs = ["sphinx"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+test = "scripts:test"
+test_with_coverage = "scripts:test_with_coverage"
+generate_coverage_report = "scripts:test_coverage_html"

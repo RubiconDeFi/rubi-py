@@ -84,7 +84,7 @@ Finally we are ready to instantiate a client
     from rubi import Client, NetworkName, Transaction, NewLimitOrder, OrderSide
 
     # instantiate the client
-    client = client = Client.from_http_node_url(
+    client = Client.from_http_node_url(
         http_node_url=http_node_url,
         wallet=wallet,
         key=key
