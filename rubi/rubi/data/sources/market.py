@@ -158,4 +158,7 @@ class MarketData:
             pagination_strategy=ShallowStrategy
         )
 
+        # TODO: handle an empty dataframe
+        # TODO: standardize the column names
+        
         return df
