@@ -231,8 +231,8 @@ class GridBot(BaseEventTradingFramework):
                     order.price - self.grid.round_to_grid_tick(active_order.price)
                 ) < self.allowed_order_price_differential
             ):
-                if order.size >= active_order.size:
-                    order.size = order.size - active_order.size
+                if order.size >= active_order.remaining_size():
+                    order.size = order.size - active_order.remaining_size()
 
                     if order.size < self.grid.min_order_size_in_base:
                         return True
