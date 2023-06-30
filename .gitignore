@@ -151,3 +151,6 @@ brom.py
 
 # bot config
 bot_config.yaml
+
+#mac files
+.DS_store
