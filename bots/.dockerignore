@@ -1,0 +1,12 @@
+# git
+.git
+.github
+.gitignore
+
+# docker
+.dockerignore
+
+# secrets
+local.env
+.env
+
