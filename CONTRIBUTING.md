@@ -4,7 +4,7 @@ Thank you for investing your time in contributing to rubi! In this guide, you wi
 
 ## New contributor guide
 
-To get an overview of rubi, please read about the [Rubicon Protocol](), the [README](https://github.com/RubiconDeFi/rubi-py/blob/master/rubi/README.md) and our [docs][]. These will get you up to speed and help you get started with this repository
+To get an overview of rubi, please read about the [Rubicon Protocol](https://rubicon.finance), the [README](https://github.com/RubiconDeFi/rubi-py/blob/master/rubi/README.md) and our [docs](https://docs.rubicon.finance). These will get you up to speed and help you get started with this repository
 
 ## Get started 
 

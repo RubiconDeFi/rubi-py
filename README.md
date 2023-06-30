@@ -25,4 +25,4 @@ Rubicon Protocol.
 
 ## Contributing 
 
-Interested in contributing? Check out our contributing guidelines. Please note that hit
+Interested in contributing? Check out our contributing guidelines.

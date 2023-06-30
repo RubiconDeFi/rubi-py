@@ -9,7 +9,7 @@ name: PR title linter
 # https://github.com/amannn/action-semantic-pull-request#event-triggers
 on:
   pull_request:
-    branches: [ 'test-cd-flow' ]
+    branches: [ 'master' ]
     types:
       - opened
       - edited
