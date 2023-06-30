@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rubi"
-version = "2.0.5"
+version = "2.1.0"
 description = "A python SDK for the Rubicon Protocol"
 authors = ["denver <denver@rubicon.finance>", "adam <adam@rubicon.finance>"]
 readme = "README.md"
@@ -49,3 +49,4 @@ upload_to_release = true                                # auto-create GitHub rel
 upload_to_pypi = false                                  # don't auto-upload to PyPI
 remove_dist = false                                     # don't remove dists
 patch_without_tag = false                               # patch release by default -> TODO
+version_source = "tag"
