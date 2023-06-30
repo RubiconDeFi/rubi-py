@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rubi"
-version = "2.1.0"
+version = "2.0.5"
 description = "A python SDK for the Rubicon Protocol"
 authors = ["denver <denver@rubicon.finance>", "adam <adam@rubicon.finance>"]
 readme = "README.md"
