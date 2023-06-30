@@ -128,6 +128,9 @@ class GridBot(BaseEventTradingFramework):
             case TransactionStatus.FAILURE:
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
+                # TODO: remove (this is a temp measure to stop the bot on transaction failures so it can be set up to
+                #  run in a hosted manner.
+                self.stop()
 
         del self.pending_transactions[result.nonce]
 

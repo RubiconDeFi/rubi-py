@@ -11,10 +11,9 @@ python-dotenv = "1.0.0"
 pyyaml = "6.0.0"
 #rubi = "2.0.6"
 
-
-[tool.poetry.group.dev.dependencies]
-rubi = { path = "../rubi", develop = true }
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+rubi = { path = "../rubi", develop = true }
