@@ -49,4 +49,4 @@ upload_to_release = true                                # auto-create GitHub rel
 upload_to_pypi = false                                  # don't auto-upload to PyPI
 remove_dist = false                                     # don't remove dists
 patch_without_tag = false                               # patch release by default -> TODO
-version_source = "tag"
+version_source = "tag"                                  
