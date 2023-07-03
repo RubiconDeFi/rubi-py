@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "bots"
+version = "0.1.1"
+description = "A python trading framwork using the rubi-py client library."
+authors = ["adam <adam@rubicon.finance>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+python-dotenv = "1.0.0"
+pyyaml = "6.0.0"
+#rubi = "2.0.6"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+rubi = { path = "../rubi", develop = true }

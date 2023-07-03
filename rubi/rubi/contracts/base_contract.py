@@ -1,4 +1,5 @@
 import logging as log
+import time
 from threading import Thread
 from time import sleep
 from typing import Optional, Callable, Type, Dict, Any
@@ -121,7 +122,7 @@ class BaseContract:
 
         thread = Thread(
             target=self._start_default_event_poller,
-            args=(pair_name, event_type, event_filter, handler, poll_time),
+            args=(pair_name, event_type, self.contract, argument_filters, event_filter, handler, poll_time),
             daemon=True
         )
         thread.start()
@@ -130,6 +131,8 @@ class BaseContract:
     def _start_default_event_poller(
         pair_name: str,
         event_type: Type[BaseEvent],
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]],
         event_filter: LogFilter,
         event_handler: Callable,
         poll_time: int
@@ -155,6 +158,11 @@ class BaseContract:
                     event_handler(pair_name, event_type, event_data)
             except Exception as e:
                 log.error(e)
+
+                # The filter has been deleted by the node and needs to be recreated
+                if "filter not found" in str(e):
+                    event_filter = event_type.create_event_filter(contract=contract, argument_filters=argument_filters)
+                    log.info(f"event filter for: {event_type} has been recreated")
 
                 # TODO: this is a hack to detect if a PairDoesNotExistException is raised and polling should stop.
                 #  Currently an additional except PairDoesNotExistException as e: cannot be added as this causes a
@@ -217,6 +225,7 @@ class BaseContract:
             private_key=self.key
         )
 
+        log.debug(f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}")
         self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         return self._wait_for_transaction_receipt(transaction=signed_txn)
@@ -262,13 +271,12 @@ class BaseContract:
 
         :param transaction: The signed transaction object.
         :type transaction: SignedTransaction
-        :raises Exception: If the transaction fails.
         """
+
         result = TransactionReceipt.from_tx_receipt(
             tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
         )
 
-        if result.status == 0:
-            raise Exception(f"transaction {transaction.hash.hex()} failed")
+        log.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
 
         return result
