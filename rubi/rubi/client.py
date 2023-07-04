@@ -35,7 +35,7 @@ from rubi.rubicon_types import (
 )
 
 from rubi.data import (
-    Data
+    MarketData
 )
 
 
@@ -74,7 +74,7 @@ class Client:
 
         self.message_queue = message_queue  # type: Queue | None
 
-        self.data = Data.from_network(network=self.network)
+        self.market_data = MarketData.from_network(network=self.network)
 
     @classmethod
     def from_http_node_url(
@@ -600,6 +600,8 @@ class Client:
         self, 
         maker: Optional[str] = None,
         from_address: Optional[str] = None,
+        pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = None,
         pay_gem: Optional[str] = None,
         buy_gem: Optional[str] = None,
         open: Optional[bool] = None,
@@ -607,10 +609,11 @@ class Client:
         end_time: Optional[int] = None,
         first: Optional[int] = 1000,
         order_by: Optional[str] = 'timestamp',
-        order_direction: Optional[str] = 'desc'
+        order_direction: Optional[str] = 'desc',
+        formatted: Optional[bool] = True
     ):
         
-        df = self.data.market.get_offers_raw(maker, from_address, pay_gem, buy_gem, open, start_time, end_time, first, order_by, order_direction)
+        df = self.market_data.get_offers(maker, from_address, pair_name, book_side, pay_gem, buy_gem, open, start_time, end_time, first, order_by, order_direction, formatted)
         return df
 
     ######################################################################

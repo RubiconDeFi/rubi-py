@@ -6,6 +6,7 @@ import yaml
 from pytest import mark
 from web3 import Web3
 from web3.contract import Contract
+from subgrounds import Subgrounds
 
 from rubi import (
     Network, Client, RubiconMarket, RubiconRouter, ERC20, NewMarketOrder, OrderSide, Transaction, NewLimitOrder,
@@ -15,7 +16,7 @@ from rubi import (
 
 
 class TestNetwork:
-    def test_init_from_yaml(self, test_network: Network, web3: Web3):
+    def test_init_from_yaml(self, test_network: Network, web3: Web3, subgrounds: Subgrounds):
         path = f"{os.path.dirname(os.path.abspath(__file__))}/test_network_config"
         with open(f"{path}/test_config.yaml", 'r') as file:
             network_config = yaml.safe_load(file)
@@ -23,6 +24,7 @@ class TestNetwork:
         network = Network(
             path=path,
             w3=web3,
+            subgrounds=subgrounds,
             **network_config
         )
 

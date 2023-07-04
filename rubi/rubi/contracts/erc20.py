@@ -91,6 +91,48 @@ class ERC20(BaseContract):
             wallet=wallet,
             key=key
         )
+    
+    @classmethod
+    def from_address(
+        cls,
+        w3: Web3,
+        address: ChecksumAddress,
+        wallet: Optional[ChecksumAddress] = None,
+        key: Optional[str] = None
+    ) -> "ERC20":
+        """Create an ERC20 instance based on an address and a network connection.
+        
+        :param w3: Web3 instance.
+        :type w3: Web3
+        :param address: The address of the contract.
+        :type address: ChecksumAddress
+        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
+        :type wallet: Optional[ChecksumAddress]
+        :param key: Optional private key for the wallet (optional, default is None).
+        :type key: Optional[str]
+        :return: An ERC20 instance based on the address and network connection.
+        :rtype: ERC20
+        """
+
+        abi: ABI
+
+        try:
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/ERC20.json"
+
+            with open(path) as f:
+                abi = json.load(f)
+
+        except FileNotFoundError:
+            raise Exception("ERC20.json abi not found. this file should in the network_config folder")
+        
+        return cls.from_address_and_abi(
+            w3=w3,
+            address=address,
+            contract_abi=abi,
+            wallet=wallet,
+            key=key
+        )
+
 
     ######################################################################
     # read calls

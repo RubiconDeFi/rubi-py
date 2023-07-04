@@ -6,6 +6,7 @@ from typing import Optional
 import yaml
 from eth_typing import ChecksumAddress
 from web3 import Web3
+from subgrounds import Subgrounds
 
 
 class NetworkId(Enum):
@@ -27,6 +28,7 @@ class Network:
         self,
         path: str,
         w3: Web3,
+        subgrounds: Subgrounds, 
         # The below all come from network_config/{network_name}/network.yaml
         name: str,
         chain_id: int,
@@ -68,6 +70,7 @@ class Network:
         self.name = name
         self.chain_id = chain_id
         self.w3 = w3
+        self.subgrounds = subgrounds
 
         self.currency = currency
         self.rpc_url = rpc_url
@@ -116,6 +119,7 @@ class Network:
         :raises Exception: If no network configuration file is found for the specified network name.
         """
         w3 = Web3(Web3.HTTPProvider(http_node_url))
+        subgrounds = Subgrounds()
 
         network_name = NetworkId(w3.eth.chain_id).name.lower()
 
@@ -124,7 +128,7 @@ class Network:
 
             with open(f"{path}/network.yaml") as f:
                 network_data = yaml.safe_load(f)
-                return cls(path=path, w3=w3, custom_token_addresses_file=custom_token_addresses_file, **network_data)
+                return cls(path=path, w3=w3, subgrounds=subgrounds,custom_token_addresses_file=custom_token_addresses_file, **network_data)
         except FileNotFoundError:
             raise Exception(f"no network config found for {network_name}, there should be a corresponding folder in "
                             f"the network_config directory")
