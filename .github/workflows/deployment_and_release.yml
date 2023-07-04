@@ -92,9 +92,9 @@ jobs:
           poetry run semantic-release publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #- name: Prod PyPi deployment
-        #uses: pypa/gh-action-pypi-publish@release/v1
-        #with:
-          #user: __token__
-          #password: ${{ secrets.PROD_PYPI_KEY }}
-          #packages_dir: ./rubi/dist
+      - name: Prod PyPi deployment
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PROD_PYPI_KEY }}
+          packages_dir: ./rubi/dist
