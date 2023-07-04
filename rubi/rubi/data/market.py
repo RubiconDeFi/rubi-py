@@ -6,8 +6,11 @@ from subgrounds.subgraph import SyntheticField
 from subgrounds.pagination import ShallowStrategy
 from typing import Union, List, Optional, Dict, Type, Any, Callable
 
-from rubi.rubicon_types.order import (
+from eth_typing import ChecksumAddress
+
+from rubi.rubicon_types import (
     OrderSide,
+    OrderQuery,
 )
 
 from rubi.network import (
@@ -34,18 +37,14 @@ class MarketData:
         self, 
         subgrounds: Subgrounds,
         subgraph_url: str,
-        network: Optional[Network] = None # we could just require a web3 connection, but this is more convenient 
+        network: Optional[Network] = None,
+        network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None
     ): 
         """constructor method"""
         self.sg = subgrounds
         self.subgraph_url = subgraph_url
         self.network = network # type: Network | None
-
-        # TODO: we probably won't do this here, but we should figure out where to store the token's for the class
-        self.tokens = self.get_network_tokens(self.network) if self.network else None
-
-        # create a token map that maps the token address (lowercase) to the token object
-        self.token_map = {token.address.lower(): token for token in self.tokens} if self.tokens else None
+        self.tokens = network_tokens # type: Dict[ChecksumAddress, ERC20] | None
 
         # initialize the subgraph 
         try: 
@@ -55,271 +54,26 @@ class MarketData:
             # TODO: not sure exactly what error we should be throwing here, this is if the url does not work 
             raise ValueError(f"subgraph_url: {subgraph_url} failed when attempting to load.")
         
+        # Initialize the query classes
+        self.offer_query = OrderQuery(self.sg, self.data, self.network, self.tokens)
+        
     @classmethod
-    def from_network(
+    def from_network_with_tokens(
         cls,
-        network: Network
+        network: Network, 
+        network_tokens: Dict[ChecksumAddress, ERC20]
     ) -> "MarketData": 
         
         """Initialize a MarketData object using a Network object."""
         return cls(
             subgrounds=network.subgrounds,
             subgraph_url=network.market_data_url,
-            network=network
+            network=network,
+            network_tokens=network_tokens
         )
     
     #####################################
-    # General Helper Methods             # TODO: we will want to move this somewhere else most likely
-    #####################################
-
-    # TODO: FIGURE OUT WHERE THIS GOES, i think we probably want all of the token addresses initialized as a class object somewhere, but i also 
-    # think that when people start building extremely long token lists that we may not want to do this by default
-    # maybe it goes on the network object? or the client?
-
-    def get_network_tokens(
-            self, 
-            network: Optional[Network] = None 
-    ) -> List[ERC20] : # TODO: determine what type to return here, probably a list of ERC20 objects
-        
-        """Returns a list of ERC20 objects for all tokens on the network."""
-        if network: 
-            token_addresses = network.token_addresses
-        elif self.network:
-            token_addresses = self.network.token_addresses
-        else:
-            raise ValueError("No network object passed and no network object initialized on the class.")
-        
-        tokens = [ERC20.from_network(name=address, network=self.network) for address in token_addresses]
-
-        return tokens
-    
-    def get_token(
-            self,
-            token_address: str
-    ) -> ERC20:
-        """Returns an ERC20 object for the token address passed from the token_map if it exists or add it to the token_map if it does not exist."""
-
-        if not self.network:
-            raise ValueError("No network object initialized on the class.")
-        else: 
-
-            try: 
-                token_address = self.network.w3.to_checksum_address(token_address)
-                token_address = token_address.lower()
-
-                if token_address not in self.token_map:
-                    self.token_map[token_address] = ERC20.from_network(address=token_address, network=self.network)
-                
-                return self.token_map[token_address]
-
-            except:
-                raise ValueError(f"Token address: {token_address} is invalid.")
-    
-    #####################################
-    # Query Helper Methods              # # TODO: we will want to move these to their own class most likely
-    #####################################
-
-    # TODO: we will probably actually want to move this to the class constructor if it behaves as expected
-    def offer_entity(
-        self,  
-    ): # TODO: return a typed object (see subgrounds documentation for more info)
-        
-        Offer = self.data.Offer
-
-        # if we have a network object we can get all the token information we need
-        if self.network: 
-
-            Offer.pay_amt_formatted = SyntheticField(
-                f=lambda pay_amt, pay_gem: self.get_token(pay_gem).to_decimal(pay_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.pay_amt, Offer.pay_gem],
-            )
-
-            Offer.buy_amt_formatted = SyntheticField(
-                f=lambda buy_amt, buy_gem: self.get_token(buy_gem).to_decimal(buy_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.buy_amt, Offer.buy_gem],
-            )
-
-            Offer.paid_amt_formatted = SyntheticField(
-                f=lambda paid_amt, pay_gem: self.get_token(pay_gem).to_decimal(paid_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.paid_amt, Offer.pay_gem],
-            )
-
-            Offer.bought_amt_formatted = SyntheticField(
-                f=lambda bought_amt, buy_gem: self.get_token(buy_gem).to_decimal(bought_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.bought_amt, Offer.buy_gem],
-            )
-
-            Offer.pay_gem_symbol = SyntheticField(
-                f=lambda pay_gem: self.get_token(pay_gem).symbol,
-                type_=SyntheticField.STRING,
-                deps=[Offer.pay_gem],
-            )
-
-            Offer.buy_gem_symbol = SyntheticField(
-                f=lambda buy_gem: self.get_token(buy_gem).symbol,
-                type_=SyntheticField.STRING,
-                deps=[Offer.buy_gem],
-            )
-
-            Offer.datetime = SyntheticField(
-                f=lambda timestamp: str(datetime.fromtimestamp(timestamp)),
-                type_=SyntheticField.STRING,
-                deps=[Offer.timestamp],
-            )
-        
-        return Offer
-
-    def offers_query(
-        self,
-        offer, # TODO: determine what type this should be (subgrounds may have types that we can utilize here)
-        order_by: str, 
-        order_direction: str,
-        first: int,
-        maker: Optional[str] = None,
-        from_address: Optional[str] = None,
-        pay_gem: Optional[str] = None, 
-        buy_gem: Optional[str] = None, 
-        open: Optional[bool] = None,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
-        # TODO: there is definitely a clear way to pass these parameters in a more concise way, prolly **kargs   
-    ): # TODO: return a typed object (see subgrounds documentation for more info)
-        
-        # determine that the parameters are valid
-        error_messages = []
-
-        # check the order_by parameter
-        if order_by.lower() not in ('timestamp', 'price'):
-            error_messages.append("Invalid order_by, must be 'timestamp' or 'price' (default: timestamp)")
-        elif order_by.lower() == 'timestamp':
-            order_by = offer.timestamp
-        elif order_by.lower() == 'price':
-            order_by = offer.price
-        
-        # check the order_direction parameter
-        if order_direction.lower() not in ('asc', 'desc'):
-            error_messages.append("Invalid order_direction, must be 'asc' or 'desc' (default: desc)")
-        else:
-            order_direction = order_direction.lower()
-
-        # check the first parameter
-        if first < 1:
-            error_messages.append("Invalid first, must be greater than 0 (default: 1000)")
-        if not isinstance(first, int):
-            error_messages.append("Invalid first, must be an integer (default: 1000)")
-        
-        # raise an error if there are any
-        if error_messages:
-            raise ValueError('\n'.join(error_messages))
-        
-        # build the list of where conditions
-        where = [
-            offer.maker == maker.lower() if maker else None,
-            offer.from_address == from_address.lower() if from_address else None,
-            offer.pay_gem == pay_gem.lower() if pay_gem else None,
-            offer.buy_gem == buy_gem.lower() if buy_gem else None,
-            offer.open == open if open is not None else None,
-            offer.timestamp >= start_time if start_time else None,
-            offer.timestamp <= end_time if end_time else None
-        ]
-        where = [condition for condition in where if condition is not None]
-    
-        """Helper method to build a query for the offers subgraph entity."""
-        offers = self.data.Query.offers(
-            orderBy = order_by,
-            orderDirection = order_direction,
-            first=first,
-            where = where if where else {}
-        )
-
-        return offers
-    
-    def offers_fields(
-        self,
-        offers: Any, # TODO: check that this is the correct type (subgrounds may have types that we can utilize here)
-        formatted: bool = False
-    ): # TODO: return a typed object (see subgrounds documentation for more info)
-        
-        """Helper method to build a list of fields for the offers subgraph entity."""
-        fields = [
-            offers.id,
-            offers.timestamp,
-            offers.index,
-            offers.maker.id,
-            offers.from_address.id,
-            offers.pay_gem,
-            offers.buy_gem,
-            offers.pay_amt,
-            offers.buy_amt,
-            offers.paid_amt,
-            offers.bought_amt,
-            offers.price,
-            offers.open,
-            offers.removed_timestamp,
-            offers.removed_block,
-            offers.transaction.id,
-            offers.transaction.block_number,
-            offers.transaction.block_index
-        ]
-
-        if formatted:
-            fields.append(offers.pay_amt_formatted)
-            fields.append(offers.buy_amt_formatted)
-            fields.append(offers.paid_amt_formatted)
-            fields.append(offers.bought_amt_formatted)
-            fields.append(offers.pay_gem_symbol)
-            fields.append(offers.buy_gem_symbol)
-            fields.append(offers.datetime)
-
-        return fields
-    
-    def query_offers(
-            self,
-            fields: List, 
-            formatted: bool = False,
-            # TOOD: maybe we give the user the option to define a custom pagination strategy?
-    ): # TODO: return a typed object (see subgrounds documentation for more info)
-        """Helper method to query the offers subgraph entity."""
-        df =  self.sg.query_df(
-            fields,
-            pagination_strategy=ShallowStrategy
-        ) 
-
-        # if the dataframe is empty, return an empty dataframe with the correct columns
-        if df.empty and not formatted:
-            cols = ['id', 'timestamp', 'index', 'maker', 'from_address', 'pay_gem',
-                'buy_gem', 'pay_amt', 'buy_amt', 'paid_amt', 'bought_amt', 'price',
-                'open', 'removed_timestamp', 'removed_block', 'transaction', 
-                'transaction_block_number', 'transaction_block_index']
-            df = pd.DataFrame(columns=cols)
-
-        elif df.empty and formatted:
-            cols = ['id', 'maker', 'from_address', 'pay_gem', 'buy_gem', 'pay_amt', 'buy_amt', 'paid_amt', 'bought_amt']
-            df = pd.DataFrame(columns=cols)
-        
-        else: 
-            df.columns = [col.replace('offers_', '') for col in df.columns]
-            df.columns = [col.replace('_id', '') for col in df.columns]
-            
-            # convert the id to an integer
-            df['id'] = df['id'].apply(lambda x: int(x, 16)) # TODO: i don't love the lambda (cc pickling, but it appears we are forced to use them in sythetic fields regardless)
-
-            # TODO: decide whether we should return the unformatted fields or not
-            if formatted:
-                print('the formmatkalkakdklj')
-                df = df.drop(columns=['pay_amt', 'buy_amt', 'paid_amt', 'bought_amt', 'pay_gem', 'buy_gem', 'timestamp', 'index', 'price', 'removed_timestamp', 'removed_block', 'transaction_block_number', 'transaction_block_index'])
-                df = df.rename(columns={'pay_amt_formatted': 'pay_amt', 'buy_amt_formatted': 'buy_amt', 'paid_amt_formatted': 'paid_amt', 'bought_amt_formatted': 'bought_amt', 'pay_gem_symbol': 'pay_gem', 'buy_gem_symbol': 'buy_gem', 'datetime': 'timestamp'})
-                # TODO: we could also get smart with displaying price dependent upon the pair_name and direction of the order
-            
-        # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers   
-        return df
-    
-    #####################################
-    # Subgraph Query Methods (raw data) #
+    # Subgraph Query Methods            #
     #####################################
 
     # TODO: refractor using a decorator to handle the parameter validation
@@ -366,9 +120,6 @@ class MarketData:
         :rtype: pd.DataFrame 
         """
 
-        # set the offer entity 
-        Offer = self.offer_entity()
-
         # if we want formatted fields, make sure we have a network object
         # TODO: we could pass this to the offers_query method and handle it there - if we start to utilize something like **kargs lets do that
         if formatted and not self.network:
@@ -385,30 +136,30 @@ class MarketData:
             
             match book_side:
                 case OrderSide.BUY:
-                    buy_query = self.offers_query(Offer, order_by, order_direction, first, maker, from_address, pay_gem = quote_asset.address, buy_gem = base_asset.address, open = open, start_time = start_time, end_time = end_time)
-                    buy_fields = self.offers_fields(buy_query, formatted)
-                    buy_df = self.query_offers(buy_fields, formatted)
+                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address, pay_gem = quote_asset.address, buy_gem = base_asset.address, open = open, start_time = start_time, end_time = end_time)
+                    buy_fields = self.offer_query.offers_fields(buy_query, formatted)
+                    buy_df = self.offer_query.query_offers(buy_fields, formatted)
                     buy_df['side'] = 'buy' # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     return buy_df
 
                 case OrderSide.SELL:
-                    sell_query = self.offers_query(Offer, order_by, order_direction, first, maker, from_address, pay_gem = base_asset.address, buy_gem = quote_asset.address, open = open, start_time = start_time, end_time = end_time)
-                    sell_fields = self.offers_fields(sell_query, formatted)
-                    sell_df = self.query_offers(sell_fields, formatted)
+                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address, pay_gem = base_asset.address, buy_gem = quote_asset.address, open = open, start_time = start_time, end_time = end_time)
+                    sell_fields = self.offer_query.offers_fields(sell_query, formatted)
+                    sell_df = self.offer_query.query_offers(sell_fields, formatted)
                     sell_df['side'] = 'sell' # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     return sell_df
 
                 case OrderSide.NEUTRAL:
-                    buy_query = self.offers_query(Offer, order_by, order_direction, first, maker, from_address, pay_gem = quote_asset.address, buy_gem = base_asset.address, open = open, start_time = start_time, end_time = end_time)
-                    buy_fields = self.offers_fields(buy_query, formatted)
-                    buy_df = self.query_offers(buy_fields, formatted)
+                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address, pay_gem = quote_asset.address, buy_gem = base_asset.address, open = open, start_time = start_time, end_time = end_time)
+                    buy_fields = self.offer_query.offers_fields(buy_query, formatted)
+                    buy_df = self.offer_query.query_offers(buy_fields, formatted)
                     buy_df['side'] = 'buy' # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
-                    sell_query = self.offers_query(Offer, order_by, order_direction, first, maker, from_address, pay_gem = base_asset.address, buy_gem = quote_asset.address, open = open, start_time = start_time, end_time = end_time)
-                    sell_fields = self.offers_fields(sell_query, formatted)
-                    sell_df = self.query_offers(sell_fields, formatted)
+                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address, pay_gem = base_asset.address, buy_gem = quote_asset.address, open = open, start_time = start_time, end_time = end_time)
+                    sell_fields = self.offer_query.offers_fields(sell_query, formatted)
+                    sell_df = self.offer_query.query_offers(sell_fields, formatted)
                     sell_df['side'] = 'sell' # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     # TODO: decide what we want to do here, maybe we just return both dataframes?
@@ -419,8 +170,8 @@ class MarketData:
         # handle the pay_gem and buy_gem parameters
         elif pay_gem and buy_gem:
 
-            query = self.offers_query(Offer, order_by, order_direction, first, maker, from_address, pay_gem = pay_gem, buy_gem = buy_gem, open = open, start_time = start_time, end_time = end_time)
-            fields = self.offers_fields(query)
-            df = self.query_offers(fields)
+            query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address, pay_gem = pay_gem, buy_gem = buy_gem, open = open, start_time = start_time, end_time = end_time)
+            fields = self.offer_query.offers_fields(query)
+            df = self.offer_query.query_offers(fields)
 
             return df

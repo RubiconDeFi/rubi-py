@@ -70,11 +70,12 @@ class Client:
         self.market = RubiconMarket.from_network(network=self.network, wallet=self.wallet, key=self.key)
         self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=self.key)
 
+        self.tokens = self.get_network_tokens()
         self._pairs: Dict[str, Pair] = {}
 
         self.message_queue = message_queue  # type: Queue | None
 
-        self.market_data = MarketData.from_network(network=self.network)
+        self.market_data = MarketData.from_network_with_tokens(network=self.network, network_tokens=self.tokens)
 
     @classmethod
     def from_http_node_url(
@@ -631,6 +632,23 @@ class Client:
     ######################################################################
     # helper methods
     ######################################################################
+
+    def get_network_tokens(
+            self, 
+    ) -> Dict[ChecksumAddress, ERC20]: 
+        """Returns a list of ERC20 objects for all tokens on the network."""
+
+        network_tokens = {}
+
+        for address in self.network.token_addresses: 
+
+            try: 
+                network_tokens[address] = ERC20.from_network(name=address, network=self.network)
+
+            except Exception as e:
+                raise Exception(f"Token address: {address} invalid from network: {e}")
+
+        return network_tokens
 
     # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
     #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
