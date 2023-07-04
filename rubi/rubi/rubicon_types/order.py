@@ -200,7 +200,7 @@ class Transaction:
     :type orders: List[BaseNewOrder]
     :param nonce: The nonce for the transaction (optional).
     :type nonce: int
-    :param gas: The gas limit for the transaction (optional)
+    :param gas: The gas limit for the transaction (optional).
     :type gas: int
     :param max_fee_per_gas: The maximum fee per gas for the transaction (optional).
     :type max_fee_per_gas: int
@@ -228,6 +228,7 @@ class Transaction:
 
     def args(self) -> Dict:
         """Creates a dictionary of not None arguments to pass to contract functions.
+
         :return: dictionary of arguments used to send transactions.
         :rtype: Dict
         """

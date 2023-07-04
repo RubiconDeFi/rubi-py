@@ -1,0 +1,66 @@
+# Run the testing suite when creating PRs to master
+
+name: Automated testing for PRs
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+        
+      # Cache installation of poetry to prevent workflow installation
+      # every time which can be slow. Based on 
+      # https://jacobian.org/til/github-actions-poetry/
+      # Setting it this way allows you to invalidate cache manually
+      # if/when we want to upgrade poetry 
+      - name: cache poetry install
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-1.5.1-0
+        
+      # Installing Poetry. 
+      # Pinning poetry version here because Poetry changes APIs between
+      # versions and actions should not break if it does 
+      # virtualenvs-in-project as true creates the venv as a .venv in
+      # the testing directry which allows next step to cache it
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          
+      # Cache dependancies 
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }} #not sure
+          
+      # Install dependancies. The --no-root flag installs all deps 
+      # except for the project itself because we don't want to cache 
+      # old versions of rubi when we update
+      - if: steps.cache-deps.outputs.cache-hit != 'true'
+        name: Install rubi
+        run: |
+          cd rubi
+          poetry install --no-interaction --no-root
+      
+      # Installing rubi itself
+      - run: |
+          cd rubi
+          poetry install --no-interaction
+      
+      # Run the default verbose test command
+      - run: |
+          cd rubi
+          poetry run test

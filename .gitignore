@@ -2,6 +2,7 @@
 __pycache__
 *.py[cod]
 *$py.class
+out/
 
 # C extensions
 *.so
@@ -141,5 +142,15 @@ brom.py
 # ignore the rdb files
 .rdb
 
-#intellij
+# intellij
 .idea
+
+# logs
+.log
+.logs
+
+# bot config
+bot_config.yaml
+
+#mac files
+.DS_store

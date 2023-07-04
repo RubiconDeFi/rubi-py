@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rubi"
-version = "2.0.5"
+version = "2.0.6"
 description = "A python SDK for the Rubicon Protocol"
 authors = ["denver <denver@rubicon.finance>", "adam <adam@rubicon.finance>"]
 readme = "README.md"
@@ -10,7 +10,7 @@ include = ["network_config/**/*"]
 [tool.poetry.dependencies]
 python = "^3.10"
 sphinx = "7.0.1"
-web3 = "6.4.0"
+web3 = "6.5.0"
 hexbytes = "0.3.0"
 attributedict = "0.3.0"
 eth-abi = "4.0.0"
@@ -32,3 +32,8 @@ docs = ["sphinx"]
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+test = "scripts:test"
+test_with_coverage = "scripts:test_with_coverage"
+generate_coverage_report = "scripts:test_coverage_html"
