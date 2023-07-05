@@ -5,8 +5,8 @@ from typing import Optional
 
 import yaml
 from eth_typing import ChecksumAddress
-from web3 import Web3
 from subgrounds import Subgrounds
+from web3 import Web3
 
 
 class NetworkId(Enum):
@@ -28,7 +28,7 @@ class Network:
         self,
         path: str,
         w3: Web3,
-        subgrounds: Subgrounds, 
+        subgrounds: Subgrounds,
         # The below all come from network_config/{network_name}/network.yaml
         name: str,
         chain_id: int,
@@ -75,7 +75,8 @@ class Network:
         self.currency = currency
         self.rpc_url = rpc_url
         self.explorer_url = explorer_url
-        # TODO: currently we are utilizing just a single url, we should switch to a dictionary as the number of subgraphs we support grows
+        # TODO: currently we are utilizing just a single url, we should switch to a dictionary as the number of
+        #  subgraphs we support grows
         self.market_data_url = market_data_url
         self.rubicon = RubiconContracts(path=path, w3=self.w3, **rubicon)
 
@@ -128,7 +129,13 @@ class Network:
 
             with open(f"{path}/network.yaml") as f:
                 network_data = yaml.safe_load(f)
-                return cls(path=path, w3=w3, subgrounds=subgrounds,custom_token_addresses_file=custom_token_addresses_file, **network_data)
+                return cls(
+                    path=path,
+                    w3=w3,
+                    subgrounds=subgrounds,
+                    custom_token_addresses_file=custom_token_addresses_file,
+                    **network_data
+                )
         except FileNotFoundError:
             raise Exception(f"no network config found for {network_name}, there should be a corresponding folder in "
                             f"the network_config directory")

@@ -636,7 +636,7 @@ class Client:
     def get_network_tokens(
             self, 
     ) -> Dict[ChecksumAddress, ERC20]: 
-        """Returns a list of ERC20 objects for all tokens on the network."""
+        """Returns a Dict of addresses to ERC20 objects for all tokens on the network."""
 
         network_tokens = {}
 
