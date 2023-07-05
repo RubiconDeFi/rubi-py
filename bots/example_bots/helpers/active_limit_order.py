@@ -40,11 +40,15 @@ class ActiveLimitOrder:
             size=order.size
         )
 
-    def is_full_take(self, take_event: OrderEvent) -> bool:
-        return take_event.size >= self.remaining_size()
+    def is_full_take(self, take_event: OrderEvent, allowed_size_differential: Decimal) -> bool:
+        return self.remaining_size() - take_event.size <= allowed_size_differential
 
     def update_with_take(self, take_event: OrderEvent) -> None:
         self.filled_size += take_event.size
 
     def remaining_size(self) -> Decimal:
         return self.size - self.filled_size
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))

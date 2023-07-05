@@ -111,7 +111,8 @@ class Client:
     ######################################################################
 
     def add_pair(
-        self, pair_name: str,
+        self,
+        pair_name: str,
         base_asset_allowance: Optional[Decimal] = None,
         quote_asset_allowance: Optional[Decimal] = None
     ) -> None:

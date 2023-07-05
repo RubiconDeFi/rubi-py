@@ -101,7 +101,14 @@ class GridBot(BaseEventTradingFramework):
 
                 self.grid.add_trade(order_side=order.order_side, price=order.price, size=order.size)
 
-                if taken_order.is_full_take(take_event=order):
+                # TODO: remove
+                # log.info(order)
+                # log.info(taken_order)
+
+                if taken_order.is_full_take(
+                    take_event=order,
+                    allowed_size_differential=self.allowed_order_size_differential
+                ):
                     log.info(f"Limit order {order.limit_order_id} fully taken")
                     del self.active_limit_orders[order.limit_order_id]
                 else:
@@ -129,7 +136,7 @@ class GridBot(BaseEventTradingFramework):
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
                 # TODO: remove (this is a temp measure to stop the bot on transaction failures so it can be set up to
-                #  run in a hosted manner.
+                #  run in a hosted manner).
                 self.stop()
 
         del self.pending_transactions[result.nonce]
