@@ -5,6 +5,7 @@ from threading import Thread
 from time import sleep
 from typing import Union, List, Optional, Dict, Type, Any, Callable
 
+import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce
 
@@ -624,7 +625,7 @@ class Client:
         order_by: Optional[str] = 'timestamp',
         order_direction: Optional[str] = 'desc',
         formatted: Optional[bool] = True
-    ):
+    ) -> pd.DataFrame:
         
         df = self.market_data.get_offers(maker, from_address, pair_name, book_side, pay_gem, buy_gem, open, start_time, end_time, first, order_by, order_direction, formatted)
         return df
