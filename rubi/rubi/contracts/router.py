@@ -28,28 +28,23 @@ class RubiconRouter(BaseContract):
         w3: Web3,
         contract: Contract,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ) -> None:
         """constructor method"""
-        super().__init__(
-            w3=w3,
-            contract=contract,
-            wallet=wallet,
-            key=key
-        )
+        super().__init__(w3=w3, contract=contract, wallet=wallet, key=key)
 
     @classmethod
     def from_network(
         cls,
         network: Network,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ) -> "RubiconRouter":
         """Create a RubiconRouter instance based on a Network instance.
 
         :param network: A Network instance.
         :type network: Network
-        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None). 
+        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
         :type wallet: Optional[ChecksumAddress]
         :param key: Optional private key for the wallet (optional, default is None).
         :type key: Optional[str]
@@ -61,7 +56,7 @@ class RubiconRouter(BaseContract):
             address=network.rubicon.router.address,
             contract_abi=network.rubicon.router.abi,
             wallet=wallet,
-            key=key
+            key=key,
         )
 
     ######################################################################
@@ -133,7 +128,9 @@ class RubiconRouter(BaseContract):
         return self.contract.functions.getBookFromPair(asset, quote).call()
 
     # getBookDepth(tokenIn (address), tokenOut (address)) -> (uint256 depth, uint256 bestOfferID)
-    def get_book_depth(self, token_in: ChecksumAddress, token_out: ChecksumAddress) -> Tuple[int, int]:
+    def get_book_depth(
+        self, token_in: ChecksumAddress, token_out: ChecksumAddress
+    ) -> Tuple[int, int]:
         """Retrieves the depth of one side of the order book for a specific token pair along with the id of the best
         offer.
 
@@ -149,9 +146,7 @@ class RubiconRouter(BaseContract):
 
     # getBestOfferAndInfo(asset (address), quote (address)) -> (uint256 id, uint256, address, uint256, address)
     def get_best_offer_and_info(
-        self,
-        asset: ChecksumAddress,
-        quote: ChecksumAddress
+        self, asset: ChecksumAddress, quote: ChecksumAddress
     ) -> Tuple[int, int, ChecksumAddress, int, ChecksumAddress]:
         """Retrieves the information and id of the best offer for a specific asset/quote pair.
 
@@ -167,7 +162,9 @@ class RubiconRouter(BaseContract):
         return self.contract.functions.getBestOfferAndInfo(asset, quote).call()
 
     # getExpectedSwapFill(pay_amt (uint256), buy_amt_min (uint256), route (address[])) -> (uint256 amount)
-    def get_expected_swap_fill(self, pay_amt: int, buy_amt_min: int, route: List[ChecksumAddress]) -> int:
+    def get_expected_swap_fill(
+        self, pay_amt: int, buy_amt_min: int, route: List[ChecksumAddress]
+    ) -> int:
         """Estimates the expected amount including fees when swapping the specified payment amount using the specified
         route. reverts with an exception if the swap cannot achieve the buy_amt_min
 
@@ -181,7 +178,9 @@ class RubiconRouter(BaseContract):
         :rtype: int
         """
 
-        return self.contract.functions.getExpectedSwapFill(pay_amt, buy_amt_min, route).call()
+        return self.contract.functions.getExpectedSwapFill(
+            pay_amt, buy_amt_min, route
+        ).call()
 
     # getExpectedMultiswapFill(pay_amts (uint256[]), buy_amt_mins (uint256[]), routes (address[][]))
     # -> (uint256 amount)
@@ -189,7 +188,7 @@ class RubiconRouter(BaseContract):
         self,
         pay_amts: List[int],
         buy_amt_mins: List[int],
-        routes: List[List[ChecksumAddress]]
+        routes: List[List[ChecksumAddress]],
     ) -> int:
         """Estimates the expected amount including fees when swapping multiple specified payment amount using multiple
         specified routes. reverts with an exception if the multiswap cannot achieve the buy_amt_mins along each route
@@ -204,7 +203,9 @@ class RubiconRouter(BaseContract):
         :rtype: int
         """
 
-        return self.contract.functions.getExpectedMultiswapFill(pay_amts, buy_amt_mins, routes).call()
+        return self.contract.functions.getExpectedMultiswapFill(
+            pay_amts, buy_amt_mins, routes
+        ).call()
 
     # checkClaimAllUserBonusTokens(address user, address[] targetBathTokens, address token)
     # -> (uint256 earnedAcrossPools)
@@ -212,7 +213,7 @@ class RubiconRouter(BaseContract):
         self,
         user: ChecksumAddress,
         target_bath_tokens: List[ChecksumAddress],
-        token: ChecksumAddress
+        token: ChecksumAddress,
     ) -> int:
         """Checks the all bonus tokens that can be claimed by a user earned across all specified rubicon pools.
 
@@ -226,7 +227,9 @@ class RubiconRouter(BaseContract):
         :rtype: int
         """
 
-        return self.contract.functions.checkClaimAllUserBonusTokens(user, target_bath_tokens, token).call()
+        return self.contract.functions.checkClaimAllUserBonusTokens(
+            user, target_bath_tokens, token
+        ).call()
 
     ######################################################################
     # write calls
@@ -242,7 +245,7 @@ class RubiconRouter(BaseContract):
         nonce: Optional[int] = None,
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Perform a multiple swaps for the specified payment amounts using the specified routes. Reverts with an
         exception if any of the swaps cannot achieve the buy_amt_min along the specified route.
@@ -270,14 +273,16 @@ class RubiconRouter(BaseContract):
         :rtype: TransactionReceipt
         """
 
-        multiswap = self.contract.functions.multiswap(routes, pay_amts, buy_amts_min, to)
+        multiswap = self.contract.functions.multiswap(
+            routes, pay_amts, buy_amts_min, to
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=multiswap,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # swap(uint256 pay_amt, uint256 buy_amt_min, address[] memory route, address to) -> uint256
@@ -290,7 +295,7 @@ class RubiconRouter(BaseContract):
         nonce: Optional[int] = None,
         gas: int = 350000,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Perform a swap operation with the specified payment amount using the specified route and paying out to the
         recipient. Reverts if the swap does not result in the buy_min_amount.
@@ -325,7 +330,7 @@ class RubiconRouter(BaseContract):
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # TODO

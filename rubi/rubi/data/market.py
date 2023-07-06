@@ -20,8 +20,8 @@ class MarketData:
     """This class represents the RubiconV2 Subgraph, which contains data primarily related to the RubiconMarket.sol
     contract. If a Network object is not passed in instantiation then this class will only be used to query data related
      to the subgraph.
-    
-    :param subgrounds: a Subgrounds instance 
+
+    :param subgrounds: a Subgrounds instance
     :type subgrounds: Subgrounds
         param subgraph_url: a RubiconV2 Subgraph url endpoint that should be utilized for this class
     :type subgraph_url: str
@@ -34,7 +34,7 @@ class MarketData:
         subgrounds: Subgrounds,
         subgraph_url: str,
         network: Optional[Network] = None,
-        network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None
+        network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None,
     ):
         """constructor method"""
         self.sg = subgrounds
@@ -42,30 +42,29 @@ class MarketData:
         self.network = network  # type: Network | None
         self.tokens = network_tokens  # type: Dict[ChecksumAddress, ERC20] | None
 
-        # initialize the subgraph 
+        # initialize the subgraph
         try:
             self.data = self.sg.load_subgraph(self.subgraph_url)
             # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
         except:
-            # TODO: not sure exactly what error we should be throwing here, this is if the url does not work 
-            raise ValueError(f"subgraph_url: {subgraph_url} failed when attempting to load.")
+            # TODO: not sure exactly what error we should be throwing here, this is if the url does not work
+            raise ValueError(
+                f"subgraph_url: {subgraph_url} failed when attempting to load."
+            )
 
         # Initialize the query classes
         self.offer_query = OrderQuery(self.sg, self.data, self.network, self.tokens)
 
     @classmethod
     def from_network_with_tokens(
-        cls,
-        network: Network,
-        network_tokens: Dict[ChecksumAddress, ERC20]
+        cls, network: Network, network_tokens: Dict[ChecksumAddress, ERC20]
     ) -> "MarketData":
-
         """Initialize a MarketData object using a Network object."""
         return cls(
             subgrounds=network.subgrounds,
             subgraph_url=network.market_data_url,
             network=network,
-            network_tokens=network_tokens
+            network_tokens=network_tokens,
         )
 
     #####################################
@@ -79,15 +78,19 @@ class MarketData:
         from_address: Optional[str] = None,
         pair_name: Optional[str] = None,
         book_side: Optional[OrderSide] = None,
-        pay_gem: Optional[str] = None,  # TODO: maybe we should allow the user to pass in an address here?
-        buy_gem: Optional[str] = None,  # TODO: maybe we should allow the user to pass in an address here?
+        pay_gem: Optional[
+            str
+        ] = None,  # TODO: maybe we should allow the user to pass in an address here?
+        buy_gem: Optional[
+            str
+        ] = None,  # TODO: maybe we should allow the user to pass in an address here?
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         first: Optional[int] = 1000,
-        order_by: Optional[str] = 'timestamp',
-        order_direction: Optional[str] = 'desc',
-        formatted: Optional[bool] = False
+        order_by: Optional[str] = "timestamp",
+        order_direction: Optional[str] = "desc",
+        formatted: Optional[bool] = False,
     ) -> pd.DataFrame:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
@@ -113,13 +116,15 @@ class MarketData:
         :type order_direction: str
         :param formatted: whether or not to return the formatted fields (default: False, requires a network object to be passed)
         :return: a dataframe of offers placed on the market contract
-        :rtype: pd.DataFrame 
+        :rtype: pd.DataFrame
         """
 
         # if we want formatted fields, make sure we have a network object
         # TODO: we could pass this to the offers_query method and handle it there - if we start to utilize something like **kargs lets do that
         if formatted and not self.network:
-            raise ValueError("Cannot return formatted fields without a network object initialized on the class.")
+            raise ValueError(
+                "Cannot return formatted fields without a network object initialized on the class."
+            )
 
         # handle the pair_name parameter
         if pair_name:
@@ -129,46 +134,85 @@ class MarketData:
 
         # handle the book_side parameter
         if book_side and pair_name:
-
             match book_side:
                 case OrderSide.BUY:
-                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
-                                                              pay_gem=quote_asset.address, buy_gem=base_asset.address,
-                                                              open=open, start_time=start_time, end_time=end_time)
+                    buy_query = self.offer_query.offers_query(
+                        order_by,
+                        order_direction,
+                        first,
+                        maker,
+                        from_address,
+                        pay_gem=quote_asset.address,
+                        buy_gem=base_asset.address,
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
                     buy_fields = self.offer_query.offers_fields(buy_query, formatted)
                     buy_df = self.offer_query.query_offers(buy_fields, formatted)
                     buy_df[
-                        'side'] = 'buy'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+                        "side"
+                    ] = "buy"  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     return buy_df
 
                 case OrderSide.SELL:
-                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
-                                                               pay_gem=base_asset.address, buy_gem=quote_asset.address,
-                                                               open=open, start_time=start_time, end_time=end_time)
+                    sell_query = self.offer_query.offers_query(
+                        order_by,
+                        order_direction,
+                        first,
+                        maker,
+                        from_address,
+                        pay_gem=base_asset.address,
+                        buy_gem=quote_asset.address,
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
                     sell_fields = self.offer_query.offers_fields(sell_query, formatted)
                     sell_df = self.offer_query.query_offers(sell_fields, formatted)
                     sell_df[
-                        'side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+                        "side"
+                    ] = "sell"  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     return sell_df
 
                 case OrderSide.NEUTRAL:
-                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
-                                                              pay_gem=quote_asset.address, buy_gem=base_asset.address,
-                                                              open=open, start_time=start_time, end_time=end_time)
+                    buy_query = self.offer_query.offers_query(
+                        order_by,
+                        order_direction,
+                        first,
+                        maker,
+                        from_address,
+                        pay_gem=quote_asset.address,
+                        buy_gem=base_asset.address,
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
                     buy_fields = self.offer_query.offers_fields(buy_query, formatted)
                     buy_df = self.offer_query.query_offers(buy_fields, formatted)
                     buy_df[
-                        'side'] = 'buy'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+                        "side"
+                    ] = "buy"  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
-                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
-                                                               pay_gem=base_asset.address, buy_gem=quote_asset.address,
-                                                               open=open, start_time=start_time, end_time=end_time)
+                    sell_query = self.offer_query.offers_query(
+                        order_by,
+                        order_direction,
+                        first,
+                        maker,
+                        from_address,
+                        pay_gem=base_asset.address,
+                        buy_gem=quote_asset.address,
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
                     sell_fields = self.offer_query.offers_fields(sell_query, formatted)
                     sell_df = self.offer_query.query_offers(sell_fields, formatted)
                     sell_df[
-                        'side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+                        "side"
+                    ] = "sell"  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
                     # TODO: decide what we want to do here, maybe we just return both dataframes?
 
@@ -177,10 +221,18 @@ class MarketData:
 
         # handle the pay_gem and buy_gem parameters
         elif pay_gem and buy_gem:
-
-            query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
-                                                  pay_gem=pay_gem, buy_gem=buy_gem, open=open, start_time=start_time,
-                                                  end_time=end_time)
+            query = self.offer_query.offers_query(
+                order_by,
+                order_direction,
+                first,
+                maker,
+                from_address,
+                pay_gem=pay_gem,
+                buy_gem=buy_gem,
+                open=open,
+                start_time=start_time,
+                end_time=end_time,
+            )
             fields = self.offer_query.offers_fields(query)
             df = self.offer_query.query_offers(fields)
 
