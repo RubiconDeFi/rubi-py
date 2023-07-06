@@ -42,7 +42,7 @@ generate_coverage_report = "scripts:test_coverage_html"
 [tool.semantic_release]
 version_toml = "pyproject.toml:tool.poetry.version"     # version location
 branch = "master"                                       # branch to make releases of
-changelog_file = "../CHANGELOG.md"                      # changelog file
+changelog_file = "./CHANGELOG.md"                      # changelog file
 build_command = "poetry build"                          # build dists
 dist_path = "../dist/"                                  # where to put dists
 upload_to_release = true                                # auto-create GitHub release
