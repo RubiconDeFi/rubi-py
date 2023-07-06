@@ -21,6 +21,8 @@ eth-utils = "2.1.0"
 subgrounds = { version = "1.6.0", extras = ["dash"] }
 pyyaml = "6.0.0"
 python-semantic-release = "7.34.3"
+pre-commit = "^3.3.3"
+black = "^23.3.0"
 
 [tool.poetry.group.dev.dependencies]
 python-dotenv = "0.21.1"
