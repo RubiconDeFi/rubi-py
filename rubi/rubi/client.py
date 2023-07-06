@@ -5,6 +5,7 @@ from threading import Thread
 from time import sleep
 from typing import Union, List, Optional, Dict, Type, Any, Callable
 
+import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce
 
@@ -32,6 +33,10 @@ from rubi.rubicon_types import (
     BaseNewOrder,
     NewCancelOrder,
     UpdateLimitOrder
+)
+
+from rubi.data import (
+    MarketData
 )
 
 
@@ -66,9 +71,12 @@ class Client:
         self.market = RubiconMarket.from_network(network=self.network, wallet=self.wallet, key=self.key)
         self.router = RubiconRouter.from_network(network=self.network, wallet=self.wallet, key=self.key)
 
+        self.tokens = self.get_network_tokens()
         self._pairs: Dict[str, Pair] = {}
 
         self.message_queue = message_queue  # type: Queue | None
+
+        self.market_data = MarketData.from_network_with_tokens(network=self.network, network_tokens=self.tokens)
 
     @classmethod
     def from_http_node_url(
@@ -597,10 +605,51 @@ class Client:
             ids=order_ids,
             **transaction.args()
         )
+    
+    ######################################################################
+    # data methods (raw data) TODO: once we have cleanly formatted data functions, we can switch to only exposing those
+    ######################################################################
+
+    def get_offers(
+        self, 
+        maker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = None,
+        pay_gem: Optional[str] = None,
+        buy_gem: Optional[str] = None,
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000,
+        order_by: Optional[str] = 'timestamp',
+        order_direction: Optional[str] = 'desc',
+        formatted: Optional[bool] = True
+    ) -> pd.DataFrame:
+        
+        df = self.market_data.get_offers(maker, from_address, pair_name, book_side, pay_gem, buy_gem, open, start_time, end_time, first, order_by, order_direction, formatted)
+        return df
 
     ######################################################################
     # helper methods
     ######################################################################
+
+    def get_network_tokens(
+            self, 
+    ) -> Dict[ChecksumAddress, ERC20]: 
+        """Returns a Dict of addresses to ERC20 objects for all tokens on the network."""
+
+        network_tokens = {}
+
+        for address in self.network.token_addresses: 
+
+            try: 
+                network_tokens[address] = ERC20.from_network(name=address, network=self.network)
+
+            except Exception as e:
+                raise Exception(f"Token address: {address} invalid from network: {e}")
+
+        return network_tokens
 
     # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
     #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods

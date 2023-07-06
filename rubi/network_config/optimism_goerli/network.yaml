@@ -3,6 +3,7 @@ chain_id: 420
 currency: "ETH"
 rpc_url: "https://goerli.optimism.io"
 explorer_url: "https://goerli-explorer.optimism.io/"
+market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Goerli"
 
 rubicon:
  market:

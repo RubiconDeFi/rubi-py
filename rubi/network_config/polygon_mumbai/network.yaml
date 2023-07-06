@@ -3,6 +3,7 @@ chain_id: 80001
 currency: "MATIC"
 rpc_url: "https://rpc-mumbai.maticvigil.com/"
 explorer_url: "https://mumbai.polygonscan.com/"
+market_data_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-polygon-mumbai"
 
 rubicon:
  market:
