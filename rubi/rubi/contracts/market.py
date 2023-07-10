@@ -227,7 +227,7 @@ class RubiconMarket(BaseContract):
         owner: Optional[ChecksumAddress] = None,
         recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
-        gas: int = 3500000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -255,8 +255,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -289,7 +289,7 @@ class RubiconMarket(BaseContract):
         self,
         id: int,
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -300,8 +300,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -330,7 +330,7 @@ class RubiconMarket(BaseContract):
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
         nonce: Optional[int] = None,
-        gas: int = 5000000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -347,8 +347,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -376,7 +376,7 @@ class RubiconMarket(BaseContract):
         self,
         ids: List[int],
         nonce: Optional[int] = None,
-        gas: int = 3500000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -387,8 +387,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -418,7 +418,7 @@ class RubiconMarket(BaseContract):
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
         nonce: Optional[int] = None,
-        gas: int = 5000000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -437,8 +437,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -467,7 +467,7 @@ class RubiconMarket(BaseContract):
         buy_gem: ChecksumAddress,
         min_fill_amount: int,
         nonce: Optional[int] = None,
-        gas: int = 500000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -485,8 +485,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -514,7 +514,7 @@ class RubiconMarket(BaseContract):
         pay_gem: ChecksumAddress,
         max_fill_amount: int,
         nonce: Optional[int] = None,
-        gas: int = 500000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -532,8 +532,8 @@ class RubiconMarket(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]

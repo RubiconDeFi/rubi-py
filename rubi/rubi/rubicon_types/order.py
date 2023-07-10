@@ -191,6 +191,7 @@ class NewCancelOrder(BaseNewOrder):
 
         self.order_id = order_id
 
+
 # TODO: add a new class for a limit order object that is returned from the subgraph
 
 class Transaction:
