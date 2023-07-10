@@ -272,12 +272,12 @@ class BaseContract:
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         transaction = {
-            'chainId': self.chain_id,
-            'gas': gas,
-            'maxFeePerGas': max_fee_per_gas,
-            'maxPriorityFeePerGas': max_priority_fee_per_gas,
-            'nonce': nonce,
-            'from': self.wallet
+            "chainId": self.chain_id,
+            "gas": gas,
+            "maxFeePerGas": max_fee_per_gas,
+            "maxPriorityFeePerGas": max_priority_fee_per_gas,
+            "nonce": nonce,
+            "from": self.wallet,
         }
 
         return {key: value for key, value in transaction.items() if value is not None}

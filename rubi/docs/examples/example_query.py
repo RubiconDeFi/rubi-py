@@ -29,12 +29,16 @@ queue = Queue()
 
 # create client
 client = Client.from_http_node_url(
-    http_node_url=http_node_url,
-    wallet=wallet,
-    key=key,
-    message_queue=queue
+    http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue
 )
 
 # query the open WETH/USDC offers for your wallet
-open_offers = client.get_offers(pair_name='WETH/USDC', book_side=OrderSide.NEUTRAL, open=True,  maker=client.wallet, first=100, formatted=True)
+open_offers = client.get_offers(
+    pair_name="WETH/USDC",
+    book_side=OrderSide.NEUTRAL,
+    open=True,
+    maker=client.wallet,
+    first=100,
+    formatted=True,
+)
 print(open_offers)
