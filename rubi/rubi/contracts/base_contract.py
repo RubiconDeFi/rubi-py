@@ -196,10 +196,10 @@ class BaseContract:
     def _default_transaction_handler(
         self,
         instantiated_contract_function: ContractFunction,
-        gas: int,
-        nonce: Optional[int] = None,
-        max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None,
+        gas: Optional[int],
+        nonce: Optional[int],
+        max_fee_per_gas: Optional[int],
+        max_priority_fee_per_gas: Optional[int],
     ) -> TransactionReceipt:
         """Default transaction handler for executing transactions against this contract. This function will build, sign
         and execute a transaction with reasonable defaults (mostly from the web3py library).
@@ -209,8 +209,8 @@ class BaseContract:
 
         :param instantiated_contract_function: The instantiated contract function to call.
         :type instantiated_contract_function: ContractFunction
-        :param gas: The gas limit for the transaction.
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[int]
         :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
@@ -248,7 +248,7 @@ class BaseContract:
     def _transaction_params(
         self,
         nonce: Optional[Nonce],
-        gas: int,
+        gas: Optional[int],
         max_fee_per_gas: Optional[int],
         max_priority_fee_per_gas: Optional[int],
     ) -> Dict:
@@ -257,8 +257,8 @@ class BaseContract:
 
         :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[Nonce]
-        :param gas: The gas limit for the transaction.
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
@@ -272,11 +272,12 @@ class BaseContract:
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         transaction = {
-            "chainId": self.chain_id,
-            "gas": gas,
-            "maxFeePerGas": max_fee_per_gas,
-            "maxPriorityFeePerGas": max_priority_fee_per_gas,
-            "nonce": nonce,
+            'chainId': self.chain_id,
+            'gas': gas,
+            'maxFeePerGas': max_fee_per_gas,
+            'maxPriorityFeePerGas': max_priority_fee_per_gas,
+            'nonce': nonce,
+            'from': self.wallet
         }
 
         return {key: value for key, value in transaction.items() if value is not None}

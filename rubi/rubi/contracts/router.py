@@ -243,7 +243,7 @@ class RubiconRouter(BaseContract):
         buy_amts_min: List[int],
         to: ChecksumAddress,
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
@@ -261,8 +261,8 @@ class RubiconRouter(BaseContract):
         :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
             (optional, default is None).
         :type nonce: Optional[int]
-        :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
             + (2 * base fee per gas of latest block) (optional, default is None).
         :type max_fee_per_gas: Optional[int]
@@ -293,7 +293,7 @@ class RubiconRouter(BaseContract):
         route: List[ChecksumAddress],
         to: ChecksumAddress,
         nonce: Optional[int] = None,
-        gas: int = 350000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
@@ -311,8 +311,8 @@ class RubiconRouter(BaseContract):
         :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
             (optional, default is None).
         :type nonce: Optional[int]
-        :param gas: Gas limit of the transaction. Defaults to a very high estimate made when writing the class.
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: Max fee that can be paid for gas. Defaults to max_priority_fee (from chain)
             + (2 * base fee per gas of latest block) (optional, default is None).
         :type max_fee_per_gas: Optional[int]
