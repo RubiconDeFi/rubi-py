@@ -607,9 +607,10 @@ class Client:
         )
     
     ######################################################################
-    # data methods (raw data) TODO: once we have cleanly formatted data functions, we can switch to only exposing those
+    # data methods 
     ######################################################################
 
+    # TODO: we currently don't throw any type of warning if a user passes in a pair_name and not a book_side, this will return None as is, we should probably default to neutral
     def get_offers(
         self, 
         maker: Optional[str] = None,
