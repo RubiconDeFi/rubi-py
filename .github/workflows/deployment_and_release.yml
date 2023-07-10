@@ -41,6 +41,7 @@ jobs:
           password: ${{ secrets.TEST_PYPI_KEY }}
           repository_url: https://test.pypi.org/legacy/
           packages_dir: ./rubi/dist
+          skip-existing: true
   
   # Create a completely separate runner and installs rubi from Test PyPi to ensure functioning build
   test-install:
