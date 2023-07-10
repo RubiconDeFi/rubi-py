@@ -200,4 +200,4 @@ class OrderBook:
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
-# TODO: add a DetailedORderBook class that contains the full order book composed of LimitOrder instances
+# TODO: add a DetailedOrderBook class that contains the full order book composed of LimitOrder instances
