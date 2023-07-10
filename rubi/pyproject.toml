@@ -27,7 +27,6 @@ black = "^23.3.0"
 python-dotenv = "0.21.1"
 ipykernel = "6.23.1"
 jupyter = "1.0.0"
-pre-commit = "^3.3.3"
 
 [tool.poetry.extras]
 docs = ["sphinx"]
