@@ -216,7 +216,7 @@ class ERC20(BaseContract):
         spender: ChecksumAddress,
         amount: int,
         nonce: Optional[int] = None,
-        gas: int = 100000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -229,8 +229,8 @@ class ERC20(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -256,7 +256,7 @@ class ERC20(BaseContract):
         recipient: ChecksumAddress,
         amount: int,
         nonce: Optional[int] = None,
-        gas: int = 100000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -268,8 +268,8 @@ class ERC20(BaseContract):
         :type amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -296,7 +296,7 @@ class ERC20(BaseContract):
         recipient: ChecksumAddress,
         amount: int,
         nonce: Optional[int] = None,
-        gas: int = 100000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -311,8 +311,8 @@ class ERC20(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -339,7 +339,7 @@ class ERC20(BaseContract):
         spender: ChecksumAddress,
         added_value: int,
         nonce: Optional[int] = None,
-        gas: int = 100000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -352,8 +352,8 @@ class ERC20(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]
@@ -379,7 +379,7 @@ class ERC20(BaseContract):
         spender: ChecksumAddress,
         subtracted_value: int,
         nonce: Optional[int] = None,
-        gas: int = 100000,
+        gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None
     ) -> TransactionReceipt:
@@ -392,8 +392,8 @@ class ERC20(BaseContract):
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
-        :param gas: gas limit of the transaction, defaults to a very high estimate made when writing the class
-        :type gas: int
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: max fee that can be paid for gas, defaults to
             max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
         :type max_fee_per_gas: Optional[int]

@@ -193,6 +193,8 @@ class NewCancelOrder(BaseNewOrder):
 
 # TODO: add a new class for a limit order object that is returned from the subgraph
 
+# TODO: add a new class for a limit order object that is returned from the subgraph
+
 class Transaction:
     """
     Class representing a transaction to be executed on chain

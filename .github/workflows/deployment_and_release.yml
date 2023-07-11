@@ -1,0 +1,101 @@
+name: Deployment to PyPi and Github releases for rubi-py
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  # Build the deploy the latest rubi-py code onto Test PyPi
+  test-deployment: 
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' #&& github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      # Cache installation of poetry to prevent workflow installation
+      - name: cache poetry install
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-1.5.1-0
+      - name: Install poetry 
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install dependancies
+        run: |
+          cd rubi
+          poetry install
+          poetry build
+      - name: Test PyPi deployment
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_KEY }}
+          repository_url: https://test.pypi.org/legacy/
+          packages_dir: ./rubi/dist
+          skip-existing: true
+  
+  # Create a completely separate runner and installs rubi from Test PyPi to ensure functioning build
+  test-install:
+    runs-on: ubuntu-latest
+    needs: test-deployment
+    steps:
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      # Test install from Test PyPi
+      # https://stackoverflow.com/questions/72907182/python-pip-pip-install-cannot-find-a-version-that-satisfies-a-requirement-des
+      - name: Test install from Test PyPi
+        run: |
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ rubi
+  
+  # Offical deployment: create a Github release and bump the version and deploy to main PyPi
+  deploy-to-pypi:
+    runs-on: ubuntu-latest
+    needs: test-install
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: cache poetry install
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-1.5.1-0
+      - name: Install poetry 
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - name: Install dependancies
+        run: |
+          cd rubi
+          poetry install
+      - name: Prepare GH release   
+        run: |
+          cd rubi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          poetry run semantic-release publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prod PyPi deployment
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PROD_PYPI_KEY }}
+          packages_dir: ./rubi/dist

@@ -129,7 +129,7 @@ class MarketData:
 
         # handle the book_side parameter
         if book_side and pair_name:
-            # TODO: we currently don't throw any type of warning if a user passes in a pair_name and not a book_side, this will return None as is, we should probably default to neutral
+
             match book_side:
                 case OrderSide.BUY:
                     buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
