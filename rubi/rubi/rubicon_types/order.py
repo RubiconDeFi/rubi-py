@@ -7,6 +7,7 @@ from eth_typing import ChecksumAddress
 from rubi.contracts.contract_types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent, \
     EmitDeleteEvent, EmitFeeEvent
 from rubi.rubicon_types.pair import Pair
+from rubi import ERC20
 
 
 class OrderSide(Enum):
@@ -191,9 +192,155 @@ class NewCancelOrder(BaseNewOrder):
 
         self.order_id = order_id
 
-# TODO: add a new class for a limit order object that is returned from the subgraph
+class LimitOrder(BaseNewOrder):
+    """Class representing a detailed limit order.
+    
+    :param pair_name: The name of the trading pair.
+    :type pair_name: str
+    :param order_type: The type of the order.
+    :type order_type: OrderType
+    :param order_side: The side of the order (buy or sell).
+    :type order_side: OrderSide
+    :param id: The ID of the order.
+    :type id: int
+    :param timestamp: The timestamp of when the order was created.
+    :type timestamp: int
+    :param block_number: The block number of when the order was created.
+    :type block_number: int
+    :param block_index: The index of the transaction in the block of when the order was created.
+    :type block_index: int
+    :param log_index: The index of the log in the transaction of when the order was created.
+    :type log_index: int
+    :param txn_hash: The hash of the transaction of when the order was created.
+    :type txn_hash: str # TODO: this probably has a type that we can import from web3
+    :param maker: The address of the maker of the order.
+    :type maker: ChecksumAddress
+    :param base_asset: The asset being traded.
+    :type base_asset: ERC20
+    :param quote_asset: The quote asset.
+    :type quote_asset: ERC20
+    :param base_amt: The base amount of the order.
+    :type base_amt: int
+    :param quote_amt: The quote amount of the order.
+    :type quote_amt: int
+    :param base_amt_original: The original base amount of the order.
+    :type base_amt_original: int
+    :param quote_amt_original: The original quote amount of the order.
+    :type quote_amt_original: int
+    :param base_amt_filled: The filled base amount of the order.
+    :type base_amt_filled: int
+    :param quote_amt_filled: The filled quote amount of the order.
+    :type quote_amt_filled: int
+    :param price: The price of the order.
+    :type price: Decimal # TODO: worth discussing if this should be the ratio of the raw amounts or the ratio of the decimal amounts - for now im opting for decimals for readability but that may limit precision
+    :param open: Whether or not the order is open.
+    :type open: bool
+    :param removed_timestamp: The timestamp of when the order was removed (optional).
+    :type removed_timestamp: Optional[int]
+    :param removed_block_number: The block number of when the order was removed (optional).
+    :type removed_block_number: Optional[int]
+    """
 
-# TODO: add a new class for a limit order object that is returned from the subgraph
+    def __init__(
+        self,
+        pair_name: str,
+        order_type: OrderType,
+        order_side: OrderSide,
+        id: int,
+        timestamp: int,
+        block_number: int,
+        block_index: int,
+        log_index: int,
+        txn_hash: str,
+        maker: ChecksumAddress,
+        base_asset: ERC20,
+        quote_asset: ERC20,
+        base_amt: int,
+        quote_amt: int,
+        base_amt_original: int,
+        quote_amt_original: int,
+        base_amt_filled: int,
+        quote_amt_filled: int,
+        open: bool,
+        price: Optional[Decimal] = None,
+        removed_timestamp: Optional[int] = None,
+        removed_block_number: Optional[int] = None,
+    ):
+        
+        # TODO: this is really an open discussion... we need an identifier for when the order was created that is inclusive of the: block, txn_index, and log_index
+        # TODO: we will probably want to discuss the base_amt, base_amt_original, base_amt_filled, quote_amt, quote_amt_original, and quote_amt_filled. not sure if this is the best way to represent this data
+
+        """constructor method."""
+        super().__init__(
+            pair_name=pair_name,
+            order_type=order_type,
+            order_side=order_side,
+        )
+
+        self.id = id
+        self.timestamp = timestamp
+        self.block_number = block_number
+        self.block_index = block_index
+        self.log_index = log_index
+        self.txn_hash = txn_hash
+        self.maker = maker
+        self.base_asset = base_asset
+        self.quote_asset = quote_asset
+        self.base_amt = base_amt
+        self.quote_amt = quote_amt
+        self.base_amt_original = base_amt_original
+        self.quote_amt_original = quote_amt_original
+        self.base_amt_filled = base_amt_filled
+        self.quote_amt_filled = quote_amt_filled
+        self.open = open
+        self.price = price
+        self.removed_timestamp = removed_timestamp
+        self.removed_block_number = removed_block_number
+
+        if self.price is None:
+            self.price = quote_asset.to_decimal(quote_amt) / base_asset.to_decimal(base_amt)
+
+    def update_fill(
+        self,
+        base_amt_filled: int,
+        quote_amt_filled: int,
+    ):
+        # TODO: tracking the base asset and quote asset can be somewhat tricky, we will want to tie these into the events so that everything plays nicely together
+        """A method to update the filled amounts of the order.
+        
+        :param base_amt_filled: The updated filled base amount of the order.
+        :type base_amt_filled: int
+        :param quote_amt_filled: The updated filled quote amount of the order.
+        :type quote_amt_filled: int
+        """
+
+        self.base_amt -= base_amt_filled
+        self.quote_amt -= quote_amt_filled
+        self.base_amt_filled += base_amt_filled
+        self.quote_amt_filled += quote_amt_filled
+    
+    def update_cancel(
+        self,
+        removed_timestamp: Optional[int] = None,
+        removed_block_number: Optional[int] = None,
+    ):
+        """A method to update the order when it is cancelled."""
+        
+        self.open = False
+        self.base_amt = 0
+        self.quote_amt = 0
+        self.removed_timestamp = removed_timestamp
+        self.removed_block_number = removed_block_number
+        
+    # TODO: do we want a function to return the asset amounts as decimals? or should we just use the ERC20.to_decimal() function?
+    def get_size(self) -> Decimal:
+        """Returns the size of the order.
+        
+        :return: The size of the order.
+        :rtype: Decimal
+        """
+        
+        return self.base_asset.to_decimal(self.base_amt)
 
 class Transaction:
     """
