@@ -347,7 +347,6 @@ class Client:
         self,
         pair_name: str,
         event_type: Type[BaseEvent],
-        filters: Optional[Dict[str, Any]] = None,
         event_handler: Optional[Callable] = None,
         poll_time: int = 2
     ) -> None:
@@ -359,9 +358,6 @@ class Client:
         :type pair_name: str
         :param event_type: Type of the event to listen for.
         :type event_type: Type[BaseEvent]
-        :param filters: Optional filters to apply when retrieving events, defaults to the events default filters
-            (optional, default is None).
-        :type filters: Optional[Dict[str, Any]], optional
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
             self._default_event_handler (optional, default is None).
         :type event_handler: Optional[Callable], optional
@@ -380,7 +376,7 @@ class Client:
             bid_identifier=pair.bid_identifier,
             ask_identifier=pair.ask_identifier,
             wallet=self.wallet
-        ) if filters is None else filters
+        )
 
         event_type.get_event_contract(market=self.market, router=self.router).start_event_poller(
             pair_name=pair_name,
