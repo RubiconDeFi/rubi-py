@@ -1,8 +1,9 @@
+import logging
 from _decimal import Decimal
 from typing import List, Tuple
 
 from rubi import ERC20
-from rubi.rubicon_types.order import OrderSide
+from rubi.rubicon_types.order import OrderSide, LimitOrder
 
 
 class BookLevel:
@@ -201,3 +202,80 @@ class OrderBook:
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
 # TODO: add a DetailedOrderBook class that contains the full order book composed of LimitOrder instances
+
+class DetailedBookLevel(BookLevel):
+    """Class representing a level in the detailed order book.
+    
+    :param price: The price of the level.
+    :type price: Decimal
+    :param size: The size of the level.
+    :type size: Decimal # TODO: determine if we really want to use a decimal here, or if we want to just make a new type that doesn't extend BookLevel
+    :param orders: The list of orders at the level.
+    :type orders: List[LimitOrder] # TODO: determine if we really need to order these, i believe the order book follows a FIFO model
+    """
+
+    # TODO: may be worth checking out something like sortedcontainers to make this more efficient
+    
+    def __init__(
+        self, 
+        price: Decimal,
+        size: Decimal,
+        orders: List[LimitOrder]
+    ): 
+        """constructor method."""
+        super().__init__(price, size)
+        
+        if not all(order.price == price for order in orders):
+            raise ValueError("Order price does not match level price.") # TODO: maybe an unecessary check, but it's good to be safe
+        
+        # Sort orders by block number, block index, and transaction index
+        self.orders = sorted(
+            orders, 
+            key=lambda order: (order.block_number, order.block_index, order.log_index)
+        )
+    
+    def add_order(
+        self, 
+        order: LimitOrder,
+        sort: bool = False
+    ): 
+        """Add an order to the level.
+        
+        :param order: The order to add to the level.
+        :type order: LimitOrder
+        :param sort: Whether or not to sort the orders after adding the new order.
+        :type sort: bool
+        """
+        if order.price != self.price:
+            raise ValueError("Order price does not match level price.")
+        
+        self.orders.append(order)
+        
+        if sort:
+            self.orders = sorted(
+                self.orders, 
+                key=lambda order: (order.block_number, order.block_index, order.log_index)
+            )
+
+    def remove_order(
+            self, 
+            id: int
+        ):
+        """Remove an order from the level.
+
+        :param id: The id of the order to remove.
+        :type id: int
+        """
+        
+        for i, order in enumerate(self.orders):
+            if order.id == id:
+
+                order = self.orders[i]
+                order_size = order.size
+
+                del self.orders[i]
+                return
+        
+        # If we didn't find the order, raise an error
+        raise ValueError(f"Order with id {id} not found.")
+        
