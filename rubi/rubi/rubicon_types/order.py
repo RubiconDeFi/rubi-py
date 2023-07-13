@@ -244,7 +244,6 @@ class LimitOrder(BaseNewOrder):
     def __init__(
         self,
         pair_name: str,
-        order_type: OrderType,
         order_side: OrderSide,
         id: int,
         timestamp: int,
@@ -273,7 +272,7 @@ class LimitOrder(BaseNewOrder):
         """constructor method."""
         super().__init__(
             pair_name=pair_name,
-            order_type=order_type,
+            order_type=OrderType.LIMIT,
             order_side=order_side,
         )
 
@@ -341,6 +340,11 @@ class LimitOrder(BaseNewOrder):
         """
         
         return self.base_asset.to_decimal(self.base_amt)
+    
+    # repr
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 class Transaction:
     """

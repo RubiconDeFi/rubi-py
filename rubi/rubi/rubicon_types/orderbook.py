@@ -3,7 +3,6 @@ from _decimal import Decimal
 from typing import List, Tuple
 
 from rubi import ERC20
-from rubi.rubi.rubicon_types.orderbook import BookLevel, OrderSide
 from rubi.rubicon_types.order import OrderSide, LimitOrder
 
 

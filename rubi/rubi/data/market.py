@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -13,6 +13,7 @@ from rubi.network import (
 from rubi.rubicon_types import (
     OrderSide,
     OrderQuery,
+    LimitOrder,
 )
 
 
@@ -185,3 +186,77 @@ class MarketData:
             df = self.offer_query.query_offers(fields)
 
             return df
+
+    def get_limit_orders(
+        self, 
+        maker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = None,
+        pay_gem: Optional[str] = None,  # TODO: maybe we should allow the user to pass in an address here?
+        buy_gem: Optional[str] = None,  # TODO: maybe we should allow the user to pass in an address here?
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000,
+        order_by: Optional[str] = 'timestamp',
+        order_direction: Optional[str] = 'desc'
+    ): # -> List[LimitOrder]:
+        
+        # handle the pair_name parameter
+        if pair_name:
+            base, quote = pair_name.split("/")
+            base_asset = ERC20.from_network(name=base, network=self.network)
+            quote_asset = ERC20.from_network(name=quote, network=self.network)
+
+        # handle the book_side parameter
+        if book_side and pair_name:
+
+            match book_side:
+                case OrderSide.BUY:
+                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
+                                                              pay_gem=quote_asset.address, buy_gem=base_asset.address,
+                                                              open=open, start_time=start_time, end_time=end_time)
+                    buy_fields = self.offer_query.offers_fields(buy_query, False)
+                    buy_df = self.offer_query.query_offers(buy_fields, False)
+                    buy_df['side'] = 'buy'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+
+                    buys = self.offer_query.dataframe_to_limit_orders(buy_df, pair_name)
+
+                    return buys
+
+                case OrderSide.SELL:
+                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
+                                                               pay_gem=base_asset.address, buy_gem=quote_asset.address,
+                                                               open=open, start_time=start_time, end_time=end_time)
+                    sell_fields = self.offer_query.offers_fields(sell_query, False)
+                    sell_df = self.offer_query.query_offers(sell_fields, False)
+                    sell_df['side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+
+                    sells = self.offer_query.dataframe_to_limit_orders(sell_df, pair_name)
+
+                    return sells
+
+                case OrderSide.NEUTRAL:
+                    buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
+                                                              pay_gem=quote_asset.address, buy_gem=base_asset.address,
+                                                              open=open, start_time=start_time, end_time=end_time)
+                    buy_fields = self.offer_query.offers_fields(buy_query, False)
+                    buy_df = self.offer_query.query_offers(buy_fields, False)
+                    buy_df['side'] = 'buy'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+
+                    sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
+                                                               pay_gem=base_asset.address, buy_gem=quote_asset.address,
+                                                               open=open, start_time=start_time, end_time=end_time)
+                    sell_fields = self.offer_query.offers_fields(sell_query, False)
+                    sell_df = self.offer_query.query_offers(sell_fields, False)
+                    sell_df['side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+
+                    # TODO: decide what we want to do here, maybe we just return both dataframes?
+                    df = pd.concat([buy_df, sell_df]).reset_index(drop=True)
+                    offers = self.offer_query.dataframe_to_limit_orders(df, pair_name)
+
+                    # reset the index  # need to pass a somewhat more complicated ordering here to comply with what happened in the same block time
+                    return offers
+                
+    
