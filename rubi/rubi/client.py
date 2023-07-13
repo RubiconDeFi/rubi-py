@@ -378,9 +378,12 @@ class Client:
 
         argument_filters = event_type.default_filters(
             bid_identifier=pair.bid_identifier,
-            ask_identifier=pair.ask_identifier,
-            wallet=self.wallet
-        ) if filters is None else filters
+            ask_identifier=pair.ask_identifier
+        ) 
+        
+        if filters is not None:
+            # TODO: add check that filters are valid, if i remember correctly i think we can only filter on indexed params. i bet there is a function to check this
+            argument_filters.update(filters)
 
         event_type.get_event_contract(market=self.market, router=self.router).start_event_poller(
             pair_name=pair_name,

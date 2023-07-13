@@ -172,9 +172,9 @@ class EmitOfferEvent(BaseMarketEvent):
         return contract.events.emitOffer.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -278,9 +278,9 @@ class EmitCancelEvent(BaseMarketEvent):
         return contract.events.emitCancel.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -353,9 +353,9 @@ class EmitDeleteEvent(BaseMarketEvent):
         return contract.events.emitDelete.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
