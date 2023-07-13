@@ -1,8 +1,10 @@
 import logging
 from _decimal import Decimal
 from typing import List, Tuple
+from .........users.denver.documents.open.rubi-py.rubi.rubi.rubicon_types.order import OrderSide
 
 from rubi import ERC20
+from rubi.rubi.rubicon_types.orderbook import BookLevel
 from rubi.rubicon_types.order import OrderSide, LimitOrder
 
 
@@ -233,6 +235,17 @@ class DetailedBookLevel(BookLevel):
             orders, 
             key=lambda order: (order.block_number, order.block_index, order.log_index)
         )
+
+    @classmethod
+    def from_rubicon_offers(
+        cls,
+        orders: List[LimitOrder]
+    ):
+        
+        price = orders[0].price
+        size = sum(order.get_size() for order in orders)
+        
+        return cls(price, size, orders)
     
     def add_order(
         self, 
@@ -250,6 +263,7 @@ class DetailedBookLevel(BookLevel):
             raise ValueError("Order price does not match level price.")
         
         self.orders.append(order)
+        self.size += order.get_size()
         
         if sort:
             self.orders = sorted(
@@ -269,13 +283,135 @@ class DetailedBookLevel(BookLevel):
         
         for i, order in enumerate(self.orders):
             if order.id == id:
-
-                order = self.orders[i]
-                order_size = order.size
+                
+                self.size -= self.orders[i].get_size()
 
                 del self.orders[i]
                 return
         
         # If we didn't find the order, raise an error
-        raise ValueError(f"Order with id {id} not found.")
+        raise ValueError(f"Order with id {id} not found.") # TODO: maybe we should just log an error here instead of raising an exception
+    
+    def update_order(
+        self, 
+        id: int,
+        base_amt_filled: int, 
+        quote_amt_filled: int
+    ): 
+        """Update an order in the level.
         
+        :param id: The id of the order to update.
+        :type id: int
+        :param base_amt_filled: The amount of the base asset that has been filled.
+        :type base_amt_filled: int
+        :param quote_amt_filled: The amount of the quote asset that has been filled.
+        :type quote_amt_filled: int
+        """
+
+        for i, order in enumerate(self.orders):
+            if order.id == id: 
+                self.orders[i].update_fill(base_amt_filled, quote_amt_filled)
+                self.size -= self.orders[i].get_size()
+                return
+        
+        # If we didn't find the order, raise an error
+        raise ValueError(f"Order with id {id} not found.") # TODO: maybe we should just log an error here instead of raising an exception
+
+class DetailedBookSide(BookSide): 
+    """Class representing a side of the detailed order book. Either bids or asks.
+    
+    :param book_side: The side of the order book (BUY or SELL).
+    :type book_side: OrderSide
+    :param levels: The list of levels on the side.
+    :type levels: List[DetailedBookLevel]
+    """
+
+    def __init__(
+        self, 
+        book_side: OrderSide, 
+        levels: List[DetailedBookLevel]
+    ):
+        """constructor method."""
+        super().__init__(book_side, levels)
+
+        # TODO: decide if this is the best path forward
+        # for ease of use, we will store a dictionary that maps the id of the offer to the level it is in
+        self.offer_to_level = {}
+        for level in self.levels:
+            for order in level.orders:
+                self.offer_to_level[order.id] = level
+
+        # TODO: decide if this is the best path forward
+        # for ease of use, we will store a dictionary that maps every price to the level it is in
+        self.price_to_level = {}
+        for level in self.levels:
+            self.price_to_level[level.price] = level
+
+        @classmethod
+        def from_rubicon_offers(
+            cls,
+            book_side: OrderSide,
+            offers: List[LimitOrder]
+        ):
+            """Creates a DetailedBookSide instance from a list of LimitOrders.
+            
+            :param book_side: The side of the order book (BUY or SELL).
+            :type book_side: OrderSide
+            :param offers: The list of offers retrieved from the Rubicon for an asset pair pay_gem/buy_gem.
+            """
+
+            # go through and get every price level that we will need
+            levels = {}
+
+            for order in offers:
+                if order.price in levels:
+                    levels[order.price].append(order)
+                else:
+                    levels[order.price] = []
+
+            # construct the levels list
+            levels_list = []
+            for price, orders in levels.items():
+                levels_list.append(DetailedBookLevel.from_rubicon_offers(orders))
+
+            # sort the levels list based on the book side
+            match book_side:
+                case OrderSide.BUY:
+                    levels_list = sorted(
+                        levels_list, 
+                        key=lambda level: level.price, 
+                        reverse=True
+                    )
+                case OrderSide.SELL:
+                    levels_list = sorted(
+                        levels_list, 
+                        key=lambda level: level.price
+                    )
+
+            return cls(
+                book_side=book_side,
+                levels=levels_list
+            )
+        
+        def add_order(
+            self, 
+            order: LimitOrder
+        ):
+            """Add an order to the detailed book side.
+            
+            :param order: The order to add to the detailed book side.
+            :type order: LimitOrder
+            """
+
+            if order.price in self.price_to_level:
+                self.price_to_level[order.price].add_order(order)
+                self.offer_to_level[order.id] = self.price_to_level[order.price]
+            else:
+                self.price_to_level[order.price] = DetailedBookLevel.from_rubicon_offers([order])
+                self.offer_to_level[order.id] = self.price_to_level[order.price]
+
+        # remove_liquidity_from_book is inherited from BookSide
+        # def remove_liquidity_from_book(self, price: Decimal, size: Decimal):
+
+        # best_price is inherited from BookSide
+        # def best_price(self) -> Decimal:
