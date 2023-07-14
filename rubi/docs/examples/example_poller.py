@@ -28,7 +28,9 @@ key = os.getenv("DEV_KEY")
 queue = Queue()
 
 # create client
-client = Client.from_http_node_url(http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue)
+client = Client.from_http_node_url(
+    http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue
+)
 
 # add the WETH/USDC pair to the client
 client.add_pair(pair_name="WETH/USDC")
