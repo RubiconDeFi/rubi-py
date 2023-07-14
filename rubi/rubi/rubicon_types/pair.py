@@ -26,7 +26,7 @@ class Pair:
         base_asset: ERC20,
         quote_asset: ERC20,
         current_base_asset_allowance: Optional[Decimal],
-        current_quote_asset_allowance: Optional[Decimal]
+        current_quote_asset_allowance: Optional[Decimal],
     ):
         self.name = name
 
@@ -35,11 +35,11 @@ class Pair:
 
         self.bid_identifier: str = base_asset.w3.solidity_keccak(
             abi_types=["address", "address"],
-            values=[self.quote_asset.address, self.base_asset.address]
+            values=[self.quote_asset.address, self.base_asset.address],
         ).hex()
         self.ask_identifier: str = base_asset.w3.solidity_keccak(
             abi_types=["address", "address"],
-            values=[self.base_asset.address, self.quote_asset.address]
+            values=[self.base_asset.address, self.quote_asset.address],
         ).hex()
 
         # TODO: think about structure of allowances on this class. Currently, this only caters for the RubiconMarket

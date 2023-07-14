@@ -4,13 +4,20 @@ from typing import Optional, Union, List, Dict
 
 from eth_typing import ChecksumAddress
 
-from rubi.contracts.contract_types.events import BaseEvent, EmitOfferEvent, EmitCancelEvent, EmitTakeEvent, \
-    EmitDeleteEvent, EmitFeeEvent
+from rubi.contracts.contract_types.events import (
+    BaseEvent,
+    EmitOfferEvent,
+    EmitCancelEvent,
+    EmitTakeEvent,
+    EmitDeleteEvent,
+    EmitFeeEvent,
+)
 from rubi.rubicon_types.pair import Pair
 
 
 class OrderSide(Enum):
     """Enumeration representing the order side."""
+
     BUY = "BUY"
     SELL = "SELL"
     NEUTRAL = "NEUTRAL"
@@ -33,6 +40,7 @@ class OrderSide(Enum):
 
 class OrderType(Enum):
     """Enumeration representing the order type."""
+
     MARKET = "MARKET"
     LIMIT = "LIMIT"
 
@@ -92,12 +100,13 @@ class NewMarketOrder(BaseNewOrder):
             pair_name=pair_name,
             order_type=OrderType.MARKET,
             order_side=order_side,
-
         )
         self.size = size
 
         if worst_execution_price is None:
-            self.worst_execution_price = Decimal("0") if order_side.SELL else Decimal("10") ** Decimal("7")
+            self.worst_execution_price = (
+                Decimal("0") if order_side.SELL else Decimal("10") ** Decimal("7")
+            )
         else:
             self.worst_execution_price = worst_execution_price
 
@@ -116,11 +125,7 @@ class NewLimitOrder(BaseNewOrder):
     """
 
     def __init__(
-        self,
-        pair_name: str,
-        order_side: OrderSide,
-        size: Decimal,
-        price: Decimal
+        self, pair_name: str, order_side: OrderSide, size: Decimal, price: Decimal
     ):
         """constructor method."""
         super().__init__(
@@ -154,7 +159,7 @@ class UpdateLimitOrder(BaseNewOrder):
         order_side: OrderSide,
         order_id: int,
         size: Decimal,
-        price: Decimal
+        price: Decimal,
     ):
         """constructor method"""
         super().__init__(
@@ -177,11 +182,7 @@ class NewCancelOrder(BaseNewOrder):
     :type order_id: int
     """
 
-    def __init__(
-        self,
-        pair_name: str,
-        order_id: int
-    ):
+    def __init__(self, pair_name: str, order_id: int):
         """constructor method"""
         super().__init__(
             pair_name=pair_name,
@@ -193,6 +194,7 @@ class NewCancelOrder(BaseNewOrder):
 
 
 # TODO: add a new class for a limit order object that is returned from the subgraph
+
 
 class Transaction:
     """
@@ -216,11 +218,13 @@ class Transaction:
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ):
         """constructor method"""
         if len(orders) < 1:
-            raise Exception("Transaction cannot be instantiated with an empty order list")
+            raise Exception(
+                "Transaction cannot be instantiated with an empty order list"
+            )
 
         self.orders = orders
         self.nonce = nonce
@@ -238,7 +242,7 @@ class Transaction:
             "nonce": self.nonce,
             "gas": self.gas,
             "max_fee_per_gas": self.max_fee_per_gas,
-            "max_priority_fee_per_gas": self.max_priority_fee_per_gas
+            "max_priority_fee_per_gas": self.max_priority_fee_per_gas,
         }
 
         return {key: value for key, value in args.items() if value is not None}
@@ -286,7 +290,9 @@ class OrderEvent:
         self.size = size
 
     @classmethod
-    def from_event(cls, pair: Pair, event: BaseEvent, wallet: ChecksumAddress) -> "OrderEvent":
+    def from_event(
+        cls, pair: Pair, event: BaseEvent, wallet: ChecksumAddress
+    ) -> "OrderEvent":
         """Create an OrderEvent from a BaseEvent emitted by the Rubicon Market.
 
         :param pair: The asset pair associated with the event.
@@ -308,7 +314,7 @@ class OrderEvent:
                     side=OrderSide.BUY,
                     order_type=OrderType.LIMIT,
                     base_amt=event.buy_amt,
-                    quote_amt=event.pay_amt
+                    quote_amt=event.pay_amt,
                 )
             else:
                 return cls._build_order(
@@ -317,7 +323,7 @@ class OrderEvent:
                     side=OrderSide.SELL,
                     order_type=OrderType.LIMIT,
                     base_amt=event.pay_amt,
-                    quote_amt=event.buy_amt
+                    quote_amt=event.buy_amt,
                 )
         elif isinstance(event, EmitCancelEvent):
             if pair.bid_identifier == event.pair:
@@ -327,7 +333,7 @@ class OrderEvent:
                     side=OrderSide.BUY,
                     order_type=OrderType.CANCEL,
                     base_amt=event.buy_amt,
-                    quote_amt=event.pay_amt
+                    quote_amt=event.pay_amt,
                 )
             else:
                 return cls._build_order(
@@ -336,7 +342,7 @@ class OrderEvent:
                     side=OrderSide.SELL,
                     order_type=OrderType.CANCEL,
                     base_amt=event.pay_amt,
-                    quote_amt=event.buy_amt
+                    quote_amt=event.buy_amt,
                 )
         elif isinstance(event, EmitTakeEvent):
             # This is nuanced as we can either receive a take event for a market order or limit order we placed. When
@@ -347,18 +353,22 @@ class OrderEvent:
                     event=event,
                     pair=pair,
                     side=OrderSide.BUY if wallet == event.maker else OrderSide.SELL,
-                    order_type=OrderType.LIMIT_TAKEN if wallet == event.maker else OrderType.MARKET,
+                    order_type=OrderType.LIMIT_TAKEN
+                    if wallet == event.maker
+                    else OrderType.MARKET,
                     base_amt=event.give_amt,
-                    quote_amt=event.take_amt
+                    quote_amt=event.take_amt,
                 )
             else:
                 return cls._build_order(
                     event=event,
                     pair=pair,
                     side=OrderSide.SELL if wallet == event.maker else OrderSide.BUY,
-                    order_type=OrderType.LIMIT_TAKEN if wallet == event.maker else OrderType.MARKET,
+                    order_type=OrderType.LIMIT_TAKEN
+                    if wallet == event.maker
+                    else OrderType.MARKET,
                     base_amt=event.take_amt,
-                    quote_amt=event.give_amt
+                    quote_amt=event.give_amt,
                 )
         elif isinstance(event, EmitDeleteEvent):
             if pair.bid_identifier == event.pair:
@@ -368,7 +378,7 @@ class OrderEvent:
                     side=None,
                     order_type=OrderType.LIMIT_DELETED,
                     base_amt=None,
-                    quote_amt=None
+                    quote_amt=None,
                 )
             else:
                 return cls._build_order(
@@ -377,7 +387,7 @@ class OrderEvent:
                     side=None,
                     order_type=OrderType.LIMIT_DELETED,
                     base_amt=None,
-                    quote_amt=None
+                    quote_amt=None,
                 )
 
         else:
@@ -391,7 +401,7 @@ class OrderEvent:
         side: Optional[OrderSide],
         order_type: OrderType,
         base_amt: Optional[int],
-        quote_amt: Optional[int]
+        quote_amt: Optional[int],
     ) -> "OrderEvent":
         """Build an OrderEvent from event data.
 
@@ -416,12 +426,14 @@ class OrderEvent:
         return cls(
             limit_order_id=event.id,
             limit_order_owner=event.maker,
-            market_order_owner=event.taker if isinstance(event, EmitTakeEvent) else None,
+            market_order_owner=event.taker
+            if isinstance(event, EmitTakeEvent)
+            else None,
             pair_name=pair.name,
             order_side=side,
             order_type=order_type,
             size=size,
-            price=price
+            price=price,
         )
 
     def __repr__(self):
@@ -467,7 +479,7 @@ class FeeEvent:
             fee_to=event.fee_to,
             market_order_owner=event.taker,
             fee=fee,
-            fee_asset=asset_symbol
+            fee_asset=asset_symbol,
         )
 
     def __repr__(self):

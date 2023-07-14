@@ -35,20 +35,19 @@ def on_order(order: OrderEvent) -> None:
     pair = client.get_pair(pair_name=order.pair_name)
 
     if pair.base_asset.symbol == "WETH":
-        response = requests.get('https://api.coinbase.com/v2/prices/ETH-USD/spot')
+        response = requests.get("https://api.coinbase.com/v2/prices/ETH-USD/spot")
         data = response.json()
 
         if response.status_code == 200:
-            price = data['data']['amount']
-            print(f'the current ETH price on coinbase is: {price}')
+            price = data["data"]["amount"]
+            print(f"the current ETH price on coinbase is: {price}")
         else:
             raise Exception("Error: Unable to retrieve price")
 
 
 # Create orderbook handler
 def on_orderbook(orderbook: OrderBook) -> None:
-    """Handle new orderbook
-    """
+    """Handle new orderbook"""
     log.info(orderbook)
 
 
@@ -61,7 +60,7 @@ client = Client.from_http_node_url(
     custom_token_addresses_file="custom_token_addresses.yaml",
     wallet=wallet,
     key=key,
-    message_queue=queue
+    message_queue=queue,
 )
 
 # add pair

@@ -34,11 +34,13 @@ class BaseContract:
         w3: Web3,
         contract: Contract,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ):
         """constructor method"""
         if (wallet is None) != (key is None):
-            raise Exception("both a wallet and a key are required to sign transactions. provide both or omit both")
+            raise Exception(
+                "both a wallet and a key are required to sign transactions. provide both or omit both"
+            )
 
         self.contract = contract
         self.address = contract.address
@@ -46,7 +48,7 @@ class BaseContract:
         self.chain_id = self.w3.eth.chain_id
 
         # Signing permissions
-        self.signing_permissions = (wallet is not None and key is not None)
+        self.signing_permissions = wallet is not None and key is not None
 
         if self.signing_permissions:
             log.info(f"instantiated {self.__class__} with signing rights")
@@ -62,7 +64,7 @@ class BaseContract:
         address: ChecksumAddress,
         contract_abi: ABI,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ) -> "BaseContract":
         """Create a BaseContract instance from the contract address and ABI.
 
@@ -101,7 +103,7 @@ class BaseContract:
         event_type: Type[BaseEvent],
         argument_filters: Optional[Dict[str, Any]] = None,
         event_handler: Optional[Callable] = None,
-        poll_time: int = 2
+        poll_time: int = 2,
     ) -> None:
         """Start a thread which runs an event poller for a specific event type.
 
@@ -117,13 +119,25 @@ class BaseContract:
         :type poll_time: int
         """
 
-        event_filter = event_type.create_event_filter(contract=self.contract, argument_filters=argument_filters)
-        handler = event_handler if event_handler is not None else event_type.default_handler
+        event_filter = event_type.create_event_filter(
+            contract=self.contract, argument_filters=argument_filters
+        )
+        handler = (
+            event_handler if event_handler is not None else event_type.default_handler
+        )
 
         thread = Thread(
             target=self._start_default_event_poller,
-            args=(pair_name, event_type, self.contract, argument_filters, event_filter, handler, poll_time),
-            daemon=True
+            args=(
+                pair_name,
+                event_type,
+                self.contract,
+                argument_filters,
+                event_filter,
+                handler,
+                poll_time,
+            ),
+            daemon=True,
         )
         thread.start()
 
@@ -135,7 +149,7 @@ class BaseContract:
         argument_filters: Optional[Dict[str, Any]],
         event_filter: LogFilter,
         event_handler: Callable,
-        poll_time: int
+        poll_time: int,
     ) -> None:
         """Start the default event poller loop. This thread will stop if the pair is removed from the client.
 
@@ -161,7 +175,9 @@ class BaseContract:
 
                 # The filter has been deleted by the node and needs to be recreated
                 if "filter not found" in str(e):
-                    event_filter = event_type.create_event_filter(contract=contract, argument_filters=argument_filters)
+                    event_filter = event_type.create_event_filter(
+                        contract=contract, argument_filters=argument_filters
+                    )
                     log.info(f"event filter for: {event_type} has been recreated")
 
                 # TODO: this is a hack to detect if a PairDoesNotExistException is raised and polling should stop.
@@ -206,23 +222,22 @@ class BaseContract:
         :rtype: TransactionReceipt
         """
         if not self.signing_permissions:
-            raise Exception(f"cannot write transaction without signing rights. "
-                            f"re-instantiate {self.__class__} with a wallet and private key")
+            raise Exception(
+                f"cannot write transaction without signing rights. "
+                f"re-instantiate {self.__class__} with a wallet and private key"
+            )
 
         base_txn = self._transaction_params(
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
-        txn = instantiated_contract_function.build_transaction(
-            transaction=base_txn
-        )
+        txn = instantiated_contract_function.build_transaction(transaction=base_txn)
 
         signed_txn = self.w3.eth.account.sign_transaction(
-            transaction_dict=txn,
-            private_key=self.key
+            transaction_dict=txn, private_key=self.key
         )
 
         log.debug(f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}")
@@ -235,7 +250,7 @@ class BaseContract:
         nonce: Optional[Nonce],
         gas: Optional[int],
         max_fee_per_gas: Optional[int],
-        max_priority_fee_per_gas: Optional[int]
+        max_priority_fee_per_gas: Optional[int],
     ) -> Dict:
         """Build transaction parameters Dict for a transaction. If a key is associated with a None value after building
         the Dict then this key will be removed before returning the dict.
@@ -257,17 +272,19 @@ class BaseContract:
             nonce = self.w3.eth.get_transaction_count(self.wallet)
 
         transaction = {
-            'chainId': self.chain_id,
-            'gas': gas,
-            'maxFeePerGas': max_fee_per_gas,
-            'maxPriorityFeePerGas': max_priority_fee_per_gas,
-            'nonce': nonce,
-            'from': self.wallet
+            "chainId": self.chain_id,
+            "gas": gas,
+            "maxFeePerGas": max_fee_per_gas,
+            "maxPriorityFeePerGas": max_priority_fee_per_gas,
+            "nonce": nonce,
+            "from": self.wallet,
         }
 
         return {key: value for key, value in transaction.items() if value is not None}
 
-    def _wait_for_transaction_receipt(self, transaction: SignedTransaction) -> TransactionReceipt:
+    def _wait_for_transaction_receipt(
+        self, transaction: SignedTransaction
+    ) -> TransactionReceipt:
         """Wait for the transaction receipt and check if the transaction was successful.
 
         :param transaction: The signed transaction object.
