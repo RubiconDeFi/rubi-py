@@ -29,37 +29,16 @@ queue = Queue()
 
 # create client
 client = Client.from_http_node_url(
-    http_node_url=http_node_url,
-    custom_token_addresses_file="custom_token_addresses.yaml",
-    wallet=wallet,
-    key=key,
-    message_queue=queue,
+    http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue
 )
 
 # add the WETH/USDC pair to the client
-client.add_pair(
-    pair_name="WETH/USDC",
-    base_asset_allowance=Decimal("1"),
-    quote_asset_allowance=Decimal("2000"),
+client.add_pair(pair_name="WETH/USDC")
+
+# start listening to offer events created by your wallet on the WETH/USDC market
+client.start_event_poller(
+    "WETH/USDC", event_type=EmitOfferEvent, filters={"maker": client.wallet}
 )
-
-# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
-client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
-client.start_orderbook_poller("WETH/USDC")
-
-# Place a new limit order
-limit_order = NewLimitOrder(
-    pair_name="WETH/USDC",
-    order_side=OrderSide.BUY,
-    size=Decimal("1"),
-    price=Decimal("1914.13"),
-)
-
-transaction_result = client.place_limit_order(
-    transaction=Transaction(orders=[limit_order])
-)
-
-log.info(transaction_result)
 
 # Print events and order books
 while True:

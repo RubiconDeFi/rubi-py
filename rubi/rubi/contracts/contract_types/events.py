@@ -14,8 +14,7 @@ _RubiconRouter = TypeVar("_RubiconRouter")
 
 
 class BaseEvent(ABC):
-    """Base class for events to define the structure of an Event from a Rubicon contract.
-    """
+    """Base class for events to define the structure of an Event from a Rubicon contract."""
 
     def __init__(self, block_number: int, **args):
         """Initialize a BaseEvent instance.
@@ -29,7 +28,9 @@ class BaseEvent(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_event_contract(market: _RubiconMarket, router: _RubiconRouter) -> Union[_RubiconMarket, _RubiconRouter]:
+    def get_event_contract(
+        market: _RubiconMarket, router: _RubiconRouter
+    ) -> Union[_RubiconMarket, _RubiconRouter]:
         """Abstract method to determine the contract an event corresponds to. Must be overridden in subclasses.
 
         :param market: The RubiconMarket instance.
@@ -43,7 +44,9 @@ class BaseEvent(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """Abstract method to create an event filter for the given contract with optional argument filters. Must be
         overridden in each event subclass.
 
@@ -58,7 +61,9 @@ class BaseEvent(ABC):
         raise NotImplementedError()
 
     @classmethod
-    def default_handler(cls, pair_name: str, event_type: Type["BaseEvent"], event_data: EventData) -> None:
+    def default_handler(
+        cls, pair_name: str, event_type: Type["BaseEvent"], event_data: EventData
+    ) -> None:
         """A default event handler. If no handler is provided then this one is used.
 
         :param pair_name: The name of the pair.
@@ -72,7 +77,7 @@ class BaseEvent(ABC):
 
     @staticmethod
     @abstractmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """Get the default filters for an event. These are used if no argument filters are provided. By default, these
         filters make sure we only receive events that relate to us. E.g on markets we care about.
 
@@ -80,8 +85,6 @@ class BaseEvent(ABC):
         :type bid_identifier: str
         :param ask_identifier: The identifier for ask events.
         :type ask_identifier: str
-        :param wallet: The wallet address.
-        :type wallet: ChecksumAddress
         :return: The default filters.
         :rtype: dict
         """
@@ -108,6 +111,7 @@ class BaseEvent(ABC):
 # market events
 ######################################################################
 
+
 class BaseMarketEvent(BaseEvent, ABC):
     """This class is a base class for all MarketEvents"""
 
@@ -126,14 +130,15 @@ class BaseMarketEvent(BaseEvent, ABC):
         self.pair = add_0x_prefix(HexStr(pair.hex()))
 
     @staticmethod
-    def get_event_contract(market: _RubiconMarket, router: _RubiconRouter) -> Union[_RubiconMarket, _RubiconRouter]:
+    def get_event_contract(
+        market: _RubiconMarket, router: _RubiconRouter
+    ) -> Union[_RubiconMarket, _RubiconRouter]:
         """implementation of BaseEvent get_event_contract"""
         return market
 
 
 class EmitOfferEvent(BaseMarketEvent):
-    """Event emitted whenever a new offer is made on the RubiconMarket
-    """
+    """Event emitted whenever a new offer is made on the RubiconMarket"""
 
     def __init__(
         self,
@@ -146,19 +151,19 @@ class EmitOfferEvent(BaseMarketEvent):
     ):
         """Initialize an EmitOfferEvent instance.
 
-       :param maker: The maker address.
-       :type maker: ChecksumAddress
-       :param pay_gem: The address of the token to be paid.
-       :type pay_gem: ChecksumAddress
-       :param buy_gem: The address of the token to be bought.
-       :type buy_gem: ChecksumAddress
-       :param pay_amt: The amount to be paid.
-       :type pay_amt: int
-       :param buy_amt: The amount to be bought.
-       :type buy_amt: int
-       :param args: Additional arguments for the event.
-       :type args: dict
-       """
+        :param maker: The maker address.
+        :type maker: ChecksumAddress
+        :param pay_gem: The address of the token to be paid.
+        :type pay_gem: ChecksumAddress
+        :param buy_gem: The address of the token to be bought.
+        :type buy_gem: ChecksumAddress
+        :param pay_amt: The amount to be paid.
+        :type pay_amt: int
+        :param buy_amt: The amount to be bought.
+        :type buy_amt: int
+        :param args: Additional arguments for the event.
+        :type args: dict
+        """
         super().__init__(**args)
         self.maker = maker
         self.pay_gem = pay_gem
@@ -167,21 +172,24 @@ class EmitOfferEvent(BaseMarketEvent):
         self.buy_amt = buy_amt
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitOffer.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitOffer.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
 
 class EmitTakeEvent(BaseMarketEvent):
-    """Event emitted whenever an offer is taken by a market order on the RubiconMarket
-    """
+    """Event emitted whenever an offer is taken by a market order on the RubiconMarket"""
 
     def __init__(
         self,
@@ -220,12 +228,16 @@ class EmitTakeEvent(BaseMarketEvent):
         self.give_amt = give_amt
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitTake.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitTake.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr) -> dict:
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -237,8 +249,7 @@ class EmitTakeEvent(BaseMarketEvent):
 
 
 class EmitCancelEvent(BaseMarketEvent):
-    """Event emitted whenever an offer is cancelled on the RubiconMarket
-    """
+    """Event emitted whenever an offer is cancelled on the RubiconMarket"""
 
     def __init__(
         self,
@@ -273,21 +284,24 @@ class EmitCancelEvent(BaseMarketEvent):
         self.buy_amt = buy_amt
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitCancel.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitCancel.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
 
 class EmitFeeEvent(BaseMarketEvent):
-    """Event emitted whenever an offer is taken on the RubiconMarket that results in a fee being paid to the maker.
-    """
+    """Event emitted whenever an offer is taken on the RubiconMarket that results in a fee being paid to the maker."""
 
     def __init__(
         self,
@@ -318,14 +332,18 @@ class EmitFeeEvent(BaseMarketEvent):
         self.fee_amt = feeAmt
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitFee.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitFee.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"feeTo": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -348,14 +366,18 @@ class EmitDeleteEvent(BaseMarketEvent):
         self.maker = maker
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitDelete.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitDelete.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -364,9 +386,9 @@ class EmitDeleteEvent(BaseMarketEvent):
 # router events
 ######################################################################
 
+
 class EmitSwap(BaseEvent):
-    """Event emitted whenever swap is executed on the RubiconRouter
-    """
+    """Event emitted whenever swap is executed on the RubiconRouter"""
 
     def __init__(
         self,
@@ -409,18 +431,24 @@ class EmitSwap(BaseEvent):
         self.hurdleBuyAmtMin = hurdleBuyAmtMin
 
     @staticmethod
-    def get_event_contract(market: _RubiconMarket, router: _RubiconRouter) -> Union[_RubiconMarket, _RubiconRouter]:
+    def get_event_contract(
+        market: _RubiconMarket, router: _RubiconRouter
+    ) -> Union[_RubiconMarket, _RubiconRouter]:
         """implementation of BaseEvent get_event_contract"""
         return router
 
     @staticmethod
-    def create_event_filter(contract: Contract, argument_filters: Optional[Dict[str, Any]] = None) -> LogFilter:
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
-        return contract.events.emitSwap.create_filter(argument_filters=argument_filters, fromBlock="latest")
+        return contract.events.emitSwap.create_filter(
+            argument_filters=argument_filters, fromBlock="latest"
+        )
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"recipient": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}

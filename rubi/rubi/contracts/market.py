@@ -28,22 +28,17 @@ class RubiconMarket(BaseContract):
         w3: Web3,
         contract: Contract,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ) -> None:
         """constructor method"""
-        super().__init__(
-            w3=w3,
-            contract=contract,
-            wallet=wallet,
-            key=key
-        )
+        super().__init__(w3=w3, contract=contract, wallet=wallet, key=key)
 
     @classmethod
     def from_network(
         cls,
         network: Network,
         wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None
+        key: Optional[str] = None,
     ) -> "RubiconMarket":
         """Create a RubiconMarket instance based on a Network instance.
 
@@ -61,7 +56,7 @@ class RubiconMarket(BaseContract):
             address=network.rubicon.market.address,
             contract_abi=network.rubicon.market.abi,
             wallet=wallet,
-            key=key
+            key=key,
         )
 
     ######################################################################
@@ -102,7 +97,9 @@ class RubiconMarket(BaseContract):
         return self.contract.functions.getMinSell(pay_gem).call()
 
     # getBestOffer(sell_gem (address), buy_gem (address)) -> uint256
-    def get_best_offer(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
+    def get_best_offer(
+        self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress
+    ) -> int:
         """Returns the best offer for the given pair of tokens
 
         :param sell_gem: the address of the token being sold by the maker
@@ -140,7 +137,9 @@ class RubiconMarket(BaseContract):
         return self.contract.functions.getBetterOffer(id).call()
 
     # getOfferCount(sell_gem (address), buy_gem (address)) -> uint256
-    def get_offer_count(self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress) -> int:
+    def get_offer_count(
+        self, sell_gem: ChecksumAddress, buy_gem: ChecksumAddress
+    ) -> int:
         """Returns the number of offers for a token pair
 
         :param sell_gem: the address of the token being sold by the maker
@@ -167,10 +166,7 @@ class RubiconMarket(BaseContract):
     # getBuyAmountWithFee(buy_gem (address), pay_gem (address), pay_amt (unit256)) ->
     # (buy_amt (uint256), approvalAmount (uint256))
     def get_buy_amount_with_fee(
-        self,
-        buy_gem: ChecksumAddress,
-        pay_gem: ChecksumAddress,
-        pay_amt: int
+        self, buy_gem: ChecksumAddress, pay_gem: ChecksumAddress, pay_amt: int
     ) -> Tuple[int, int]:
         """Returns the amount of the buy_gem you will receive if you send the pay_amt to the contract along with the
         amount to approve for the transaction
@@ -185,15 +181,14 @@ class RubiconMarket(BaseContract):
             transaction
         :rtype: Tuple[int, int]
         """
-        return self.contract.functions.getBuyAmountWithFee(buy_gem, pay_gem, pay_amt).call()
+        return self.contract.functions.getBuyAmountWithFee(
+            buy_gem, pay_gem, pay_amt
+        ).call()
 
     # getPayAmountWithFee(pay_gem (address), buy_gem (address), buy_amt (unit256)) ->
     # (buy_amt (uint256), approvalAmount (uint256))
     def get_pay_amount_with_fee(
-        self,
-        pay_gem: ChecksumAddress,
-        buy_gem: ChecksumAddress,
-        buy_amt: int
+        self, pay_gem: ChecksumAddress, buy_gem: ChecksumAddress, buy_amt: int
     ) -> Tuple[int, int]:
         """Returns the amount of the pay_gem you will need to pay to the contract to receive the buy_amt along with the
         amount to approve for the transaction
@@ -208,7 +203,9 @@ class RubiconMarket(BaseContract):
             transaction
         :rtype: Tuple[int, int]
         """
-        return self.contract.functions.getPayAmountWithFee(buy_gem, pay_gem, buy_amt).call()
+        return self.contract.functions.getPayAmountWithFee(
+            buy_gem, pay_gem, buy_amt
+        ).call()
 
     ######################################################################
     # write calls
@@ -229,7 +226,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
@@ -268,20 +265,24 @@ class RubiconMarket(BaseContract):
         """
 
         if not self.signing_permissions:
-            raise Exception(f"cannot write transaction without signing rights. "
-                            f"re-instantiate {self.__class__} with a wallet and private key")
+            raise Exception(
+                f"cannot write transaction without signing rights. "
+                f"re-instantiate {self.__class__} with a wallet and private key"
+            )
 
         owner = owner if owner is not None else self.wallet
         recipient = recipient if recipient is not None else self.wallet
 
-        offer = self.contract.functions.offer(pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, owner, recipient)
+        offer = self.contract.functions.offer(
+            pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, owner, recipient
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=offer,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # cancel(id (uint256)) -> bool
@@ -291,7 +292,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Cancel an offer by offer id
 
@@ -319,7 +320,7 @@ class RubiconMarket(BaseContract):
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # batchOffer(payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[])) -> uint256[]
@@ -332,7 +333,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Batch the placement of a set of offers in one transaction
 
@@ -359,16 +360,20 @@ class RubiconMarket(BaseContract):
         :rtype: TransactionReceipt
         """
         if not (len(pay_amts) == len(pay_gems) == len(buy_amts) == len(buy_gems)):
-            raise Exception("mismatches lengths in pay_amts, pay_gems, buy_amts and buy_gems")
+            raise Exception(
+                "mismatches lengths in pay_amts, pay_gems, buy_amts and buy_gems"
+            )
 
-        batch_offer = self.contract.functions.batchOffer(pay_amts, pay_gems, buy_amts, buy_gems)
+        batch_offer = self.contract.functions.batchOffer(
+            pay_amts, pay_gems, buy_amts, buy_gems
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=batch_offer,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # batchCancel (ids (uint256[])) -> bool[]
@@ -378,7 +383,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Cancel a set offer by offer id in a single transaction
 
@@ -405,7 +410,7 @@ class RubiconMarket(BaseContract):
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # batchRequote (ids (uint256[]), payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[]))
@@ -420,7 +425,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Batch update a set of offers in a single transaction and return a list of new offer ids
 
@@ -449,14 +454,16 @@ class RubiconMarket(BaseContract):
         :rtype: TransactionReceipt
         """
 
-        batch_requote = self.contract.functions.batchRequote(ids, pay_amts, pay_gems, buy_amts, buy_gems)
+        batch_requote = self.contract.functions.batchRequote(
+            ids, pay_amts, pay_gems, buy_amts, buy_gems
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=batch_requote,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256)) -> uint256
@@ -469,7 +476,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
         min_fill_amount of the buy_gem token
@@ -496,14 +503,16 @@ class RubiconMarket(BaseContract):
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-        sell_all_amount = self.contract.functions.sellAllAmount(pay_gem, pay_amt, buy_gem, min_fill_amount)
+        sell_all_amount = self.contract.functions.sellAllAmount(
+            pay_gem, pay_amt, buy_gem, min_fill_amount
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=sell_all_amount,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
     # buyAllAmount(buy_gem (address), buy_amt (uint256), pay_gem (address), max_fill_amount (uint256)) -> uint256
@@ -516,7 +525,7 @@ class RubiconMarket(BaseContract):
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None
+        max_priority_fee_per_gas: Optional[int] = None,
     ) -> TransactionReceipt:
         """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
         max_fill_amount of the pay_gem token
@@ -543,12 +552,14 @@ class RubiconMarket(BaseContract):
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-        buy_all_amount = self.contract.functions.buyAllAmount(buy_gem, buy_amt, pay_gem, max_fill_amount)
+        buy_all_amount = self.contract.functions.buyAllAmount(
+            buy_gem, buy_amt, pay_gem, max_fill_amount
+        )
 
         return self._default_transaction_handler(
             instantiated_contract_function=buy_all_amount,
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )

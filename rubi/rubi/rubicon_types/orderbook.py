@@ -15,11 +15,7 @@ class BookLevel:
     :type size: Decimal
     """
 
-    def __init__(
-        self,
-        price: Decimal,
-        size: Decimal
-    ):
+    def __init__(self, price: Decimal, size: Decimal):
         """constructor method."""
         self.price = price
         self.size = size
@@ -38,11 +34,7 @@ class BookSide:
     :type levels: List[BookLevel]
     """
 
-    def __init__(
-        self,
-        book_side: OrderSide,
-        levels: List[BookLevel]
-    ):
+    def __init__(self, book_side: OrderSide, levels: List[BookLevel]):
         """constructor method."""
         self.book_side = book_side
         self.levels = levels
@@ -70,7 +62,7 @@ class BookSide:
         book_side: OrderSide,
         offers: List[List[int]],
         base_asset: ERC20,
-        quote_asset: ERC20
+        quote_asset: ERC20,
     ) -> "BookSide":
         """Creates a BookSide instance from a list of Rubicon offers.
 
@@ -107,10 +99,7 @@ class BookSide:
                     else:
                         levels.append(BookLevel(price=price, size=size))
 
-        return cls(
-            book_side=book_side,
-            levels=levels
-        )
+        return cls(book_side=book_side, levels=levels)
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
@@ -136,7 +125,7 @@ class OrderBook:
         cls,
         offer_book: Tuple[List[List[int]], List[List[int]]],
         base_asset: ERC20,
-        quote_asset: ERC20
+        quote_asset: ERC20,
     ) -> "OrderBook":
         """Create an OrderBook from Rubicon offer book.
 
@@ -154,14 +143,14 @@ class OrderBook:
                 book_side=OrderSide.BUY,  # Corresponds to BIDS
                 offers=offer_book[1],
                 base_asset=base_asset,
-                quote_asset=quote_asset
+                quote_asset=quote_asset,
             ),
             asks=BookSide.from_rubicon_offers(
                 book_side=OrderSide.SELL,  # Corresponds to ASKS
                 offers=offer_book[0],
                 base_asset=base_asset,
-                quote_asset=quote_asset
-            )
+                quote_asset=quote_asset,
+            ),
         )
 
     def best_bid(self) -> Decimal:
