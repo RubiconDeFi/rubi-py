@@ -297,7 +297,7 @@ class LimitOrder(BaseNewOrder):
         self.removed_block_number = removed_block_number
 
         if self.price is None:
-            self.price = quote_asset.to_decimal(quote_amt) / base_asset.to_decimal(base_amt)
+            self.price = quote_asset.to_decimal(quote_amt_original) / base_asset.to_decimal(base_amt_original)
 
     def update_fill(
         self,

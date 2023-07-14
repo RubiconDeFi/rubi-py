@@ -201,7 +201,7 @@ class MarketData:
         first: Optional[int] = 1000,
         order_by: Optional[str] = 'timestamp',
         order_direction: Optional[str] = 'desc'
-    ): # -> List[LimitOrder]:
+    ): # -> List[LimitOrder]: # TODO: determine how we want to return this data
         
         # handle the pair_name parameter
         if pair_name:
@@ -221,9 +221,9 @@ class MarketData:
                     buy_df = self.offer_query.query_offers(buy_fields, False)
                     buy_df['side'] = 'buy'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
-                    buys = self.offer_query.dataframe_to_limit_orders(buy_df, pair_name)
+                    bids = self.offer_query.dataframe_to_limit_orders(buy_df, pair_name)
 
-                    return buys
+                    return bids
 
                 case OrderSide.SELL:
                     sell_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
@@ -233,9 +233,9 @@ class MarketData:
                     sell_df = self.offer_query.query_offers(sell_fields, False)
                     sell_df['side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
-                    sells = self.offer_query.dataframe_to_limit_orders(sell_df, pair_name)
+                    asks = self.offer_query.dataframe_to_limit_orders(sell_df, pair_name)
 
-                    return sells
+                    return asks
 
                 case OrderSide.NEUTRAL:
                     buy_query = self.offer_query.offers_query(order_by, order_direction, first, maker, from_address,
@@ -252,11 +252,9 @@ class MarketData:
                     sell_df = self.offer_query.query_offers(sell_fields, False)
                     sell_df['side'] = 'sell'  # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
 
-                    # TODO: decide what we want to do here, maybe we just return both dataframes?
-                    df = pd.concat([buy_df, sell_df]).reset_index(drop=True)
-                    offers = self.offer_query.dataframe_to_limit_orders(df, pair_name)
+                    bids = self.offer_query.dataframe_to_limit_orders(buy_df, pair_name)
+                    asks = self.offer_query.dataframe_to_limit_orders(sell_df, pair_name)
 
-                    # reset the index  # need to pass a somewhat more complicated ordering here to comply with what happened in the same block time
-                    return offers
+                    return [bids, asks]
                 
     

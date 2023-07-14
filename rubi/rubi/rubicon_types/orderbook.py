@@ -485,7 +485,7 @@ class DetailedOrderBook(OrderBook):
         return cls(
             bids=DetailedBookSide.from_rubicon_offers(
                 book_side=OrderSide.BUY, 
-                offers=offer_book[1]
+                offers=offer_book[0]
             ),
             asks=DetailedBookSide.from_rubicon_offers(
                 book_side=OrderSide.SELL, 
