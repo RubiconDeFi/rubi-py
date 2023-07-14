@@ -28,18 +28,15 @@ key = os.getenv("DEV_KEY")
 queue = Queue()
 
 # create client
-client = Client.from_http_node_url(
-    http_node_url=http_node_url,
-    wallet=wallet,
-    key=key,
-    message_queue=queue
-)
+client = Client.from_http_node_url(http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue)
 
 # add the WETH/USDC pair to the client
 client.add_pair(pair_name="WETH/USDC")
 
 # start listening to offer events created by your wallet on the WETH/USDC market
-client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent, filters={"maker": client.wallet})
+client.start_event_poller(
+    "WETH/USDC", event_type=EmitOfferEvent, filters={"maker": client.wallet}
+)
 
 # Print events and order books
 while True:
