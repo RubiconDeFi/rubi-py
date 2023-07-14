@@ -6,7 +6,7 @@ from multiprocessing import Queue
 from dotenv import load_dotenv
 
 from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide, DetailedOrderBook
 
 # load from env file
 load_dotenv("../../local.env")
@@ -29,16 +29,18 @@ queue = Queue()
 
 # create client
 client = Client.from_http_node_url(
-    http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue
+    http_node_url=http_node_url,
+    wallet=wallet,
+    key=key,
+    message_queue=queue
 )
 
 # query the open WETH/USDC offers for your wallet
-open_offers = client.get_offers(
-    pair_name="WETH/USDC",
-    book_side=OrderSide.NEUTRAL,
-    open=True,
-    maker=client.wallet,
-    first=100,
-    formatted=True,
-)
-print(open_offers)
+open_offers = client.market_data.get_limit_orders(pair_name='WETH/USDC', book_side=OrderSide.NEUTRAL, open=False,  maker=client.wallet, first=100)
+#print(open_offers)
+
+data = (open_offers[0], open_offers[1])
+
+# create a detailed order book for WETH/USDC
+book = DetailedOrderBook.from_rubicon_offer_book(data)
+print(book.best_bid_offer())
