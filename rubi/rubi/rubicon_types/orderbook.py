@@ -1,4 +1,4 @@
-import logging
+import logging as log
 from _decimal import Decimal
 from typing import List, Tuple
 
@@ -237,7 +237,7 @@ class DetailedBookLevel(BookLevel):
         cls,
         orders: List[LimitOrder]
     ):
-        
+
         price = orders[0].price
         size = sum(order.get_size() for order in orders)
         
@@ -363,7 +363,7 @@ class DetailedBookSide(BookSide):
             if order.price in levels:
                 levels[order.price].append(order)
             else:
-                levels[order.price] = []
+                levels[order.price] = [order]
 
         # construct the levels list
         levels_list = []
@@ -481,16 +481,18 @@ class DetailedOrderBook(OrderBook):
         cls, 
         offer_book: Tuple[List[LimitOrder], List[LimitOrder]]
     ):
-        
+
+        bids=DetailedBookSide.from_rubicon_offers(
+            book_side=OrderSide.BUY, 
+            offers=offer_book[0]
+        )
+        asks=DetailedBookSide.from_rubicon_offers(
+            book_side=OrderSide.SELL, 
+            offers=offer_book[1]
+        )
         return cls(
-            bids=DetailedBookSide.from_rubicon_offers(
-                book_side=OrderSide.BUY, 
-                offers=offer_book[0]
-            ),
-            asks=DetailedBookSide.from_rubicon_offers(
-                book_side=OrderSide.SELL, 
-                offers=offer_book[0]
-            )
+            bids, 
+            asks
         )
     
     def add_order(
@@ -565,6 +567,7 @@ class DetailedOrderBook(OrderBook):
         :return: The best bid offer.
         :rtype: LimitOrder
         """
+        
         return self.bids.best_offer()
     
     def best_ask_offer(self) -> LimitOrder:
@@ -574,3 +577,6 @@ class DetailedOrderBook(OrderBook):
         :rtype: LimitOrder
         """
         return self.asks.best_offer()
+
+    # TODO: 
+    # def get_order(self, id: int) -> LimitOrder:
