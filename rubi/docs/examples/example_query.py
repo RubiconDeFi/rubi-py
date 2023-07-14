@@ -43,4 +43,4 @@ data = (open_offers[0], open_offers[1])
 
 # create a detailed order book for WETH/USDC
 book = DetailedOrderBook.from_rubicon_offer_book(data)
-print(book)
+print(book.best_bid_offer())
