@@ -72,7 +72,7 @@ class BaseEvent(ABC):
 
     @staticmethod
     @abstractmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """Get the default filters for an event. These are used if no argument filters are provided. By default, these
         filters make sure we only receive events that relate to us. E.g on markets we care about.
 
@@ -80,8 +80,6 @@ class BaseEvent(ABC):
         :type bid_identifier: str
         :param ask_identifier: The identifier for ask events.
         :type ask_identifier: str
-        :param wallet: The wallet address.
-        :type wallet: ChecksumAddress
         :return: The default filters.
         :rtype: dict
         """
@@ -225,7 +223,7 @@ class EmitTakeEvent(BaseMarketEvent):
         return contract.events.emitTake.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr) -> dict:
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -323,9 +321,9 @@ class EmitFeeEvent(BaseMarketEvent):
         return contract.events.emitFee.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"feeTo": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -419,8 +417,8 @@ class EmitSwap(BaseEvent):
         return contract.events.emitSwap.create_filter(argument_filters=argument_filters, fromBlock="latest")
 
     @staticmethod
-    def default_filters(bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"recipient": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
