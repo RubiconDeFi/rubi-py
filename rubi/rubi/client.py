@@ -404,10 +404,9 @@ class Client:
         pair = self.get_pair(pair_name)
 
         argument_filters = event_type.default_filters(
-            bid_identifier=pair.bid_identifier,
-            ask_identifier=pair.ask_identifier
+            bid_identifier=pair.bid_identifier, ask_identifier=pair.ask_identifier
         )
-        
+
         if filters is not None:
             # TODO: add check that filters are valid, if i remember correctly i think we can only filter on indexed
             #  params. i bet there is a function to check this

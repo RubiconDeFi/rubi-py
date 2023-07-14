@@ -78,7 +78,6 @@ class BaseEvent(ABC):
     @staticmethod
     @abstractmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-
         """Get the default filters for an event. These are used if no argument filters are provided. By default, these
         filters make sure we only receive events that relate to us. E.g on markets we care about.
 
@@ -183,7 +182,6 @@ class EmitOfferEvent(BaseMarketEvent):
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -240,7 +238,6 @@ class EmitTakeEvent(BaseMarketEvent):
 
     @staticmethod
     def default_filters(bid_identifier: HexStr, ask_identifier: HexStr) -> dict:
-
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -297,7 +294,6 @@ class EmitCancelEvent(BaseMarketEvent):
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-    
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -346,7 +342,6 @@ class EmitFeeEvent(BaseMarketEvent):
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-
         """implementation of BaseEvent default_filters"""
         filters = {}
 
@@ -381,7 +376,6 @@ class EmitDeleteEvent(BaseMarketEvent):
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -454,7 +448,6 @@ class EmitSwap(BaseEvent):
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
-
         """implementation of BaseEvent default_filters"""
         filters = {}
 
