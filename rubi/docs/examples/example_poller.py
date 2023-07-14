@@ -38,7 +38,7 @@ client = Client.from_http_node_url(
 # add the WETH/USDC pair to the client
 client.add_pair(pair_name="WETH/USDC")
 
-# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
+# start listening to offer events created by your wallet on the WETH/USDC market
 client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent, filters={"maker": client.wallet})
 
 # Print events and order books
