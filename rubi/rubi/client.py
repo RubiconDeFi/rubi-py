@@ -385,7 +385,7 @@ class Client:
         :param event_type: Type of the event to listen for.
         :type event_type: Type[BaseEvent]
         :param filters: Optional filters to apply when retrieving events, defaults to the events default filters
-            (optional, default is None).
+            (optional, default is None). These are added to the default filters for the event
         :type filters: Optional[Dict[str, Any]], optional
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
             self._default_event_handler (optional, default is None).
@@ -403,15 +403,14 @@ class Client:
 
         pair = self.get_pair(pair_name)
 
-        argument_filters = (
-            event_type.default_filters(
-                bid_identifier=pair.bid_identifier,
-                ask_identifier=pair.ask_identifier,
-                wallet=self.wallet,
-            )
-            if filters is None
-            else filters
+        argument_filters = event_type.default_filters(
+            bid_identifier=pair.bid_identifier, ask_identifier=pair.ask_identifier
         )
+
+        if filters is not None:
+            # TODO: add check that filters are valid, if i remember correctly i think we can only filter on indexed
+            #  params. i bet there is a function to check this
+            argument_filters.update(filters)
 
         event_type.get_event_contract(
             market=self.market, router=self.router

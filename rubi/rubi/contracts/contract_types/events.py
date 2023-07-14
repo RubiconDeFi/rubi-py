@@ -77,9 +77,7 @@ class BaseEvent(ABC):
 
     @staticmethod
     @abstractmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """Get the default filters for an event. These are used if no argument filters are provided. By default, these
         filters make sure we only receive events that relate to us. E.g on markets we care about.
 
@@ -87,8 +85,6 @@ class BaseEvent(ABC):
         :type bid_identifier: str
         :param ask_identifier: The identifier for ask events.
         :type ask_identifier: str
-        :param wallet: The wallet address.
-        :type wallet: ChecksumAddress
         :return: The default filters.
         :rtype: dict
         """
@@ -185,11 +181,9 @@ class EmitOfferEvent(BaseMarketEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -243,9 +237,7 @@ class EmitTakeEvent(BaseMarketEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: HexStr, ask_identifier: HexStr, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: HexStr, ask_identifier: HexStr) -> dict:
         """implementation of BaseEvent default_filters"""
         filters = {"pair": [bid_identifier, ask_identifier]}
 
@@ -301,11 +293,9 @@ class EmitCancelEvent(BaseMarketEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -351,11 +341,9 @@ class EmitFeeEvent(BaseMarketEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"feeTo": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -387,11 +375,9 @@ class EmitDeleteEvent(BaseMarketEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"pair": [bid_identifier, ask_identifier], "maker": wallet}
+        filters = {"pair": [bid_identifier, ask_identifier]}
 
         return {key: value for key, value in filters.items() if value is not None}
 
@@ -461,10 +447,8 @@ class EmitSwap(BaseEvent):
         )
 
     @staticmethod
-    def default_filters(
-        bid_identifier: str, ask_identifier: str, wallet: ChecksumAddress
-    ) -> dict:
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
         """implementation of BaseEvent default_filters"""
-        filters = {"recipient": wallet}
+        filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
