@@ -23,7 +23,7 @@ class TransactionReceipt:
         l1_fee: Optional[int] = None,
         l1_gas_price: Optional[int] = None,
         l1_gas_used: Optional[int] = None,
-        l1_fee_scalar: Optional[Decimal] = None
+        l1_fee_scalar: Optional[Decimal] = None,
     ):
         self.block_number = block_number
         self.contract_address = contract_address
@@ -41,7 +41,6 @@ class TransactionReceipt:
 
     @classmethod
     def from_tx_receipt(cls, tx_receipt: TxReceipt) -> "TransactionReceipt":
-
         return cls(
             block_number=tx_receipt["blockNumber"],
             contract_address=tx_receipt["contractAddress"],
@@ -52,10 +51,18 @@ class TransactionReceipt:
             status=tx_receipt["status"],
             transaction_hash=tx_receipt["transactionHash"],
             transaction_index=tx_receipt["transactionIndex"],
-            l1_fee=None if tx_receipt.get("l1Fee") is None else int(tx_receipt.get("l1Fee"), 16),
-            l1_gas_price=None if tx_receipt.get("l1GasPrice") is None else int(tx_receipt.get("l1GasPrice"), 16),
-            l1_gas_used=None if tx_receipt.get("l1GasUsed") is None else int(tx_receipt.get("l1GasUsed"), 16),
-            l1_fee_scalar=None if tx_receipt.get("l1FeeScalar") is None else Decimal(tx_receipt.get("l1FeeScalar"))
+            l1_fee=None
+            if tx_receipt.get("l1Fee") is None
+            else int(tx_receipt.get("l1Fee"), 16),
+            l1_gas_price=None
+            if tx_receipt.get("l1GasPrice") is None
+            else int(tx_receipt.get("l1GasPrice"), 16),
+            l1_gas_used=None
+            if tx_receipt.get("l1GasUsed") is None
+            else int(tx_receipt.get("l1GasUsed"), 16),
+            l1_fee_scalar=None
+            if tx_receipt.get("l1FeeScalar") is None
+            else Decimal(tx_receipt.get("l1FeeScalar")),
         )
 
     def __repr__(self):

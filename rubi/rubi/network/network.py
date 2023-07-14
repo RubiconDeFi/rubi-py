@@ -39,7 +39,7 @@ class Network:
         rubicon: dict,
         token_addresses: dict,
         # optional custom token config file from the user
-        custom_token_addresses_file: Optional[str] = None
+        custom_token_addresses_file: Optional[str] = None,
     ):
         """Initializes a Network instance.
 
@@ -87,8 +87,13 @@ class Network:
         if custom_token_addresses_file:
             working_directory = os.getcwd()
 
-            if not (custom_token_addresses_file.endswith(".yaml") or custom_token_addresses_file.endswith(".yml")):
-                raise Exception(f"token_config_file: {custom_token_addresses_file} must be a yaml file.")
+            if not (
+                custom_token_addresses_file.endswith(".yaml")
+                or custom_token_addresses_file.endswith(".yml")
+            ):
+                raise Exception(
+                    f"token_config_file: {custom_token_addresses_file} must be a yaml file."
+                )
 
             try:
                 with open(f"{working_directory}/{custom_token_addresses_file}") as f:
@@ -96,16 +101,22 @@ class Network:
                     for k, v in custom_token_addresses.items():
                         checksummed_token_addresses[k] = self.w3.to_checksum_address(v)
             except FileNotFoundError:
-                raise Exception(f"could not find token_config_file, expected it to be a yaml file here: "
-                                f"{working_directory}/{custom_token_addresses_file}.")
+                raise Exception(
+                    f"could not find token_config_file, expected it to be a yaml file here: "
+                    f"{working_directory}/{custom_token_addresses_file}."
+                )
             except AttributeError:
-                raise Exception(f"{custom_token_addresses_file} cannot be empty, should be in the format: "
-                                f"token_symbol: address, e.g. WETH: chain_specific_weth_address")
+                raise Exception(
+                    f"{custom_token_addresses_file} cannot be empty, should be in the format: "
+                    f"token_symbol: address, e.g. WETH: chain_specific_weth_address"
+                )
 
         self.token_addresses = checksummed_token_addresses
 
     @classmethod
-    def from_config(cls, http_node_url: str, custom_token_addresses_file: Optional[str] = None) -> "Network":
+    def from_config(
+        cls, http_node_url: str, custom_token_addresses_file: Optional[str] = None
+    ) -> "Network":
         """Create a Network instance based on the node url provided. A call is then made to this node to get the
         chain_id which links to network_config/{network_name}/ using the NetworkId Enum.
 
@@ -134,11 +145,13 @@ class Network:
                     w3=w3,
                     subgrounds=subgrounds,
                     custom_token_addresses_file=custom_token_addresses_file,
-                    **network_data
+                    **network_data,
                 )
         except FileNotFoundError:
-            raise Exception(f"no network config found for {network_name}, there should be a corresponding folder in "
-                            f"the network_config directory")
+            raise Exception(
+                f"no network config found for {network_name}, there should be a corresponding folder in "
+                f"the network_config directory"
+            )
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
@@ -171,8 +184,7 @@ class RubiconContracts:
 
 
 class ContractRepr:
-    """This class represents a contract on a specific network.
-    """
+    """This class represents a contract on a specific network."""
 
     def __init__(self, path: str, w3: Web3, name: str, address: str) -> None:
         """Initialize a ContractRepr instance which is a representation of a contract containing the contract address
