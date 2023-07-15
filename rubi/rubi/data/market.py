@@ -1,5 +1,6 @@
 from typing import Optional, Dict
 
+import time
 import pandas as pd
 from eth_typing import ChecksumAddress
 from subgrounds import Subgrounds
@@ -33,24 +34,34 @@ class MarketData:
         self,
         subgrounds: Subgrounds,
         subgraph_url: str,
+        subgraph_fallback_url: str,
         network: Optional[Network] = None,
         network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None,
     ):
         """constructor method"""
         self.sg = subgrounds
         self.subgraph_url = subgraph_url
+        self.subgraph_fallback_url = subgraph_fallback_url
         self.network = network  # type: Network | None
         self.tokens = network_tokens  # type: Dict[ChecksumAddress, ERC20] | None
 
         # initialize the subgraph
-        try:
-            self.data = self.sg.load_subgraph(self.subgraph_url)
-            # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
-        except:
-            # TODO: not sure exactly what error we should be throwing here, this is if the url does not work
-            raise ValueError(
-                f"subgraph_url: {subgraph_url} failed when attempting to load."
-            )
+        for attempt in range(3):
+            try:
+                self.data = self.sg.load_subgraph(self.subgraph_url) # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
+                break 
+            except Exception as e:
+                if attempt < 2: 
+                    time.sleep(1.5) 
+                    continue
+                else:
+                    try:
+                        self.data = self.sg.load_subgraph(self.subgraph_fallback_url)
+                        break
+                    except:
+                        raise ValueError(
+                            f"Both subgraph_url: {self.subgraph_url} and fallback_url: {self.subgraph_fallback_url} failed when attempting to load. Error: {str(e)}"
+                        )
 
         # Initialize the query classes
         self.offer_query = OrderQuery(self.sg, self.data, self.network, self.tokens)
@@ -63,6 +74,7 @@ class MarketData:
         return cls(
             subgrounds=network.subgrounds,
             subgraph_url=network.market_data_url,
+            subgraph_fallback_url=network.market_data_fallback_url,
             network=network,
             network_tokens=network_tokens,
         )
