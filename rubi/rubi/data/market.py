@@ -48,11 +48,13 @@ class MarketData:
         # initialize the subgraph
         for attempt in range(3):
             try:
-                self.data = self.sg.load_subgraph(self.subgraph_url) # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
-                break 
+                self.data = self.sg.load_subgraph(
+                    self.subgraph_url
+                )  # TODO: we should add a check here to guarantee the schema matches what we expect to be receiving
+                break
             except Exception as e:
-                if attempt < 2: 
-                    time.sleep(1.5) 
+                if attempt < 2:
+                    time.sleep(1.5)
                     continue
                 else:
                     try:
