@@ -9,7 +9,7 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3._utils.filters import LogFilter  # noqa
 from web3.contract import Contract
-from web3.contract.contract import ContractFunction
+from web3.contract.contract import ContractFunction # TODO: figure out why jupyter notebook is complaining about this
 from web3.types import ABI, Nonce
 
 from rubi.contracts.contract_types import BaseEvent, TransactionReceipt

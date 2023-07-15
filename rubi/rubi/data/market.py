@@ -13,6 +13,7 @@ from rubi.network import (
 from rubi.rubicon_types import (
     OrderSide,
     OrderQuery,
+    TradeQuery,
 )
 
 
@@ -54,6 +55,7 @@ class MarketData:
 
         # Initialize the query classes
         self.offer_query = OrderQuery(self.sg, self.data, self.network, self.tokens)
+        self.trade_query = TradeQuery(self.sg, self.data, self.network, self.tokens)
 
     @classmethod
     def from_network_with_tokens(
@@ -133,7 +135,7 @@ class MarketData:
             quote_asset = ERC20.from_network(name=quote, network=self.network)
 
         # handle the book_side parameter
-        if book_side and pair_name:
+        if book_side and pair_name: # TODO: we need to handle the case where neither of these are passed
             match book_side:
                 case OrderSide.BUY:
                     buy_query = self.offer_query.offers_query(
@@ -235,5 +237,128 @@ class MarketData:
             )
             fields = self.offer_query.offers_fields(query)
             df = self.offer_query.query_offers(fields)
+
+            return df
+
+    def get_trades(
+        self, 
+        taker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = None,
+        take_gem: Optional[
+            str
+        ] = None,  # TODO: not sure we really need this given the pair_name parameter
+        give_gem: Optional[
+            str
+        ] = None,  # TODO: not sure we really need this given the pair_name parameter
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000, # TODO: maybe this should be a large number by default?
+        order_by: Optional[str] = "timestamp",
+        order_direction: Optional[str] = "desc",
+        formatted: Optional[bool] = False,
+    ) -> pd.DataFrame:
+        """TODO: class description"""
+
+        # if we want formatted fields, make sure we have a network object
+        if formatted and not self.network:
+            raise ValueError(
+                "Cannot return formatted fields without a network object initialized on the class."
+            )
+        
+        # handle the pair_name parameter
+        if pair_name:
+            base, quote = pair_name.split("/")
+            base_asset = ERC20.from_network(name=base, network=self.network)
+            quote_asset = ERC20.from_network(name=quote, network=self.network)
+
+        # handle the book_side parameter
+        if book_side and pair_name: # TODO: we need to handle the case where neither of these are passed
+            match book_side:
+                case OrderSide.BUY:
+                    buy_query = self.trade_query.trades_query(
+                        order_by, 
+                        order_direction,
+                        first, 
+                        taker, 
+                        from_address,
+                        take_gem=base_asset.address,
+                        give_gem=quote_asset.address,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
+                    buy_fields = self.trade_query.trades_fields(buy_query, formatted)
+                    buy_df = self.trade_query.query_trades(buy_fields, formatted)
+                    buy_df["side"] = "buy"
+
+                    return buy_df
+                
+                case OrderSide.SELL:
+                    sell_query = self.trade_query.trades_query(
+                        order_by, 
+                        order_direction,
+                        first, 
+                        taker, 
+                        from_address,
+                        take_gem=quote_asset.address,
+                        give_gem=base_asset.address,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
+                    sell_fields = self.trade_query.trades_fields(sell_query, formatted)
+                    sell_df = self.trade_query.query_trades(sell_fields, formatted)
+                    sell_df["side"] = "sell"
+
+                    return sell_df
+                
+                case OrderSide.NEUTRAL:
+                    buy_query = self.trade_query.trades_query(
+                        order_by, 
+                        order_direction,
+                        first, # TODO: decide if we only want to pass half the values here
+                        taker, 
+                        from_address,
+                        take_gem=base_asset.address,
+                        give_gem=quote_asset.address,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
+                    buy_fields = self.trade_query.trades_fields(buy_query, formatted)
+                    buy_df = self.trade_query.query_trades(buy_fields, formatted)
+                    buy_df["side"] = "buy"
+
+                    sell_query = self.trade_query.trades_query(
+                        order_by, 
+                        order_direction,
+                        first, 
+                        taker, 
+                        from_address,
+                        take_gem=quote_asset.address,
+                        give_gem=base_asset.address,
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
+                    sell_fields = self.trade_query.trades_fields(sell_query, formatted)
+                    sell_df = self.trade_query.query_trades(sell_fields, formatted)
+                    sell_df["side"] = "sell"
+
+                    return pd.concat([buy_df, sell_df]).reset_index(drop=True) # TODO: decide what we want to do here, maybe we just return both dataframes?
+                
+        # handle the take_gem and give_gem parameters
+        elif take_gem and give_gem:
+            query = self.trade_query.trades_query(
+                order_by, 
+                order_direction,
+                first, 
+                taker, 
+                from_address,
+                take_gem=take_gem,
+                give_gem=give_gem,
+                start_time=start_time,
+                end_time=end_time,
+            )
+            fields = self.trade_query.trades_fields(query, formatted)
+            df = self.trade_query.query_trades(fields, formatted)
 
             return df
