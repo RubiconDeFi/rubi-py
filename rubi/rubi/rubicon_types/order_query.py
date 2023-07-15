@@ -19,6 +19,7 @@ from rubi.rubicon_types import (
     OrderSide,
 )
 
+
 class OrderQuery:
     def __init__(
         self,
@@ -319,57 +320,58 @@ class OrderQuery:
         return df
 
     def dataframe_to_limit_orders(
-                self,
-                df: pd.DataFrame, 
-                pair_name: str
-            ) -> List[LimitOrder]:
-            """Converts a DataFrame of order data into a list of LimitOrder objects."""
-                    
-            def row_to_limitorder(row: pd.Series) -> LimitOrder:
+        self, df: pd.DataFrame, pair_name: str
+    ) -> List[LimitOrder]:
+        """Converts a DataFrame of order data into a list of LimitOrder objects."""
 
-                if row['side'] == 'buy': # TODO: there is probably a better way to do this
-                    base_asset = self.get_token(row['buy_gem'])
-                    quote_asset = self.get_token(row['pay_gem'])
+        def row_to_limitorder(row: pd.Series) -> LimitOrder:
+            if row["side"] == "buy":  # TODO: there is probably a better way to do this
+                base_asset = self.get_token(row["buy_gem"])
+                quote_asset = self.get_token(row["pay_gem"])
 
-                    base_asset_amt = row['buy_amt']
-                    quote_asset_amt = row['pay_amt']
-                    base_asset_amt_filled = row['bought_amt']
-                    quote_asset_amt_filled = row['paid_amt']
+                base_asset_amt = row["buy_amt"]
+                quote_asset_amt = row["pay_amt"]
+                base_asset_amt_filled = row["bought_amt"]
+                quote_asset_amt_filled = row["paid_amt"]
 
-                    order_side = OrderSide.BUY
-                else:
-                    base_asset = self.get_token(row['pay_gem'])
-                    quote_asset = self.get_token(row['buy_gem'])
+                order_side = OrderSide.BUY
+            else:
+                base_asset = self.get_token(row["pay_gem"])
+                quote_asset = self.get_token(row["buy_gem"])
 
-                    base_asset_amt = row['pay_amt']
-                    quote_asset_amt = row['buy_amt']
-                    base_asset_amt_filled = row['paid_amt'] 
-                    quote_asset_amt_filled = row['bought_amt']
+                base_asset_amt = row["pay_amt"]
+                quote_asset_amt = row["buy_amt"]
+                base_asset_amt_filled = row["paid_amt"]
+                quote_asset_amt_filled = row["bought_amt"]
 
-                    order_side = OrderSide.SELL
-                
-                return LimitOrder(
-                    pair_name=pair_name,
-                    order_side=order_side,
-                    id=row['id'],
-                    timestamp=row['timestamp'],
-                    block_number=row['transaction_block_number'],
-                    block_index=row['transaction_block_index'],
-                    log_index=row['index'],  # Assume 0 if 'log_index' column doesn't exist
-                    txn_hash=row['transaction'],
-                    maker=self.network.w3.to_checksum_address(row['maker']),
-                    base_asset=base_asset,
-                    quote_asset=quote_asset,
-                    base_amt=base_asset_amt - base_asset_amt_filled,
-                    quote_amt=quote_asset_amt - quote_asset_amt_filled,
-                    base_amt_original=base_asset_amt,
-                    quote_amt_original=quote_asset_amt,
-                    base_amt_filled=base_asset_amt_filled,
-                    quote_amt_filled=quote_asset_amt_filled,
-                    open=row['open'],
-                    price=None, # we want to calculate this on the fly based on direction
-                    removed_timestamp=row.get('removed_timestamp', None),  # Use None if 'removed_timestamp' doesn't exist
-                    removed_block_number=row.get('removed_block', None)  # Use None if 'removed_block' doesn't exist
-                )
-            
-            return df.apply(row_to_limitorder, axis=1).tolist()
+                order_side = OrderSide.SELL
+
+            return LimitOrder(
+                pair_name=pair_name,
+                order_side=order_side,
+                id=row["id"],
+                timestamp=row["timestamp"],
+                block_number=row["transaction_block_number"],
+                block_index=row["transaction_block_index"],
+                log_index=row["index"],  # Assume 0 if 'log_index' column doesn't exist
+                txn_hash=row["transaction"],
+                maker=self.network.w3.to_checksum_address(row["maker"]),
+                base_asset=base_asset,
+                quote_asset=quote_asset,
+                base_amt=base_asset_amt - base_asset_amt_filled,
+                quote_amt=quote_asset_amt - quote_asset_amt_filled,
+                base_amt_original=base_asset_amt,
+                quote_amt_original=quote_asset_amt,
+                base_amt_filled=base_asset_amt_filled,
+                quote_amt_filled=quote_asset_amt_filled,
+                open=row["open"],
+                price=None,  # we want to calculate this on the fly based on direction
+                removed_timestamp=row.get(
+                    "removed_timestamp", None
+                ),  # Use None if 'removed_timestamp' doesn't exist
+                removed_block_number=row.get(
+                    "removed_block", None
+                ),  # Use None if 'removed_block' doesn't exist
+            )
+
+        return df.apply(row_to_limitorder, axis=1).tolist()

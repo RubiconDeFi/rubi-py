@@ -193,9 +193,10 @@ class NewCancelOrder(BaseNewOrder):
 
         self.order_id = order_id
 
+
 class LimitOrder(BaseNewOrder):
     """Class representing a detailed limit order.
-    
+
     :param pair_name: The name of the trading pair.
     :type pair_name: str
     :param order_type: The type of the order.
@@ -266,7 +267,6 @@ class LimitOrder(BaseNewOrder):
         removed_timestamp: Optional[int] = None,
         removed_block_number: Optional[int] = None,
     ):
-        
         # TODO: this is really an open discussion... we need an identifier for when the order was created that is inclusive of the: block, txn_index, and log_index
         # TODO: we will probably want to discuss the base_amt, base_amt_original, base_amt_filled, quote_amt, quote_amt_original, and quote_amt_filled. not sure if this is the best way to represent this data
 
@@ -298,7 +298,9 @@ class LimitOrder(BaseNewOrder):
         self.removed_block_number = removed_block_number
 
         if self.price is None:
-            self.price = quote_asset.to_decimal(quote_amt_original) / base_asset.to_decimal(base_amt_original)
+            self.price = quote_asset.to_decimal(
+                quote_amt_original
+            ) / base_asset.to_decimal(base_amt_original)
 
     def update_fill(
         self,
@@ -307,7 +309,7 @@ class LimitOrder(BaseNewOrder):
     ):
         # TODO: tracking the base asset and quote asset can be somewhat tricky, we will want to tie these into the events so that everything plays nicely together
         """A method to update the filled amounts of the order.
-        
+
         :param base_amt_filled: The updated filled base amount of the order.
         :type base_amt_filled: int
         :param quote_amt_filled: The updated filled quote amount of the order.
@@ -318,34 +320,35 @@ class LimitOrder(BaseNewOrder):
         self.quote_amt -= quote_amt_filled
         self.base_amt_filled += base_amt_filled
         self.quote_amt_filled += quote_amt_filled
-    
+
     def update_cancel(
         self,
         removed_timestamp: Optional[int] = None,
         removed_block_number: Optional[int] = None,
     ):
         """A method to update the order when it is cancelled."""
-        
+
         self.open = False
         self.base_amt = 0
         self.quote_amt = 0
         self.removed_timestamp = removed_timestamp
         self.removed_block_number = removed_block_number
-        
+
     # TODO: do we want a function to return the asset amounts as decimals? or should we just use the ERC20.to_decimal() function?
     def get_size(self) -> Decimal:
         """Returns the size of the order.
-        
+
         :return: The size of the order.
         :rtype: Decimal
         """
-        
+
         return self.base_asset.to_decimal(self.base_amt)
-    
+
     # repr
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
         return "{}({})".format(type(self).__name__, ", ".join(items))
+
 
 class Transaction:
     """
