@@ -257,7 +257,7 @@ def test_network(
         rpc_url="https://ishan.io/rpc",
         explorer_url="https://ishanexplorer.io",
         market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",  # TODO: update once prod has been synced
-        market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev", 
+        market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
         rubicon=rubicon,
         token_addresses=token_addresses,
     )
