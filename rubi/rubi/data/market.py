@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 
-import time
 import pandas as pd
 from eth_typing import ChecksumAddress
 from subgrounds import Subgrounds
@@ -54,7 +53,6 @@ class MarketData:
                 break
             except Exception as e:
                 if attempt < 2:
-                    time.sleep(1.5)
                     continue
                 else:
                     try:
