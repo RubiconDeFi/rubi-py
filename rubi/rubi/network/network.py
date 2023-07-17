@@ -36,6 +36,7 @@ class Network:
         rpc_url: str,
         explorer_url: str,
         market_data_url: str,
+        market_data_fallback_url: str,
         rubicon: dict,
         token_addresses: dict,
         # optional custom token config file from the user
@@ -78,6 +79,7 @@ class Network:
         # TODO: currently we are utilizing just a single url, we should switch to a dictionary as the number of
         #  subgraphs we support grows
         self.market_data_url = market_data_url
+        self.market_data_fallback_url = market_data_fallback_url
         self.rubicon = RubiconContracts(path=path, w3=self.w3, **rubicon)
 
         checksummed_token_addresses: dict[str, ChecksumAddress] = {}
