@@ -63,9 +63,15 @@ class GridBot(BaseEventTradingFramework):
         self.client.start_orderbook_poller(pair_name=self.pair.name)
 
         # Order event pollers
-        self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitOfferEvent)
-        self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitTakeEvent)
-        self.client.start_event_poller(pair_name=self.pair.name, event_type=EmitCancelEvent)
+        self.client.start_event_poller(
+            pair_name=self.pair.name, event_type=EmitOfferEvent, filters={"maker": self.client.wallet}
+        )
+        self.client.start_event_poller(
+            pair_name=self.pair.name, event_type=EmitTakeEvent, filters={"maker": self.client.wallet}
+        )
+        self.client.start_event_poller(
+            pair_name=self.pair.name, event_type=EmitCancelEvent, filters={"maker": self.client.wallet}
+        )
 
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
