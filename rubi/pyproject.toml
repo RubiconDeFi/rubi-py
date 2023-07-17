@@ -27,6 +27,7 @@ black = "^23.3.0"
 python-dotenv = "0.21.1"
 ipykernel = "6.23.1"
 jupyter = "1.0.0"
+flask = "^2.3.2"
 
 [tool.poetry.extras]
 docs = ["sphinx"]
