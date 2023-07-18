@@ -2,12 +2,16 @@ import logging
 from io import StringIO
 import requests
 import sys
+from dotenv import load_dotenv
+import os
+
+# get url path if supplied
+load_dotenv()
+api_enabled = bool(os.getenv("LOGGING_URL"))
 
 # Create an in-memory stream to store logs
+# TODO: do i need this?
 log_stream = StringIO()
-
-# flag to enable API endpoint
-api_enabled = True
 
 
 class APILogHandler(logging.Handler):
@@ -30,10 +34,3 @@ api_log_handler.setFormatter(formatter)
 
 logger.addHandler(api_log_handler)
 logger.addHandler(logging.StreamHandler(sys.stdout))
-
-# # Function to retrieve the captured logs
-# def get_logs():
-#     logs = log_stream.getvalue().strip().split("\n")
-#     log_stream.seek(0)
-#     log_stream.truncate()
-#     return logs
