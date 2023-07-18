@@ -1,6 +1,7 @@
 import logging
 from io import StringIO
 import requests
+import sys
 
 # Create an in-memory stream to store logs
 log_stream = StringIO()
@@ -28,6 +29,7 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 api_log_handler.setFormatter(formatter)
 
 logger.addHandler(api_log_handler)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 # # Function to retrieve the captured logs
 # def get_logs():
