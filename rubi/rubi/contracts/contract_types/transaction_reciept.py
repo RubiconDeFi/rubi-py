@@ -3,7 +3,23 @@ from typing import Optional
 
 from eth_typing import BlockNumber, ChecksumAddress
 from hexbytes import HexBytes
-from web3.types import Wei, TxReceipt
+from web3.types import Wei, TxReceipt, TxParams
+
+
+class TransactionSimulation:
+    def __init__(
+        self,
+        success: bool,
+        transaction_params: Optional[TxParams] = None,
+        failure_reason: Optional[Exception] = None,
+    ):
+        self.success = success
+        self.transaction_params = transaction_params
+        self.failure_reason = failure_reason
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 # TODO: a TxReceipt contains logs which can be decoded into events that were emitted by calling the contract function.

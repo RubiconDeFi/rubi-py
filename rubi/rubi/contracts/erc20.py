@@ -9,7 +9,7 @@ from web3.contract import Contract
 from web3.types import ABI
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.contract_types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt, TransactionSimulation
 from rubi.network import Network
 
 
@@ -215,7 +215,8 @@ class ERC20(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Approves the spender to spend the amount of the erc20 token from the signer's wallet
 
         :param spender: address of the spender
@@ -233,8 +234,11 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         approve = self.contract.functions.approve(spender, amount)
 
@@ -244,6 +248,7 @@ class ERC20(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # transfer(recipient (address), amount (uint256)) -> bool
@@ -255,7 +260,8 @@ class ERC20(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Transfers the amount of the erc20 token to the recipient
 
         :param recipient: address of the recipient
@@ -272,8 +278,11 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         transfer = self.contract.functions.transfer(recipient, amount)
 
@@ -283,6 +292,7 @@ class ERC20(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # transferFrom(sender (address), recipient (address), amount (uint256)) -> bool
@@ -295,7 +305,8 @@ class ERC20(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Transfers the amount of the erc20 token from the sender to the recipient
 
         :param sender: address of the sender
@@ -315,8 +326,11 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         transfer_from = self.contract.functions.transferFrom(sender, recipient, amount)
@@ -327,6 +341,7 @@ class ERC20(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # increaseAllowance(spender (address), addedValue (uint256)) -> bool
@@ -338,7 +353,8 @@ class ERC20(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Increases the allowance of the spender by the added_value
 
         :param spender: address of the spender
@@ -356,8 +372,11 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         increase_allowance = self.contract.functions.increaseAllowance(
             spender, added_value
@@ -369,6 +388,7 @@ class ERC20(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # decreaseAllowance(spender (address), subtractedValue (uint256)) -> bool
@@ -380,7 +400,8 @@ class ERC20(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Decreases the allowance of the spender by the subtracted_value
 
         :param spender: address of the spender
@@ -398,8 +419,11 @@ class ERC20(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         decrease_allowance = self.contract.functions.decreaseAllowance(
             spender, subtracted_value
@@ -411,6 +435,7 @@ class ERC20(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     ######################################################################

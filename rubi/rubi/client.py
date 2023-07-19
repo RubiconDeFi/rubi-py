@@ -15,6 +15,7 @@ from rubi.contracts import (
     ERC20,
     TransactionReceipt,
     EmitFeeEvent,
+    TransactionSimulation,
 )
 from rubi.network import (
     Network,
@@ -457,15 +458,17 @@ class Client:
     # order methods
     ######################################################################
 
-    def place_market_order(self, transaction: Transaction) -> TransactionReceipt:
+    def place_market_order(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Place a market order transaction by executing the specified transaction object. The transaction
         object should contain a single order of type NewMarketOrder. The order is retrieved from the transaction and
         the corresponding market buy or sell method is called based on the order side.
 
         :param transaction: Transaction object containing the market order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed market order.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -497,14 +500,16 @@ class Client:
                     **transaction.args(),
                 )
 
-    def place_limit_order(self, transaction: Transaction) -> TransactionReceipt:
+    def place_limit_order(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Place a limit order transaction by executing the specified transaction object. The transaction object should
         contain a single order of type NewLimitOrder.
 
         :param transaction: Transaction object containing the limit order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed limit order.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -532,14 +537,16 @@ class Client:
                     **transaction.args(),
                 )
 
-    def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
+    def cancel_limit_order(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
         should contain a single order of type NewCancelOrder.
 
         :param transaction: Transaction object containing the cancel order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed cancel order.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -549,13 +556,15 @@ class Client:
 
         return self.market.cancel(id=order.order_id, **transaction.args())
 
-    def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
+    def batch_place_limit_orders(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Place multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit orders.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit orders.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         pay_amts = []
         pay_gems = []
@@ -590,13 +599,15 @@ class Client:
             **transaction.args(),
         )
 
-    def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
+    def batch_update_limit_orders(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Update multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order updates.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit order updates.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         order_ids = []
         pay_amts = []
@@ -635,13 +646,15 @@ class Client:
             **transaction.args(),
         )
 
-    def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
+    def batch_cancel_limit_orders(
+        self, transaction: Transaction
+    ) -> TransactionReceipt | TransactionSimulation:
         """Cancel multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order cancellations.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit order cancellations.
-        :rtype: str
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         order_ids = []
 
