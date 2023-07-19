@@ -79,7 +79,7 @@ class MarketData:
         maker: Optional[str] = None,
         from_address: Optional[str] = None,
         pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = None,
+        book_side: Optional[OrderSide] = OrderSide.NEUTRAL,
         pay_gem: Optional[
             str
         ] = None,  # TODO: maybe we should allow the user to pass in an address here?
@@ -135,7 +135,9 @@ class MarketData:
             quote_asset = ERC20.from_network(name=quote, network=self.network)
 
         # handle the book_side parameter
-        if book_side and pair_name: # TODO: we need to handle the case where neither of these are passed
+        if (
+            book_side and pair_name
+        ):  # TODO: we need to handle the case where neither of these are passed
             match book_side:
                 case OrderSide.BUY:
                     buy_query = self.offer_query.offers_query(
@@ -241,11 +243,11 @@ class MarketData:
             return df
 
     def get_trades(
-        self, 
+        self,
         taker: Optional[str] = None,
         from_address: Optional[str] = None,
         pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = None,
+        book_side: Optional[OrderSide] = OrderSide.NEUTRAL,
         take_gem: Optional[
             str
         ] = None,  # TODO: not sure we really need this given the pair_name parameter
@@ -254,19 +256,49 @@ class MarketData:
         ] = None,  # TODO: not sure we really need this given the pair_name parameter
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        first: Optional[int] = 1000, # TODO: maybe this should be a large number by default?
+        first: Optional[
+            int
+        ] = 1000,  # TODO: maybe this should be a large number by default?
         order_by: Optional[str] = "timestamp",
         order_direction: Optional[str] = "desc",
         formatted: Optional[bool] = False,
     ) -> pd.DataFrame:
-        """TODO: class description"""
+        """Returns a dataframe of trades that have occurred on the market contract, with the option to pass in filters.
+
+        :param taker: the address of the taker of the trade
+        :type taker: str
+        :param from_address: the address that originated the transaction that created the trade
+        :type from_address: str
+        :param pair_name: the name of the pair that the trade occurred on (will override take_gem and give_gem if both are passed)
+        :type pair_name: str
+        :param book_side: the side of the order book that the trade occurred on (defaults to neutral, options: buy, sell, neutral)
+        :type book_side: OrderSide
+        :param take_gem: the address of the token that the taker received
+        :type take_gem: str
+        :param give_gem: the address of the token that the taker gave
+        :type give_gem: str
+        :param start_time: the timestamp of the earliest trade to return
+        :type start_time: int
+        :param end_time: the timestamp of the latest trade to return
+        :type end_time: int
+        :param first: the number of trades to return
+        :type first: int
+        :param order_by: the field to order the trades by (default: timestamp, options: timestamp) TODO: expand this list
+        :type order_by: str
+        :param order_direction: the direction to order the trades by (default: desc, options: asc, desc)
+        :type order_direction: str
+        :param formatted: whether or not to return the formatted fields (default: False, requires a network object to be passed)
+        :type formatted: bool
+        :return: a dataframe of trades that have occurred on the market contract
+        :rtype: pd.DataFrame
+        """
 
         # if we want formatted fields, make sure we have a network object
         if formatted and not self.network:
             raise ValueError(
                 "Cannot return formatted fields without a network object initialized on the class."
             )
-        
+
         # handle the pair_name parameter
         if pair_name:
             base, quote = pair_name.split("/")
@@ -274,14 +306,16 @@ class MarketData:
             quote_asset = ERC20.from_network(name=quote, network=self.network)
 
         # handle the book_side parameter
-        if book_side and pair_name: # TODO: we need to handle the case where neither of these are passed
+        if (
+            book_side and pair_name
+        ):  # TODO: we need to handle the case where neither of these are passed
             match book_side:
                 case OrderSide.BUY:
                     buy_query = self.trade_query.trades_query(
-                        order_by, 
+                        order_by,
                         order_direction,
-                        first, 
-                        taker, 
+                        first,
+                        taker,
                         from_address,
                         take_gem=base_asset.address,
                         give_gem=quote_asset.address,
@@ -293,13 +327,13 @@ class MarketData:
                     buy_df["side"] = "buy"
 
                     return buy_df
-                
+
                 case OrderSide.SELL:
                     sell_query = self.trade_query.trades_query(
-                        order_by, 
+                        order_by,
                         order_direction,
-                        first, 
-                        taker, 
+                        first,
+                        taker,
                         from_address,
                         take_gem=quote_asset.address,
                         give_gem=base_asset.address,
@@ -311,13 +345,13 @@ class MarketData:
                     sell_df["side"] = "sell"
 
                     return sell_df
-                
+
                 case OrderSide.NEUTRAL:
                     buy_query = self.trade_query.trades_query(
-                        order_by, 
+                        order_by,
                         order_direction,
-                        first, # TODO: decide if we only want to pass half the values here
-                        taker, 
+                        first,  # TODO: decide if we only want to pass half the values here
+                        taker,
                         from_address,
                         take_gem=base_asset.address,
                         give_gem=quote_asset.address,
@@ -329,10 +363,10 @@ class MarketData:
                     buy_df["side"] = "buy"
 
                     sell_query = self.trade_query.trades_query(
-                        order_by, 
+                        order_by,
                         order_direction,
-                        first, 
-                        taker, 
+                        first,
+                        taker,
                         from_address,
                         take_gem=quote_asset.address,
                         give_gem=base_asset.address,
@@ -343,15 +377,17 @@ class MarketData:
                     sell_df = self.trade_query.query_trades(sell_fields, formatted)
                     sell_df["side"] = "sell"
 
-                    return pd.concat([buy_df, sell_df]).reset_index(drop=True) # TODO: decide what we want to do here, maybe we just return both dataframes?
-                
+                    return pd.concat([buy_df, sell_df]).reset_index(
+                        drop=True
+                    )  # TODO: decide what we want to do here, maybe we just return both dataframes?
+
         # handle the take_gem and give_gem parameters
         elif take_gem and give_gem:
             query = self.trade_query.trades_query(
-                order_by, 
+                order_by,
                 order_direction,
-                first, 
-                taker, 
+                first,
+                taker,
                 from_address,
                 take_gem=take_gem,
                 give_gem=give_gem,

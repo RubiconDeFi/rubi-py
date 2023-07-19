@@ -689,6 +689,37 @@ class Client:
         )
         return df
 
+    def get_trades(
+        self,
+        taker: Optional[str] = None,
+        from_address: Optional[str] = None,
+        pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = OrderSide.NEUTRAL,
+        take_gem: Optional[str] = None,
+        give_gem: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        first: Optional[int] = 1000,
+        order_by: Optional[str] = "timestamp",
+        order_direction: Optional[str] = "desc",
+        formatted: Optional[bool] = True,
+    ) -> pd.DataFrame:
+        df = self.market_data.get_trades(
+            taker,
+            from_address,
+            pair_name,
+            book_side,
+            take_gem,
+            give_gem,
+            start_time,
+            end_time,
+            first,
+            order_by,
+            order_direction,
+            formatted,
+        )
+        return df
+
     ######################################################################
     # helper methods
     ######################################################################

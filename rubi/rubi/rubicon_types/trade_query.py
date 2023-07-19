@@ -60,7 +60,7 @@ class TradeQuery:
     # Query Methods                     #
     #####################################
 
-    '''
+    """
     {
     takes {
         id
@@ -98,7 +98,7 @@ class TradeQuery:
         }
     }
     }   
-    '''
+    """
 
     def trade_entity(
         self,
@@ -108,13 +108,17 @@ class TradeQuery:
         # if we have a network object we can get all the token information we need
         if self.network:
             Take.take_amt_formatted = SyntheticField(
-                f=lambda take_amt, take_gem: self.get_token(take_gem).to_decimal(take_amt),
+                f=lambda take_amt, take_gem: self.get_token(take_gem).to_decimal(
+                    take_amt
+                ),
                 type_=SyntheticField.FLOAT,
                 deps=[Take.take_amt, Take.take_gem],
             )
 
             Take.give_amt_formatted = SyntheticField(
-                f=lambda give_amt, give_gem: self.get_token(give_gem).to_decimal(give_amt),
+                f=lambda give_amt, give_gem: self.get_token(give_gem).to_decimal(
+                    give_amt
+                ),
                 type_=SyntheticField.FLOAT,
                 deps=[Take.give_amt, Take.give_gem],
             )
@@ -214,20 +218,20 @@ class TradeQuery:
         fields = [
             trades.id,
             trades.timestamp,
-            trades.take_gem, 
-            trades.give_gem, 
+            trades.take_gem,
+            trades.give_gem,
             trades.take_amt,
             trades.give_amt,
-            trades.taker.id, 
+            trades.taker.id,
             trades.from_address.id,
-            trades.transaction.block_number, 
+            trades.transaction.block_number,
             trades.transaction.block_index,
             trades.index,
             trades.offer.maker.id,
             trades.offer.from_address.id,
             trades.offer.transaction.block_number,
             trades.offer.transaction.block_index,
-            trades.offer.index
+            trades.offer.index,
         ]
 
         if formatted:
@@ -281,6 +285,9 @@ class TradeQuery:
                 "timestamp",
                 "maker",
                 "maker_from_address",
+                "block_number",
+                "block_index",
+                "log_index",
             ]
             df = pd.DataFrame(columns=cols)
 
@@ -313,6 +320,9 @@ class TradeQuery:
                         "take_gem_symbol": "take_gem",
                         "give_gem_symbol": "give_gem",
                         "datetime": "timestamp",
+                        "index": "log_index",
+                        "transaction_block_number": "block_number",
+                        "transaction_block_index": "block_index",
                     }
                 )
                 # TODO: we could also get smart with displaying price dependent upon the pair_name and direction of the
@@ -320,4 +330,3 @@ class TradeQuery:
 
         # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
         return df
-
