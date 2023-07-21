@@ -1,7 +1,6 @@
 import logging as log
 import os
 import signal
-from _decimal import Decimal
 from multiprocessing import Queue
 
 import yaml
@@ -26,21 +25,7 @@ if __name__ == "__main__":
     key = os.getenv("PROD_KEY")
 
     # Setup Grid
-    grid = Grid(
-        starting_base_asset_amount=Decimal(grid_config["starting_base_asset_amount"]),
-        starting_quote_asset_amount=Decimal(grid_config["starting_quote_asset_amount"]),
-        starting_base_asset_average_price=None,
-        fair_price=Decimal(grid_config["fair_price"]),
-        price_tick=Decimal(grid_config["price_tick"]),
-        grid_range=Decimal(grid_config["grid_range"]),
-        spread=Decimal(grid_config["spread"]),
-        min_order_size_in_base=Decimal(grid_config["min_order_size_in_base"]),
-        min_level_size_in_base=Decimal(grid_config["min_level_size_in_base"]),
-        min_transaction_size_in_base=Decimal(grid_config["min_transaction_size_in_base"])
-    )
-
-    debug = grid.get_desired_orders()
-    log.debug(debug)
+    grid = Grid(**grid_config)
 
     # Initialize strategy message queue
     message_queue = Queue()
