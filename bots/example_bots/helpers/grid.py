@@ -5,28 +5,20 @@ from typing import List, Tuple, Optional
 from rubi import OrderSide, NewLimitOrder
 
 
-class Order:
+class DesiredOrder:
     def __init__(
         self,
         side: OrderSide,
         price: Decimal,
         size: Decimal,
-        filled_size: Decimal = Decimal("0")
     ):
         self.side = side
         self.price = price
         self.size = size
-        self.filled_size = filled_size
-
-    def __eq__(self, other: "Order") -> bool:
-        return (
-            other.side == self.side
-            and other.price == self.price
-        )
 
 
 class GridLevel:
-    def __init__(self, bid: Order, ask: Order):
+    def __init__(self, bid: DesiredOrder, ask: DesiredOrder):
         self.bid = bid
         self.ask = ask
 
@@ -149,7 +141,7 @@ class Grid:
 
         return bids_to_place + asks_to_place
 
-    def _get_desired_orders(self) -> Tuple[List[Order], List[Order]]:
+    def _get_desired_orders(self) -> Tuple[List[DesiredOrder], List[DesiredOrder]]:
         desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
         if self._last_sold_price:
             desired_bids = list(filter(lambda bid: bid.price < self._last_sold_price, desired_bids))
@@ -181,12 +173,12 @@ class Grid:
         ask_price = self.round_to_grid_tick(self.fair_price + self.spread / Decimal("2"))
 
         middle_level = GridLevel(
-            bid=Order(
+            bid=DesiredOrder(
                 price=bid_price,
                 size=bid_side[-1].bid.size,
                 side=OrderSide.BUY
             ),
-            ask=Order(
+            ask=DesiredOrder(
                 price=ask_price,
                 size=ask_side[0].ask.size,
                 side=OrderSide.SELL
@@ -226,12 +218,12 @@ class Grid:
 
                     grid_side_levels.append(
                         GridLevel(
-                            bid=Order(
+                            bid=DesiredOrder(
                                 price=price,
                                 size=size,
                                 side=OrderSide.BUY
                             ),
-                            ask=Order(
+                            ask=DesiredOrder(
                                 price=price + self.spread,
                                 size=size,
                                 side=OrderSide.SELL
@@ -250,12 +242,12 @@ class Grid:
 
                     grid_side_levels.append(
                         GridLevel(
-                            bid=Order(
+                            bid=DesiredOrder(
                                 price=price - self.spread,
                                 size=size,
                                 side=OrderSide.BUY
                             ),
-                            ask=Order(
+                            ask=DesiredOrder(
                                 price=price,
                                 size=size,
                                 side=OrderSide.SELL
