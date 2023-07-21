@@ -306,8 +306,8 @@ class TradeQuery:
                     columns={
                         "take_amt_formatted": "take_amt",
                         "give_amt_formatted": "give_amt",
-                        "take_gem_raw": "take_gem",
-                        "give_gem_raw": "give_gem",
+                        "take_amt": "take_amt_raw",
+                        "give_amt": "give_amt_raw",
                         "take_gem_symbol": "take_gem",
                         "give_gem_symbol": "give_gem",
                         "take_gem_address": "take_gem",
