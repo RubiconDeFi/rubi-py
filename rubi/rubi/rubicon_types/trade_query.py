@@ -300,29 +300,25 @@ class TradeQuery:
                 df = df.drop(
                     columns=[
                         "id",
-                        "take_amt",
-                        "give_amt",
-                        "take_gem",
-                        "give_gem",
-                        "timestamp",
-                        "index",
-                        "transaction_block_number",
-                        "transaction_block_index",
-                        "offer_transaction_block_number",
-                        "offer_transaction_block_index",
-                        "offer_index",
                     ]
                 )
                 df = df.rename(
                     columns={
                         "take_amt_formatted": "take_amt",
                         "give_amt_formatted": "give_amt",
+                        "take_gem_raw": "take_gem",
+                        "give_gem_raw": "give_gem",
                         "take_gem_symbol": "take_gem",
                         "give_gem_symbol": "give_gem",
+                        "take_gem_address": "take_gem",
+                        "give_gem_address": "give_gem",
                         "datetime": "timestamp",
                         "index": "log_index",
                         "transaction_block_number": "block_number",
                         "transaction_block_index": "block_index",
+                        "offer_transaction_block_number": "offer_block_number",
+                        "offer_transaction_block_index": "offer_block_index",
+                        "offer_index": "offer_log_index",
                     }
                 )
                 # TODO: we could also get smart with displaying price dependent upon the pair_name and direction of the

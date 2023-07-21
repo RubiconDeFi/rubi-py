@@ -310,103 +310,75 @@ class MarketData:
             raise ValueError(
                 "Cannot return formatted fields without a network object initialized on the class."
             )
+    
+        match book_side:
+            case OrderSide.BUY:
+                buy_query = self.trade_query.trades_query(
+                    order_by,
+                    order_direction,
+                    first,
+                    taker,
+                    from_address,
+                    take_gem=take_gem,
+                    give_gem=give_gem,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                buy_fields = self.trade_query.trades_fields(buy_query, formatted)
+                buy_df = self.trade_query.query_trades(buy_fields, formatted)
+                buy_df["side"] = "buy"
 
-        # handle the pair_name parameter
-        if pair_name:
-            base, quote = pair_name.split("/")
-            base_asset = ERC20.from_network(name=base, network=self.network)
-            quote_asset = ERC20.from_network(name=quote, network=self.network)
+                return buy_df
 
-        # handle the book_side parameter
-        if (
-            book_side and pair_name
-        ):  # TODO: we need to handle the case where neither of these are passed
-            match book_side:
-                case OrderSide.BUY:
-                    buy_query = self.trade_query.trades_query(
-                        order_by,
-                        order_direction,
-                        first,
-                        taker,
-                        from_address,
-                        take_gem=base_asset.address,
-                        give_gem=quote_asset.address,
-                        start_time=start_time,
-                        end_time=end_time,
-                    )
-                    buy_fields = self.trade_query.trades_fields(buy_query, formatted)
-                    buy_df = self.trade_query.query_trades(buy_fields, formatted)
-                    buy_df["side"] = "buy"
+            case OrderSide.SELL:
+                sell_query = self.trade_query.trades_query(
+                    order_by,
+                    order_direction,
+                    first,
+                    taker,
+                    from_address,
+                    take_gem=give_gem,
+                    give_gem=take_gem,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                sell_fields = self.trade_query.trades_fields(sell_query, formatted)
+                sell_df = self.trade_query.query_trades(sell_fields, formatted)
+                sell_df["side"] = "sell"
 
-                    return buy_df
+                return sell_df
 
-                case OrderSide.SELL:
-                    sell_query = self.trade_query.trades_query(
-                        order_by,
-                        order_direction,
-                        first,
-                        taker,
-                        from_address,
-                        take_gem=quote_asset.address,
-                        give_gem=base_asset.address,
-                        start_time=start_time,
-                        end_time=end_time,
-                    )
-                    sell_fields = self.trade_query.trades_fields(sell_query, formatted)
-                    sell_df = self.trade_query.query_trades(sell_fields, formatted)
-                    sell_df["side"] = "sell"
+            case OrderSide.NEUTRAL:
+                buy_query = self.trade_query.trades_query(
+                    order_by,
+                    order_direction,
+                    first,  # TODO: decide if we only want to pass half the values here
+                    taker,
+                    from_address,
+                    take_gem=take_gem,
+                    give_gem=give_gem,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                buy_fields = self.trade_query.trades_fields(buy_query, formatted)
+                buy_df = self.trade_query.query_trades(buy_fields, formatted)
+                buy_df["side"] = "buy"
 
-                    return sell_df
+                sell_query = self.trade_query.trades_query(
+                    order_by,
+                    order_direction,
+                    first,
+                    taker,
+                    from_address,
+                    take_gem=give_gem,
+                    give_gem=take_gem,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+                sell_fields = self.trade_query.trades_fields(sell_query, formatted)
+                sell_df = self.trade_query.query_trades(sell_fields, formatted)
+                sell_df["side"] = "sell"
 
-                case OrderSide.NEUTRAL:
-                    buy_query = self.trade_query.trades_query(
-                        order_by,
-                        order_direction,
-                        first,  # TODO: decide if we only want to pass half the values here
-                        taker,
-                        from_address,
-                        take_gem=base_asset.address,
-                        give_gem=quote_asset.address,
-                        start_time=start_time,
-                        end_time=end_time,
-                    )
-                    buy_fields = self.trade_query.trades_fields(buy_query, formatted)
-                    buy_df = self.trade_query.query_trades(buy_fields, formatted)
-                    buy_df["side"] = "buy"
-
-                    sell_query = self.trade_query.trades_query(
-                        order_by,
-                        order_direction,
-                        first,
-                        taker,
-                        from_address,
-                        take_gem=quote_asset.address,
-                        give_gem=base_asset.address,
-                        start_time=start_time,
-                        end_time=end_time,
-                    )
-                    sell_fields = self.trade_query.trades_fields(sell_query, formatted)
-                    sell_df = self.trade_query.query_trades(sell_fields, formatted)
-                    sell_df["side"] = "sell"
-
-                    return pd.concat([buy_df, sell_df]).reset_index(
-                        drop=True
-                    )  # TODO: decide what we want to do here, maybe we just return both dataframes?
-
-        # handle the take_gem and give_gem parameters
-        elif take_gem and give_gem:
-            query = self.trade_query.trades_query(
-                order_by,
-                order_direction,
-                first,
-                taker,
-                from_address,
-                take_gem=take_gem,
-                give_gem=give_gem,
-                start_time=start_time,
-                end_time=end_time,
-            )
-            fields = self.trade_query.trades_fields(query, formatted)
-            df = self.trade_query.query_trades(fields, formatted)
-
-            return df
+                return pd.concat([buy_df, sell_df]).reset_index(
+                    drop=True
+                )  # TODO: decide what we want to do here, maybe we just return both dataframes?
