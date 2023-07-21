@@ -12,7 +12,11 @@ from web3.contract import Contract
 from web3.contract.contract import ContractFunction
 from web3.types import ABI, Nonce
 
-from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
+from rubi.contracts.contract_types import (
+    BaseEvent,
+    TransactionReceipt,
+    TransactionSimulation,
+)
 
 
 class BaseContract:
@@ -200,7 +204,8 @@ class BaseContract:
         nonce: Optional[int],
         max_fee_per_gas: Optional[int],
         max_priority_fee_per_gas: Optional[int],
-    ) -> TransactionReceipt:
+        simulate: bool,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Default transaction handler for executing transactions against this contract. This function will build, sign
         and execute a transaction with reasonable defaults (mostly from the web3py library).
 
@@ -218,6 +223,9 @@ class BaseContract:
         :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
             (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
@@ -232,9 +240,16 @@ class BaseContract:
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
-        txn = instantiated_contract_function.build_transaction(transaction=base_txn)
+        try:
+            txn = instantiated_contract_function.build_transaction(transaction=base_txn)
+        except Exception as e:
+            return TransactionSimulation(success=False, failure_reason=e)
+
+        if simulate:
+            return TransactionSimulation(success=True, transaction_params=txn)
 
         signed_txn = self.w3.eth.account.sign_transaction(
             transaction_dict=txn, private_key=self.key
@@ -264,6 +279,9 @@ class BaseContract:
         :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
             (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
         :return: The transaction parameters dictionary.
         :rtype: Dict
         """

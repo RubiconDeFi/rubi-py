@@ -5,7 +5,7 @@ from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.contract_types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt, TransactionSimulation
 from rubi.network import Network
 
 
@@ -246,7 +246,8 @@ class RubiconRouter(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Perform a multiple swaps for the specified payment amounts using the specified routes. Reverts with an
         exception if any of the swaps cannot achieve the buy_amt_min along the specified route.
 
@@ -269,8 +270,11 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         multiswap = self.contract.functions.multiswap(
@@ -283,6 +287,7 @@ class RubiconRouter(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # swap(uint256 pay_amt, uint256 buy_amt_min, address[] memory route, address to) -> uint256
@@ -296,7 +301,8 @@ class RubiconRouter(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Perform a swap operation with the specified payment amount using the specified route and paying out to the
         recipient. Reverts if the swap does not result in the buy_min_amount.
 
@@ -319,8 +325,11 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         swap = self.contract.functions.swap(pay_amt, buy_amt_min, route, to)
@@ -331,6 +340,7 @@ class RubiconRouter(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # TODO

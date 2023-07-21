@@ -234,6 +234,7 @@ class Transaction:
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
+        simulate: bool = False,
     ):
         """constructor method"""
         if len(orders) < 1:
@@ -246,6 +247,7 @@ class Transaction:
         self.gas = gas
         self.max_fee_per_gas = max_fee_per_gas
         self.max_priority_fee_per_gas = max_priority_fee_per_gas
+        self.simulate = simulate
 
     def args(self) -> Dict:
         """Creates a dictionary of not None arguments to pass to contract functions.
@@ -258,6 +260,7 @@ class Transaction:
             "gas": self.gas,
             "max_fee_per_gas": self.max_fee_per_gas,
             "max_priority_fee_per_gas": self.max_priority_fee_per_gas,
+            "simulate": self.simulate,
         }
 
         return {key: value for key, value in args.items() if value is not None}

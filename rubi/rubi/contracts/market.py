@@ -5,7 +5,7 @@ from web3 import Web3
 from web3.contract import Contract
 
 from rubi.contracts.base_contract import BaseContract
-from rubi.contracts.contract_types import TransactionReceipt
+from rubi.contracts.contract_types import TransactionReceipt, TransactionSimulation
 from rubi.network import Network
 
 
@@ -227,7 +227,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
 
         :param pay_amt: the amount of the token being sold
@@ -260,8 +261,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         if not self.signing_permissions:
@@ -283,6 +287,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # cancel(id (uint256)) -> bool
@@ -293,7 +298,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Cancel an offer by offer id
 
         :param id: the id of the offer to cancel
@@ -309,8 +315,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         cancel = self.contract.functions.cancel(id)
@@ -321,6 +330,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # batchOffer(payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[])) -> uint256[]
@@ -334,7 +344,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Batch the placement of a set of offers in one transaction
 
         :param pay_amts: the amounts of the token being sold
@@ -356,8 +367,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         if not (len(pay_amts) == len(pay_gems) == len(buy_amts) == len(buy_gems)):
             raise Exception(
@@ -374,6 +388,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # batchCancel (ids (uint256[])) -> bool[]
@@ -384,7 +399,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Cancel a set offer by offer id in a single transaction
 
         :param ids: the ids of the offers to cancel
@@ -400,8 +416,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         cancels = self.contract.functions.batchCancel(ids)
 
@@ -411,6 +430,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # batchRequote (ids (uint256[]), payAmts (uint[]), payGems (address[]), buyAmts (uint[]), buyGems (address[]))
@@ -426,7 +446,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Batch update a set of offers in a single transaction and return a list of new offer ids
 
         :param ids: the ids of the offers to cancel
@@ -450,8 +471,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
 
         batch_requote = self.contract.functions.batchRequote(
@@ -464,6 +488,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # sellAllAmount(pay_gem (address), pay_amt (uint256), buy_gem (address), min_fill_amount (uint256)) -> uint256
@@ -477,7 +502,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
         min_fill_amount of the buy_gem token
 
@@ -500,8 +526,14 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         sell_all_amount = self.contract.functions.sellAllAmount(
             pay_gem, pay_amt, buy_gem, min_fill_amount
@@ -513,6 +545,7 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
 
     # buyAllAmount(buy_gem (address), buy_amt (uint256), pay_gem (address), max_fill_amount (uint256)) -> uint256
@@ -526,7 +559,8 @@ class RubiconMarket(BaseContract):
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
+        simulate: bool = False,
+    ) -> TransactionReceipt | TransactionSimulation:
         """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
         max_fill_amount of the pay_gem token
 
@@ -549,8 +583,11 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param simulate: If true then does not send the transaction to chain but rather simulates the transaction and
+            returns the result along with estimates if they are not provided. (defaults to False)
+        :type simulate: bool
+        :return: An object representing the transaction receipt or transaction simulation
+        :rtype: TransactionReceipt | TransactionSimulation
         """
         buy_all_amount = self.contract.functions.buyAllAmount(
             buy_gem, buy_amt, pay_gem, max_fill_amount
@@ -562,4 +599,5 @@ class RubiconMarket(BaseContract):
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            simulate=simulate,
         )
