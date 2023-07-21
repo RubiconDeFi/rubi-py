@@ -154,3 +154,6 @@ bot_config.yaml
 
 #mac files
 .DS_store
+
+# playground
+playground.py
