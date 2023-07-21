@@ -91,7 +91,10 @@ class GridBot(BaseEventTradingFramework):
 
         # construct and place grid
         if self.allowed_to_place_new_orders:
-            orders = self.grid.get_orders()
+            orders = self.grid.get_orders(
+                best_bid_price=orderbook.best_bid(),
+                best_ask_price=orderbook.best_ask(),
+            )
 
             self.place_new_limit_orders(orders=orders)
         else:

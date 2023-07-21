@@ -109,8 +109,15 @@ class Grid:
     # grid functions
     ######################################################################
 
-    def get_orders(self) -> List[NewLimitOrder]:
-        desired_bids, desired_asks = self._get_desired_orders()
+    def get_orders(
+        self,
+        best_bid_price: Decimal,
+        best_ask_price: Decimal
+    ) -> List[NewLimitOrder]:
+        desired_bids, desired_asks = self._get_desired_orders(
+            best_bid_price=best_bid_price,
+            best_ask_price=best_ask_price
+        )
 
         bid_amount_available = self._inventory[self.quote_asset]
         ask_amount_available = self._inventory[self.base_asset]
@@ -141,13 +148,26 @@ class Grid:
 
         return bids_to_place + asks_to_place
 
-    def _get_desired_orders(self) -> Tuple[List[DesiredOrder], List[DesiredOrder]]:
-        desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
+    def _get_desired_orders(
+        self,
+        best_bid_price: Decimal,
+        best_ask_price: Decimal
+    ) -> Tuple[List[DesiredOrder], List[DesiredOrder]]:
+
+        bid_below = best_ask_price
         if self._last_sold_price:
-            desired_bids = list(filter(lambda bid: bid.price < self._last_sold_price, desired_bids))
-        desired_asks = list(map(lambda level: level.ask, self.desired_grid[self.current_grid_index:]))
+            if self._last_sold_price < bid_below:
+                bid_below = self._last_sold_price
+
+        ask_above = best_bid_price
         if self._last_bought_price:
-            desired_asks = list(filter(lambda ask: ask.price > self._last_bought_price, desired_asks))
+            if self._last_bought_price > ask_above:
+                ask_above = self._last_sold_price
+
+        desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
+        desired_bids = list(filter(lambda bid: bid.price < bid_below, desired_bids))
+        desired_asks = list(map(lambda level: level.ask, self.desired_grid[self.current_grid_index:]))
+        desired_asks = list(filter(lambda ask: ask.price > ask_above, desired_asks))
 
         return desired_bids, desired_asks
 
