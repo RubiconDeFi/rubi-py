@@ -91,7 +91,9 @@ class GridBot(BaseEventTradingFramework):
 
         # construct and place grid
         if self.allowed_to_place_new_orders:
-            self.place_new_limit_orders(orders=self.construct_grid())
+            orders = self.grid.get_orders()
+
+            self.place_new_limit_orders(orders=orders)
         else:
             log.info("Not currently allowed to place new orders")
 
@@ -134,56 +136,19 @@ class GridBot(BaseEventTradingFramework):
             case TransactionStatus.FAILURE:
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
-                # TODO: remove (this is a temp measure to stop the bot on transaction failures so it can be set up to
-                #  run in a hosted manner.
-                self.stop()
 
         del self.pending_transactions[result.nonce]
-
-    ######################################################################
-    # strategy methods
-    ######################################################################
-
-    def construct_grid(self):
-        desired_bids, desired_asks = self.grid.get_desired_orders()
-
-        bid_amount_available = self.grid.quote_asset_amount
-        ask_amount_available = self.grid.base_asset_amount
-
-        orders_to_place = []
-
-        for bid in desired_bids:
-            size = min(bid_amount_available / bid.price, bid.size)
-            if size >= self.grid.min_order_size_in_base:
-                orders_to_place.append(NewLimitOrder(
-                    pair_name=self.pair.name,
-                    order_side=OrderSide.BUY,
-                    size=size,
-                    price=bid.price
-                ))
-            bid_amount_available -= size * bid.price
-
-        for ask in desired_asks:
-            size = min(ask_amount_available, ask.size)
-            if size >= self.grid.min_order_size_in_base:
-                orders_to_place.append(NewLimitOrder(
-                    pair_name=self.pair.name,
-                    order_side=OrderSide.SELL,
-                    size=size,
-                    price=ask.price
-                ))
-            ask_amount_available -= size
-
-        return orders_to_place
 
     ######################################################################
     # place transaction methods
     ######################################################################
 
     def place_new_limit_orders(self, orders: Optional[List[NewLimitOrder]]) -> None:
-        orders_to_place: List[NewLimitOrder] = list(filter(
+        new_orders: List[NewLimitOrder] = list(filter(
             lambda order: not self._is_active_or_pending_order(order), orders
         ))
+
+        orders_to_place: List[NewLimitOrder] = self._check_sufficient_inventory_to_place(new_orders=new_orders)
 
         if orders_to_place is None or len(orders_to_place) == 0:
             log.debug("no new orders provided to place_new_limit_orders")
@@ -231,6 +196,56 @@ class GridBot(BaseEventTradingFramework):
     ######################################################################
     # helper methods
     ######################################################################
+
+    def _amount_in_market(self, side: OrderSide) -> Decimal:
+        active_orders = list(filter(lambda order: order.order_side == side, self.active_limit_orders.values()))
+        pending_orders = []
+        for pending_transaction in self.pending_transactions.values():
+            pending_orders.extend(list(filter(lambda order: order.order_side == side, pending_transaction.orders)))
+
+        amount = (
+            sum(map(lambda order: order.remaining_size(), active_orders)) +
+            sum(map(lambda order: order.size, pending_orders))
+        )
+
+        return amount
+
+    def _check_sufficient_inventory_to_place(self, new_orders: List[NewLimitOrder]) -> List[NewLimitOrder]:
+        quote_in_market = self._amount_in_market(side=OrderSide.BUY)
+        base_in_market = self._amount_in_market(side=OrderSide.SELL)
+
+        quote_amount_available = self.grid.get_quote_asset_amount() - quote_in_market
+        base_amount_available = self.grid.get_base_asset_amount() - base_in_market
+
+        orders_to_place = []
+
+        for order in new_orders:
+            match order.order_side:
+                case OrderSide.BUY:
+                    if quote_amount_available == Decimal("0"):
+                        continue
+
+                    if order.size <= quote_amount_available:
+                        quote_amount_available -= order.size
+                    else:
+                        order.size = quote_amount_available
+                        quote_amount_available = Decimal("0")
+                    if order.size >= self.grid.min_order_size_in_base:
+                        orders_to_place.append(order)
+
+                case OrderSide.SELL:
+                    if base_amount_available == Decimal("0"):
+                        continue
+
+                    if order.size <= base_amount_available:
+                        base_amount_available -= order.size
+                    else:
+                        order.size = base_amount_available
+                        base_amount_available = Decimal("0")
+                    if order.size >= self.grid.min_order_size_in_base:
+                        orders_to_place.append(order)
+
+        return orders_to_place
 
     def _is_active_or_pending_order(self, order: NewLimitOrder) -> bool:
         for active_order in self.active_limit_orders.values():

@@ -1,9 +1,5 @@
 FROM python:3.10-slim-buster
 
-ENV POETRY_NO_INTERACTION=1 \
-  POETRY_VIRTUALENVS_CREATE=false \
-  POETRY_CACHE_DIR='/var/cache/pypoetry'
-
 # https://stackoverflow.com/questions/59812009/what-is-the-use-of-pythonunbuffered-in-docker-file
 ENV PYTHONUNBUFFERED=1 \
   POETRY_NO_INTERACTION=1 \
