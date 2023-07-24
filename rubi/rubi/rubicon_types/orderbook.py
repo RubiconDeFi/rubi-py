@@ -114,8 +114,11 @@ class OrderBook:
     :type asks: BookSide
     """
 
-    def __init__(self, bids: BookSide, asks: BookSide):
+    def __init__(
+        self, base_asset: str, quote_asset: str, bids: BookSide, asks: BookSide
+    ):
         """constructor method."""
+        self.pair_name = f"{base_asset}/{quote_asset}"
         self.bids = bids
         self.asks = asks
 
@@ -138,6 +141,8 @@ class OrderBook:
         :rtype: OrderBook
         """
         return cls(
+            base_asset=base_asset.symbol,
+            quote_asset=quote_asset.symbol,
             bids=BookSide.from_rubicon_offers(
                 book_side=OrderSide.BUY,  # Corresponds to BIDS
                 offers=offer_book[1],
