@@ -1,4 +1,5 @@
 import logging as log
+import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, Future
 from enum import Enum
@@ -99,8 +100,11 @@ class ThreadedTransactionManager:
         """Start the threaded transaction manager."""
         self.running = True
 
-        thread = Thread(target=self._handle_transaction_receipts, daemon=True)
-        thread.start()
+        receipt_handler = Thread(target=self._handle_transaction_receipts, daemon=True)
+        receipt_handler.start()
+
+        nonce_updater = Thread(target=self._update_nonce, daemon=True)
+        nonce_updater.start()
 
     def stop(self):
         """Stop the threaded transaction manager."""
@@ -187,3 +191,12 @@ class ThreadedTransactionManager:
                             transaction_receipt=None
                         ))
                     self.pending_transactions.clear()
+
+    def _update_nonce(self):
+        while self.running:
+            try:
+                with self.nonce_lock:
+                    self.nonce = self.client.get_nonce()
+            except Exception as e:
+                log.error(f"Error updating nonce: {e}")
+            time.sleep(2)
