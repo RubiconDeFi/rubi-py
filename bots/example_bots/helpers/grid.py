@@ -2,7 +2,9 @@ import math
 from _decimal import Decimal
 from typing import List, Tuple, Optional
 
-from rubi import OrderSide, NewLimitOrder
+from rubi import OrderSide, NewLimitOrder, Transaction
+
+from example_bots.helpers.active_limit_order import ActiveLimitOrder
 
 
 class DesiredOrder:
@@ -40,8 +42,6 @@ class Grid:
         min_level_size_in_base: Decimal | str,
         # Order
         min_order_size_in_base: Decimal | str,
-        # Transaction
-        min_transaction_size_in_base: Decimal | str,
     ):
         base_asset, quote_asset = pair_name.split("/")
 
@@ -79,9 +79,6 @@ class Grid:
         # Order
         self.min_order_size_in_base = Decimal(min_order_size_in_base)
 
-        # Transaction
-        self.min_transaction_size_in_base = Decimal(min_transaction_size_in_base)
-
     ######################################################################
     # inventory functions
     ######################################################################
@@ -104,6 +101,80 @@ class Grid:
 
     def get_quote_asset_amount(self):
         return self._inventory[self.quote_asset]
+
+    def check_sufficient_inventory_to_place(
+        self,
+        new_orders: List[NewLimitOrder],
+        active_limit_orders: List[ActiveLimitOrder],
+        pending_transactions: List[Transaction],
+    ) -> List[NewLimitOrder]:
+        new_orders_for_this_market = list(filter(lambda order: order.pair == self.pair_name, new_orders))
+
+        quote_in_market = self._amount_in_market(
+            side=OrderSide.BUY,
+            active_limit_orders=active_limit_orders,
+            pending_transactions=pending_transactions
+        )
+        base_in_market = self._amount_in_market(
+            side=OrderSide.SELL,
+            active_limit_orders=active_limit_orders,
+            pending_transactions=pending_transactions
+        )
+
+        quote_amount_available = self.get_quote_asset_amount() - quote_in_market
+        base_amount_available = self.get_base_asset_amount() - base_in_market
+
+        orders_to_place = []
+
+        for order in new_orders_for_this_market:
+            match order.order_side:
+                case OrderSide.BUY:
+                    if quote_amount_available == Decimal("0"):
+                        continue
+
+                    if order.size <= quote_amount_available:
+                        quote_amount_available -= order.size
+                    else:
+                        order.size = quote_amount_available
+                        quote_amount_available = Decimal("0")
+                    if order.size >= self.min_order_size_in_base:
+                        orders_to_place.append(order)
+
+                case OrderSide.SELL:
+                    if base_amount_available == Decimal("0"):
+                        continue
+
+                    if order.size <= base_amount_available:
+                        base_amount_available -= order.size
+                    else:
+                        order.size = base_amount_available
+                        base_amount_available = Decimal("0")
+                    if order.size >= self.min_order_size_in_base:
+                        orders_to_place.append(order)
+
+        return orders_to_place
+
+    def _amount_in_market(
+        self,
+        side: OrderSide,
+        active_limit_orders: List[ActiveLimitOrder],
+        pending_transactions: List[Transaction],
+    ) -> Decimal:
+        active_orders = list(filter(
+            lambda order: order.order_side == side and order.pair == self.pair_name, active_limit_orders
+        ))
+        pending_orders = []
+        for pending_transaction in pending_transactions:
+            pending_orders.extend(list(filter(
+                lambda order: order.order_side == side and order.pair == self.pair_name, pending_transaction.orders
+            )))
+
+        amount = (
+            sum(map(lambda order: order.remaining_size(), active_orders)) +
+            sum(map(lambda order: order.size, pending_orders))
+        )
+
+        return amount
 
     ######################################################################
     # grid functions

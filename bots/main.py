@@ -2,6 +2,7 @@ import logging as log
 import os
 import signal
 from multiprocessing import Queue
+from typing import Dict
 
 import yaml
 from dotenv import load_dotenv
@@ -15,7 +16,9 @@ if __name__ == "__main__":
 
     # load the bot config
     with open("bot_config.yaml") as file:
-        grid_config = yaml.safe_load(file)
+        configs = yaml.safe_load(file)
+        grid_configs = configs["grids"]
+        min_transaction_size = configs["min_transaction_size"]
 
     # load and set env variables
     load_dotenv("local.env")
@@ -24,8 +27,10 @@ if __name__ == "__main__":
     wallet = os.getenv("PROD_WALLET")
     key = os.getenv("PROD_KEY")
 
-    # Setup Grid
-    grid = Grid(**grid_config)
+    # Setup Grids
+    grids: Dict[str, Grid] = {}
+    for config in grid_configs:
+        grids[config["pair_name"]] = Grid(**config)
 
     # Initialize strategy message queue
     message_queue = Queue()
@@ -40,9 +45,9 @@ if __name__ == "__main__":
 
     # Initialize grid bot strategy
     grid_bot = GridBot(
-        pair_name=grid_config["pair_name"],
-        grid=grid,
+        grids=grids,
         client=rubicon_client,
+        min_transaction_size=min_transaction_size
     )
 
     # Shutdown bot on keyboard signal

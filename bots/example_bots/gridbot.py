@@ -5,7 +5,7 @@ from typing import Dict, Optional, List
 
 from rubi import (
     OrderEvent, OrderBook, Client, EmitOfferEvent, EmitTakeEvent, EmitCancelEvent, OrderType,
-    NewLimitOrder, OrderSide, Transaction, NewCancelOrder
+    NewLimitOrder, Transaction, NewCancelOrder
 )
 
 from event_trading_framework import BaseEventTradingFramework, TransactionResult, TransactionStatus, \
@@ -17,21 +17,29 @@ from example_bots.helpers.grid import Grid
 class GridBot(BaseEventTradingFramework):
     def __init__(
         self,
-        pair_name: str,
-        grid: Grid,
+        grids: Dict[str, Grid],
         client: Client,
+        min_transaction_size: Decimal | str,
     ):
+        # Setup grids
+        self.grids: Dict[str, Grid] = grids
+
         # Setup client
         self.client = client
-        client.add_pair(pair_name=pair_name)
+        for pair_name, _ in self.grids.items():
+            client.add_pair(pair_name=pair_name)
 
-        # set max approval for pair
-        pair = client.get_pair(pair_name=pair_name)
-        client.update_pair_allowance(
-            pair_name=pair_name,
-            new_base_asset_allowance=pair.base_asset.max_approval_amount(),
-            new_quote_asset_allowance=pair.quote_asset.max_approval_amount()
-        )
+            pair = client.get_pair(pair_name=pair_name)
+
+            # set max approval for pair
+            client.update_pair_allowance(
+                pair_name=pair.name,
+                new_base_asset_allowance=pair.base_asset.max_approval_amount(),
+                new_quote_asset_allowance=pair.quote_asset.max_approval_amount()
+            )
+
+        # Check wallet has sufficient balance of assets
+        self._check_wallet_balance()
 
         # Initialise transaction manager
         transaction_manager = ThreadedTransactionManager(client=client)
@@ -39,39 +47,40 @@ class GridBot(BaseEventTradingFramework):
         # Instantiate framework
         super().__init__(event_queue=client.message_queue, transaction_manager=transaction_manager)
 
-        # Strategy objects
-        self.pair = client.get_pair(pair_name=pair_name)
-
-        # Strategy variables
-        self.grid: Grid = grid
-
         # allowed to trade
         self.allowed_to_place_new_orders: bool = False
 
         # Orderbook data
-        self.orderbook: Optional[OrderBook] = None
+        self.orderbook: Dict[str, OrderBook] = {}
 
         # Transaction variables
         self.pending_transactions: Dict[int, Transaction] = {}
         self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
 
+        self.consecutive_failure_count = 0
+
+        self.min_transaction_size = Decimal(min_transaction_size)
+
         self.allowed_order_price_differential = Decimal(1 / 10 ** 18)
         self.allowed_order_size_differential = Decimal(1 / 10 ** 18)
 
     def on_startup(self):
-        # Orderbook poller
-        self.client.start_orderbook_poller(pair_name=self.pair.name)
+        for pair_name, grid in self.grids.items():
+            # Orderbook poller
+            self.client.start_orderbook_poller(pair_name=pair_name)
 
-        # Order event pollers
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitOfferEvent, filters={"maker": self.client.wallet}
-        )
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitTakeEvent, filters={"maker": self.client.wallet}
-        )
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitCancelEvent, filters={"maker": self.client.wallet}
-        )
+            self.orderbook[pair_name] = self.client.get_orderbook(pair_name=pair_name)
+
+            # Order event pollers
+            self.client.start_event_poller(
+                pair_name=pair_name, event_type=EmitOfferEvent, filters={"maker": self.client.wallet}
+            )
+            self.client.start_event_poller(
+                pair_name=pair_name, event_type=EmitTakeEvent, filters={"maker": self.client.wallet}
+            )
+            self.client.start_event_poller(
+                pair_name=pair_name, event_type=EmitCancelEvent, filters={"maker": self.client.wallet}
+            )
 
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
@@ -87,14 +96,18 @@ class GridBot(BaseEventTradingFramework):
         log.debug(orderbook)
 
         # set strategy orderbook
-        self.orderbook = orderbook
+        self.orderbook[orderbook.pair_name] = orderbook
 
         # construct and place grid
         if self.allowed_to_place_new_orders:
-            orders = self.grid.get_orders(
-                best_bid_price=orderbook.best_bid(),
-                best_ask_price=orderbook.best_ask(),
-            )
+            orders = []
+            for pair_name, grid in self.grids.items():
+                orders.extend(
+                    grid.get_orders(
+                        best_bid_price=self.orderbook[pair_name].best_bid(),
+                        best_ask_price=self.orderbook[pair_name].best_ask(),
+                    )
+                )
 
             self.place_new_limit_orders(orders=orders)
         else:
@@ -110,7 +123,7 @@ class GridBot(BaseEventTradingFramework):
             case OrderType.LIMIT_TAKEN:
                 taken_order = self.active_limit_orders[order.limit_order_id]
 
-                self.grid.add_trade(order_side=order.order_side, price=order.price, size=order.size)
+                self.grids[order.pair_name].add_trade(order_side=order.order_side, price=order.price, size=order.size)
 
                 if taken_order.is_full_take(take_event=order):
                     log.info(f"Limit order {order.limit_order_id} fully taken")
@@ -134,11 +147,18 @@ class GridBot(BaseEventTradingFramework):
 
         match result.status:
             case TransactionStatus.SUCCESS:
+                self.consecutive_failure_count = 0
                 log.info(f"Successful transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                          f"with nonce: {result.nonce}")
             case TransactionStatus.FAILURE:
+                self.consecutive_failure_count += 1
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
+
+        if self.consecutive_failure_count >= 5:
+            self.allowed_to_place_new_orders = False
+            raise Exception(f"Failed to place transactions {self.consecutive_failure_count} times in a row. Not placing"
+                            f"any more orders")
 
         del self.pending_transactions[result.nonce]
 
@@ -151,7 +171,13 @@ class GridBot(BaseEventTradingFramework):
             lambda order: not self._is_active_or_pending_order(order), orders
         ))
 
-        orders_to_place: List[NewLimitOrder] = self._check_sufficient_inventory_to_place(new_orders=new_orders)
+        orders_to_place: List[NewLimitOrder] = []
+        for _, grid in self.grids.items():
+            orders_to_place.extend(grid.check_sufficient_inventory_to_place(
+                new_orders=new_orders,
+                active_limit_orders=list(self.active_limit_orders.values()),
+                pending_transactions=list(self.pending_transactions.values())
+            ))
 
         if orders_to_place is None or len(orders_to_place) == 0:
             log.debug("no new orders provided to place_new_limit_orders")
@@ -159,8 +185,8 @@ class GridBot(BaseEventTradingFramework):
 
         transaction = Transaction(orders=orders_to_place)
 
-        transaction_amount = sum(map(lambda order: order.size, transaction.orders))
-        if self.grid.min_transaction_size_in_base > transaction_amount:
+        transaction_amount = sum(map(lambda order: order.size * order.price, transaction.orders))
+        if self.min_transaction_size > transaction_amount:
             # Do not send a transaction which does not meet the min transaction size
             return
 
@@ -176,7 +202,10 @@ class GridBot(BaseEventTradingFramework):
     def cancel_all_active_orders(self) -> None:
         orders_to_cancel: List[NewCancelOrder] = list(
             map(
-                lambda order_id: NewCancelOrder(pair_name=self.pair.name, order_id=order_id),
+                lambda order_id: NewCancelOrder(
+                    pair_name=self.active_limit_orders[order_id].pair_name,
+                    order_id=order_id
+                ),
                 self.active_limit_orders.keys()
             )
         )
@@ -200,68 +229,54 @@ class GridBot(BaseEventTradingFramework):
     # helper methods
     ######################################################################
 
-    def _amount_in_market(self, side: OrderSide) -> Decimal:
-        active_orders = list(filter(lambda order: order.order_side == side, self.active_limit_orders.values()))
-        pending_orders = []
-        for pending_transaction in self.pending_transactions.values():
-            pending_orders.extend(list(filter(lambda order: order.order_side == side, pending_transaction.orders)))
+    def _check_wallet_balance(self):
+        amounts_required: Dict[str, Decimal] = {}
 
-        amount = (
-            sum(map(lambda order: order.remaining_size(), active_orders)) +
-            sum(map(lambda order: order.size, pending_orders))
-        )
+        for _, grid in self.grids.items():
+            if grid.base_asset in amounts_required:
+                amounts_required[grid.base_asset] += grid.get_base_asset_amount()
+            else:
+                amounts_required[grid.base_asset] = grid.get_base_asset_amount()
+            if grid.quote_asset in amounts_required:
+                amounts_required[grid.quote_asset] += grid.get_quote_asset_amount()
+            else:
+                amounts_required[grid.quote_asset] = grid.get_quote_asset_amount()
 
-        return amount
+        exceptions = []
 
-    def _check_sufficient_inventory_to_place(self, new_orders: List[NewLimitOrder]) -> List[NewLimitOrder]:
-        quote_in_market = self._amount_in_market(side=OrderSide.BUY)
-        base_in_market = self._amount_in_market(side=OrderSide.SELL)
+        for _, pair in self.client._pairs.items():
+            if pair.base_asset.symbol in amounts_required:
+                balance = pair.base_asset.to_decimal(pair.base_asset.balance_of(self.client.wallet))
 
-        quote_amount_available = self.grid.get_quote_asset_amount() - quote_in_market
-        base_amount_available = self.grid.get_base_asset_amount() - base_in_market
+                if amounts_required[pair.base_asset.symbol] > balance:
+                    exceptions.append(
+                        f"Insufficient amount of {pair.base_asset.symbol} to run bot, have: "
+                        f"{balance}, config requires: {amounts_required[pair.base_asset.symbol]}."
+                    )
+            if pair.quote_asset.symbol in amounts_required:
+                balance = pair.quote_asset.to_decimal(pair.quote_asset.balance_of(self.client.wallet))
 
-        orders_to_place = []
+                if amounts_required[pair.quote_asset.symbol] > balance:
+                    exceptions.append(
+                        f"Insufficient amount of {pair.quote_asset.symbol} to run bot, have: "
+                        f"{balance}, config requires: {amounts_required[pair.quote_asset.symbol]}."
+                    )
 
-        for order in new_orders:
-            match order.order_side:
-                case OrderSide.BUY:
-                    if quote_amount_available == Decimal("0"):
-                        continue
-
-                    if order.size <= quote_amount_available:
-                        quote_amount_available -= order.size
-                    else:
-                        order.size = quote_amount_available
-                        quote_amount_available = Decimal("0")
-                    if order.size >= self.grid.min_order_size_in_base:
-                        orders_to_place.append(order)
-
-                case OrderSide.SELL:
-                    if base_amount_available == Decimal("0"):
-                        continue
-
-                    if order.size <= base_amount_available:
-                        base_amount_available -= order.size
-                    else:
-                        order.size = base_amount_available
-                        base_amount_available = Decimal("0")
-                    if order.size >= self.grid.min_order_size_in_base:
-                        orders_to_place.append(order)
-
-        return orders_to_place
+        if len(exceptions) > 0:
+            raise Exception(" ".join(exceptions))
 
     def _is_active_or_pending_order(self, order: NewLimitOrder) -> bool:
         for active_order in self.active_limit_orders.values():
             if (
                 order.order_side == active_order.order_side
                 and abs(
-                    order.price - self.grid.round_to_grid_tick(active_order.price)
+                    order.price - self.grids[order.pair].round_to_grid_tick(active_order.price)
                 ) < self.allowed_order_price_differential
             ):
                 if order.size >= active_order.remaining_size():
                     order.size = order.size - active_order.remaining_size()
 
-                    if order.size < self.grid.min_order_size_in_base:
+                    if order.size < self.grids[order.pair].min_order_size_in_base:
                         return True
                 else:
                     return True
@@ -276,17 +291,9 @@ class GridBot(BaseEventTradingFramework):
                     if order.size >= pending_order.size:
                         order.size = order.size - pending_order.size
 
-                    if order.size < self.grid.min_order_size_in_base:
+                    if order.size < self.grids[order.pair].min_order_size_in_base:
                         return True
                     else:
                         return True
 
         return False
-
-    def _remove_own_orders_from_book(self):
-        for active_order in self.active_limit_orders.values():
-            match active_order.order_side:
-                case OrderSide.BUY:
-                    self.orderbook.bids.remove_liquidity_from_book(price=active_order.price, size=active_order.size)
-                case OrderSide.SELL:
-                    self.orderbook.asks.remove_liquidity_from_book(price=active_order.price, size=active_order.size)

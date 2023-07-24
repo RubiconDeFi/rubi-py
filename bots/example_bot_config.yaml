@@ -1,10 +1,20 @@
-pair_name: "DAI/USDC"
-starting_base_asset_amount: "1000" # amount of DAI
-starting_quote_asset_amount: "1000" # amount of USDC
-fair_price: "1" # fair price of DAI/USDC
-price_tick: "0.00005"
-grid_range: "0.0020" # the range of the grif
-spread: "0.0001" # the spread the grid will earn
-min_level_size_in_base: "100" # grid level size
-min_order_size_in_base: "50" # min order size in DAI
-min_transaction_size_in_base: "200" # min size of a transaction in DAI
+min_transaction_size: "1000"
+grids:
+  - pair_name: "DAI/USDC"
+    starting_base_asset_amount: "1000" # amount of DAI
+    starting_quote_asset_amount: "1000" # amount of USDC
+    fair_price: "1" # fair price of DAI/USDC
+    price_tick: "0.00005"
+    grid_range: "0.0020" # the range of the grid
+    spread: "0.0001" # the spread the grid will earn
+    min_level_size_in_base: "100" # grid level size
+    min_order_size_in_base: "50" # min order size in DAI
+  - pair_name: "USDT/USDC"
+    starting_base_asset_amount: "1000" # amount of USDT
+    starting_quote_asset_amount: "1000" # amount of USDC
+    fair_price: "1" # fair price of USDT/USDC
+    price_tick: "0.00005"
+    grid_range: "0.0020" # the range of the grid
+    spread: "0.0001" # the spread the grid will earn
+    min_level_size_in_base: "100" # grid level size
+    min_order_size_in_base: "50" # min order size in USDT
