@@ -108,7 +108,7 @@ class Grid:
         active_limit_orders: List[ActiveLimitOrder],
         pending_transactions: List[Transaction],
     ) -> List[NewLimitOrder]:
-        new_orders_for_this_market = list(filter(lambda order: order.pair_name == self.pair_name, new_orders))
+        new_orders_for_this_market = list(filter(lambda order: order.pair == self.pair_name, new_orders))
 
         quote_in_market = self._amount_in_market(
             side=OrderSide.BUY,
@@ -161,12 +161,12 @@ class Grid:
         pending_transactions: List[Transaction],
     ) -> Decimal:
         active_orders = list(filter(
-            lambda order: order.order_side == side and order.pair_name == self.pair_name, active_limit_orders
+            lambda order: order.order_side == side and order.pair == self.pair_name, active_limit_orders
         ))
         pending_orders = []
         for pending_transaction in pending_transactions:
             pending_orders.extend(list(filter(
-                lambda order: order.order_side == side and order.pair_name == self.pair_name, pending_transaction.orders
+                lambda order: order.order_side == side and order.pair == self.pair_name, pending_transaction.orders
             )))
 
         amount = (

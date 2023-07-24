@@ -57,6 +57,8 @@ class GridBot(BaseEventTradingFramework):
         self.pending_transactions: Dict[int, Transaction] = {}
         self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
 
+        self.consecutive_failure_count = 0
+
         self.min_transaction_size = Decimal(min_transaction_size)
 
         self.allowed_order_price_differential = Decimal(1 / 10 ** 18)
@@ -145,11 +147,18 @@ class GridBot(BaseEventTradingFramework):
 
         match result.status:
             case TransactionStatus.SUCCESS:
+                self.consecutive_failure_count = 0
                 log.info(f"Successful transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                          f"with nonce: {result.nonce}")
             case TransactionStatus.FAILURE:
+                self.consecutive_failure_count += 1
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
+
+        if self.consecutive_failure_count >= 5:
+            self.allowed_to_place_new_orders = False
+            raise Exception(f"Failed to place transactions {self.consecutive_failure_count} times in a row. Not placing"
+                            f"any more orders")
 
         del self.pending_transactions[result.nonce]
 
