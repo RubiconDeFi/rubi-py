@@ -144,6 +144,8 @@ class GridBot(BaseEventTradingFramework):
                 log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
                             f"with nonce: {result.nonce}")
 
+        del self.pending_transactions[result.nonce]
+
         if self.consecutive_failure_count >= 5:
             self.allowed_to_place_new_orders = False
             self.running = False
