@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -120,10 +120,10 @@ class OrderQuery:
         order_by: str,
         order_direction: str,
         first: int,
-        maker: Optional[str] = None,
-        from_address: Optional[str] = None,
-        pay_gem: Optional[str] = None,
-        buy_gem: Optional[str] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
@@ -164,10 +164,10 @@ class OrderQuery:
 
         # build the list of where conditions
         where = [
-            self.offer.maker == maker.lower() if maker else None,
-            self.offer.from_address == from_address.lower() if from_address else None,
-            self.offer.pay_gem == pay_gem.lower() if pay_gem else None,
-            self.offer.buy_gem == buy_gem.lower() if buy_gem else None,
+            self.offer.maker == str(maker).lower() if maker else None,
+            self.offer.from_address == str(from_address).lower() if from_address else None,
+            self.offer.pay_gem == str(pay_gem).lower() if pay_gem else None,
+            self.offer.buy_gem == str(buy_gem).lower() if buy_gem else None,
             self.offer.open == open if open is not None else None,
             self.offer.timestamp >= start_time if start_time else None,
             self.offer.timestamp <= end_time if end_time else None,

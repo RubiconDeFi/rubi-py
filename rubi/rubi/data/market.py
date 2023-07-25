@@ -93,15 +93,11 @@ class MarketData:
         order_direction: str = "desc",
         formatted: bool = False,
         book_side: OrderSide = OrderSide.NEUTRAL,
-        maker: Optional[str] = None,
-        from_address: Optional[str] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
-        pay_gem: Optional[
-            str
-        ] = None,  # TODO: maybe we should allow the user to pass in an address here?
-        buy_gem: Optional[
-            str
-        ] = None,  # TODO: maybe we should allow the user to pass in an address here?
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,  
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None, 
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
