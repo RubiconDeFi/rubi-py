@@ -15,7 +15,7 @@ from rubi.network import (
 )
 
 
-class OrderQuery:
+class TradeQuery:
     def __init__(
         self,
         subgrounds: Subgrounds,
@@ -27,7 +27,7 @@ class OrderQuery:
         self.data = subgraph
         self.network = network
         self.tokens = network_tokens
-        self.offer = self.offer_entity()
+        self.trade = self.trade_entity()
 
     # TODO: we will want to move this somewhere else most likely - we can't access the client from here though so we
     #  will need to figure out how to do that
@@ -60,71 +60,99 @@ class OrderQuery:
     # Query Methods                     #
     #####################################
 
-    def offer_entity(
+    """
+    {
+    takes {
+        id
+        index
+        timestamp
+        transaction {
+            id
+            timestamp
+            block_number
+            block_index
+        }
+        taker {
+            id
+        }
+        from_address {
+            id
+        }
+        take_gem
+        give_gem
+        take_amt
+        give_amt
+        offer {
+            maker {
+                id
+            }
+            from_address {
+                id
+            }
+            index
+            transaction {
+                id
+                block_number
+                block_index
+            }
+        }
+    }
+    }   
+    """
+
+    def trade_entity(
         self,
     ):  # TODO: return a typed object (see subgrounds documentation for more info)
-        Offer = self.data.Offer
+        Take = self.data.Take
 
         # if we have a network object we can get all the token information we need
         if self.network:
-            Offer.pay_amt_formatted = SyntheticField(
-                f=lambda pay_amt, pay_gem: self.get_token(pay_gem).to_decimal(pay_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.pay_amt, Offer.pay_gem],
-            )
-
-            Offer.buy_amt_formatted = SyntheticField(
-                f=lambda buy_amt, buy_gem: self.get_token(buy_gem).to_decimal(buy_amt),
-                type_=SyntheticField.FLOAT,
-                deps=[Offer.buy_amt, Offer.buy_gem],
-            )
-
-            Offer.paid_amt_formatted = SyntheticField(
-                f=lambda paid_amt, pay_gem: self.get_token(pay_gem).to_decimal(
-                    paid_amt
+            Take.take_amt_formatted = SyntheticField(
+                f=lambda take_amt, take_gem: self.get_token(take_gem).to_decimal(
+                    take_amt
                 ),
                 type_=SyntheticField.FLOAT,
-                deps=[Offer.paid_amt, Offer.pay_gem],
+                deps=[Take.take_amt, Take.take_gem],
             )
 
-            Offer.bought_amt_formatted = SyntheticField(
-                f=lambda bought_amt, buy_gem: self.get_token(buy_gem).to_decimal(
-                    bought_amt
+            Take.give_amt_formatted = SyntheticField(
+                f=lambda give_amt, give_gem: self.get_token(give_gem).to_decimal(
+                    give_amt
                 ),
                 type_=SyntheticField.FLOAT,
-                deps=[Offer.bought_amt, Offer.buy_gem],
+                deps=[Take.give_amt, Take.give_gem],
             )
 
-            Offer.pay_gem_symbol = SyntheticField(
-                f=lambda pay_gem: self.get_token(pay_gem).symbol,
+            Take.take_gem_symbol = SyntheticField(
+                f=lambda take_gem: self.get_token(take_gem).symbol,
                 type_=SyntheticField.STRING,
-                deps=[Offer.pay_gem],
+                deps=[Take.take_gem],
             )
 
-            Offer.buy_gem_symbol = SyntheticField(
-                f=lambda buy_gem: self.get_token(buy_gem).symbol,
+            Take.give_gem_symbol = SyntheticField(
+                f=lambda give_gem: self.get_token(give_gem).symbol,
                 type_=SyntheticField.STRING,
-                deps=[Offer.buy_gem],
+                deps=[Take.give_gem],
             )
 
-            Offer.datetime = SyntheticField(
+            Take.datetime = SyntheticField(
                 f=lambda timestamp: str(datetime.fromtimestamp(timestamp)),
                 type_=SyntheticField.STRING,
-                deps=[Offer.timestamp],
+                deps=[Take.timestamp],
             )
 
-        return Offer
+        return Take
 
-    def offers_query(
+    def trades_query(
         self,
         order_by: str,
         order_direction: str,
         first: int,
-        maker: Optional[Union[ChecksumAddress, str]] = None,
+        # maker: Optional[str] = None, TODO: resolve #63 and add in conditional filter for offer maker/from_address
+        taker: Optional[Union[str, ChecksumAddress]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
-        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
-        open: Optional[bool] = None,
+        take_gem: Optional[Union[ChecksumAddress, str]] = None,
+        give_gem: Optional[Union[ChecksumAddress, str]] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         # TODO: there is definitely a clear way to pass these parameters in a more concise way, prolly **kargs
@@ -133,14 +161,12 @@ class OrderQuery:
         error_messages = []
 
         # check the order_by parameter
-        if order_by.lower() not in ("timestamp", "price"):
+        if order_by.lower() not in ("timestamp"):
             error_messages.append(
-                "Invalid order_by, must be 'timestamp' or 'price' (default: timestamp)"
+                "Invalid order_by, must be 'timestamp' (default: timestamp)"
             )
         elif order_by.lower() == "timestamp":
-            order_by = self.offer.timestamp
-        elif order_by.lower() == "price":
-            order_by = self.offer.price
+            order_by = self.trade.timestamp
 
         # check the order_direction parameter
         if order_direction.lower() not in ("asc", "desc"):
@@ -164,67 +190,62 @@ class OrderQuery:
 
         # build the list of where conditions
         where = [
-            self.offer.maker == str(maker).lower() if maker else None,
-            self.offer.from_address == str(from_address).lower()
+            self.trade.taker == str(taker).lower() if taker else None,
+            self.trade.from_address == str(from_address).lower()
             if from_address
             else None,
-            self.offer.pay_gem == str(pay_gem).lower() if pay_gem else None,
-            self.offer.buy_gem == str(buy_gem).lower() if buy_gem else None,
-            self.offer.open == open if open is not None else None,
-            self.offer.timestamp >= start_time if start_time else None,
-            self.offer.timestamp <= end_time if end_time else None,
+            self.trade.take_gem == str(take_gem).lower() if take_gem else None,
+            self.trade.give_gem == str(give_gem).lower() if give_gem else None,
+            self.trade.timestamp >= start_time if start_time else None,
+            self.trade.timestamp <= end_time if end_time else None,
         ]
         where = [condition for condition in where if condition is not None]
 
-        """Helper method to build a query for the offers subgraph entity."""
-        offers = self.data.Query.offers(
+        """Helper method to build a query for the take subgraph entity."""
+        trades = self.data.Query.takes(
             orderBy=order_by,
             orderDirection=order_direction,
             first=first,
             where=where if where else {},
         )
 
-        return offers
+        return trades
 
-    def offers_fields(
+    def trades_fields(
         self,
-        offers: Any,  # TODO: check that this is the correct type (subgrounds may have types that we can utilize here)
+        trades: Any,  # TODO: check that this is the correct type (subgrounds may have types that we can utilize here)
         formatted: bool = False,
     ):  # TODO: return a typed object (see subgrounds documentation for more info)
         """Helper method to build a list of fields for the offers subgraph entity."""
         fields = [
-            offers.id,
-            offers.timestamp,
-            offers.index,
-            offers.maker.id,
-            offers.from_address.id,
-            offers.pay_gem,
-            offers.buy_gem,
-            offers.pay_amt,
-            offers.buy_amt,
-            offers.paid_amt,
-            offers.bought_amt,
-            offers.price,
-            offers.open,
-            offers.removed_timestamp,
-            offers.removed_block,
-            offers.transaction.id,
-            offers.transaction.block_number,
-            offers.transaction.block_index,
+            trades.id,
+            trades.timestamp,
+            trades.take_gem,
+            trades.give_gem,
+            trades.take_amt,
+            trades.give_amt,
+            trades.taker.id,
+            trades.from_address.id,
+            trades.transaction.block_number,
+            trades.transaction.block_index,
+            trades.index,
+            trades.offer.maker.id,
+            trades.offer.from_address.id,
+            trades.offer.transaction.block_number,
+            trades.offer.transaction.block_index,
+            trades.offer.index,
         ]
 
         if formatted:
-            fields.append(offers.pay_amt_formatted)
-            fields.append(offers.buy_amt_formatted)
-            fields.append(offers.paid_amt_formatted)
-            fields.append(offers.bought_amt_formatted)
-            fields.append(offers.pay_gem_symbol)
-            fields.append(offers.buy_gem_symbol)
-            fields.append(offers.datetime)
+            fields.append(trades.take_amt_formatted)
+            fields.append(trades.give_amt_formatted)
+            fields.append(trades.take_gem_symbol)
+            fields.append(trades.give_gem_symbol)
+            fields.append(trades.datetime)
 
         return fields
 
-    def query_offers(
+    def query_trades(
         self,
         fields: List,
         formatted: bool = False,
@@ -238,76 +259,67 @@ class OrderQuery:
             cols = [
                 "id",
                 "timestamp",
-                "index",
-                "maker",
+                "take_gem",
+                "give_gem",
+                "take_amt",
+                "give_amt",
+                "taker",
                 "from_address",
-                "pay_gem",
-                "buy_gem",
-                "pay_amt",
-                "buy_amt",
-                "paid_amt",
-                "bought_amt",
-                "price",
-                "open",
-                "removed_timestamp",
-                "removed_block",
-                "transaction",
-                "transaction_block_number",
-                "transaction_block_index",
+                "block_number",
+                "block_index",
+                "log_index",
+                "maker",
+                "maker_from_address",
+                "offer_block_number",
+                "offer_block_index",
+                "offer_log_index",
             ]
             df = pd.DataFrame(columns=cols)
 
         elif df.empty and formatted:
             cols = [
-                "id",
-                "maker",
+                "taker",
                 "from_address",
-                "pay_gem",
-                "buy_gem",
-                "pay_amt",
-                "buy_amt",
-                "paid_amt",
-                "bought_amt",
+                "take_gem",
+                "give_gem",
+                "take_amt",
+                "give_amt",
+                "timestamp",
+                "maker",
+                "maker_from_address",
+                "block_number",
+                "block_index",
+                "log_index",
             ]
             df = pd.DataFrame(columns=cols)
 
         else:
-            df.columns = [col.replace("offers_", "") for col in df.columns]
+            df.columns = [col.replace("takes_", "") for col in df.columns]
             df.columns = [col.replace("_id", "") for col in df.columns]
-
-            # convert the id to an integer
-            # TODO: i don't love the lambda (cc pickling, but it appears we are forced to use them in sythetic fields
-            #  regardless)
-            df["id"] = df["id"].apply(lambda x: int(x, 16))
 
             # TODO: decide whether we should return the unformatted fields or not
             if formatted:
                 df = df.drop(
                     columns=[
-                        "pay_amt",
-                        "buy_amt",
-                        "paid_amt",
-                        "bought_amt",
-                        "pay_gem",
-                        "buy_gem",
-                        "timestamp",
-                        "index",
-                        "price",
-                        "removed_timestamp",
-                        "removed_block",
-                        "transaction_block_number",
-                        "transaction_block_index",
+                        "id",
                     ]
                 )
                 df = df.rename(
                     columns={
-                        "pay_amt_formatted": "pay_amt",
-                        "buy_amt_formatted": "buy_amt",
-                        "paid_amt_formatted": "paid_amt",
-                        "bought_amt_formatted": "bought_amt",
-                        "pay_gem_symbol": "pay_gem",
-                        "buy_gem_symbol": "buy_gem",
-                        "datetime": "timestamp",
+                        "take_amt_formatted": "take_amt",
+                        "give_amt_formatted": "give_amt",
+                        "take_amt": "take_amt_raw",
+                        "give_amt": "give_amt_raw",
+                        "take_gem": "take_gem_address",
+                        "give_gem": "give_gem_address",
+                        "take_gem_symbol": "take_gem",
+                        "give_gem_symbol": "give_gem",
+                        "index": "log_index",
+                        "transaction_block_number": "block_number",
+                        "transaction_block_index": "block_index",
+                        "offer_transaction_block_number": "offer_block_number",
+                        "offer_transaction_block_index": "offer_block_index",
+                        "offer_index": "offer_log_index",
                     }
                 )
                 # TODO: we could also get smart with displaying price dependent upon the pair_name and direction of the
