@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -88,10 +88,14 @@ class MarketData:
     # TODO: refactor using a decorator to handle the parameter validation
     def get_offers(
         self,
+        first: int = 1000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = False,
+        book_side: OrderSide = OrderSide.NEUTRAL,
         maker: Optional[str] = None,
         from_address: Optional[str] = None,
         pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = OrderSide.NEUTRAL,
         pay_gem: Optional[
             str
         ] = None,  # TODO: maybe we should allow the user to pass in an address here?
@@ -101,10 +105,7 @@ class MarketData:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        first: Optional[int] = 1000,
-        order_by: Optional[str] = "timestamp",
-        order_direction: Optional[str] = "desc",
-        formatted: Optional[bool] = False,
+
     ) -> pd.DataFrame:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
@@ -254,26 +255,20 @@ class MarketData:
 
             return df
 
+    # TODO: add an optional filter by maker when 
     def get_trades(
         self,
-        taker: Optional[str] = None,
-        from_address: Optional[str] = None,
-        pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = OrderSide.NEUTRAL,
-        take_gem: Optional[
-            str
-        ] = None,  # TODO: not sure we really need this given the pair_name parameter
-        give_gem: Optional[
-            str
-        ] = None,  # TODO: not sure we really need this given the pair_name parameter
+        first: int = 1000,  # TODO: maybe this should be a large number by default?
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = False,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        take_gem: Optional[Union[ChecksumAddress, str]] = None,
+        give_gem: Optional[Union[ChecksumAddress, str]] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        first: Optional[
-            int
-        ] = 1000,  # TODO: maybe this should be a large number by default?
-        order_by: Optional[str] = "timestamp",
-        order_direction: Optional[str] = "desc",
-        formatted: Optional[bool] = False,
     ) -> pd.DataFrame:
         """Returns a dataframe of trades that have occurred on the market contract, with the option to pass in filters.
 
@@ -281,8 +276,6 @@ class MarketData:
         :type taker: str
         :param from_address: the address that originated the transaction that created the trade
         :type from_address: str
-        :param pair_name: the name of the pair that the trade occurred on (will override take_gem and give_gem if both are passed)
-        :type pair_name: str
         :param book_side: the side of the order book that the trade occurred on (defaults to neutral, options: buy, sell, neutral)
         :type book_side: OrderSide
         :param take_gem: the address of the token that the taker received

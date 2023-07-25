@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -149,10 +149,10 @@ class TradeQuery:
         order_direction: str,
         first: int,
         # maker: Optional[str] = None, TODO: resolve #63 and add in conditional filter for offer maker/from_address
-        taker: Optional[str] = None,
-        from_address: Optional[str] = None,
-        take_gem: Optional[str] = None,
-        give_gem: Optional[str] = None,
+        taker: Optional[Union[str, ChecksumAddress]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        take_gem: Optional[Union[ChecksumAddress, str]] = None,
+        give_gem: Optional[Union[ChecksumAddress, str]] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         # TODO: there is definitely a clear way to pass these parameters in a more concise way, prolly **kargs
@@ -190,10 +190,10 @@ class TradeQuery:
 
         # build the list of where conditions
         where = [
-            self.trade.taker == taker.lower() if taker else None,
-            self.trade.from_address == from_address.lower() if from_address else None,
-            self.trade.take_gem == take_gem.lower() if take_gem else None,
-            self.trade.give_gem == give_gem.lower() if give_gem else None,
+            self.trade.taker == str(taker).lower() if taker else None,
+            self.trade.from_address == str(from_address).lower() if from_address else None,
+            self.trade.take_gem == str(take_gem).lower() if take_gem else None,
+            self.trade.give_gem == str(give_gem).lower() if give_gem else None,
             self.trade.timestamp >= start_time if start_time else None,
             self.trade.timestamp <= end_time if end_time else None,
         ]
@@ -308,11 +308,10 @@ class TradeQuery:
                         "give_amt_formatted": "give_amt",
                         "take_amt": "take_amt_raw",
                         "give_amt": "give_amt_raw",
+                        "take_gem": "take_gem_address",
+                        "give_gem": "give_gem_address",
                         "take_gem_symbol": "take_gem",
                         "give_gem_symbol": "give_gem",
-                        "take_gem_address": "take_gem",
-                        "give_gem_address": "give_gem",
-                        "datetime": "timestamp",
                         "index": "log_index",
                         "transaction_block_number": "block_number",
                         "transaction_block_index": "block_index",

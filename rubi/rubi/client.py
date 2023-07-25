@@ -691,19 +691,18 @@ class Client:
 
     def get_trades(
         self,
-        first: int = 1000,
+        first: int = 10000000, # TODO: decide on a default value
         order_by: str = "timestamp",
         order_direction: str = "desc",
         formatted: bool = True,
         book_side: OrderSide = OrderSide.NEUTRAL,
-        taker: Optional[str] = None,
-        from_address: Optional[str] = None,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,        
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-
     ) -> pd.DataFrame:
-        
+
         # handle the pair_name parameter
         if pair_name:
             base, quote = pair_name.split("/")
@@ -715,18 +714,17 @@ class Client:
             raise Exception(f"Pair {pair_name} does not exist")
 
         df = self.market_data.get_trades(
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            book_side=book_side,
+            formatted=formatted,
             taker=taker,
             from_address=from_address,
-            pair_name=pair_name,
-            book_side=book_side,
             take_gem=base_asset.address,
             give_gem=quote_asset.address,
             start_time=start_time,
             end_time=end_time,
-            first=first,
-            order_by=order_by,
-            order_direction=order_direction,
-            formatted=formatted,
         )
         return df
 
