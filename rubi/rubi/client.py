@@ -707,12 +707,11 @@ class Client:
         # handle the pair_name parameter
         if pair_name:
             base, quote = pair_name.split("/")
-            base_asset = ERC20.from_network(name=base, network=self.network)
-            quote_asset = ERC20.from_network(name=quote, network=self.network)
-        
-        # throw an error if the pair does not exist
-        if base_asset is None or quote_asset is None:
-            raise Exception(f"Pair {pair_name} does not exist")
+            base_asset = ERC20.from_network(name=base, network=self.network).address
+            quote_asset = ERC20.from_network(name=quote, network=self.network).address
+        else:
+            base_asset = None
+            quote_asset = None
 
         df = self.market_data.get_trades(
             first=first,
@@ -722,8 +721,8 @@ class Client:
             formatted=formatted,
             taker=taker,
             from_address=from_address,
-            take_gem=base_asset.address,
-            give_gem=quote_asset.address,
+            take_gem=base_asset,
+            give_gem=quote_asset,
             start_time=start_time,
             end_time=end_time,
         )
