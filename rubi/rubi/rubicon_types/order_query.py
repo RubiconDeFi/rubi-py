@@ -165,7 +165,9 @@ class OrderQuery:
         # build the list of where conditions
         where = [
             self.offer.maker == str(maker).lower() if maker else None,
-            self.offer.from_address == str(from_address).lower() if from_address else None,
+            self.offer.from_address == str(from_address).lower()
+            if from_address
+            else None,
             self.offer.pay_gem == str(pay_gem).lower() if pay_gem else None,
             self.offer.buy_gem == str(buy_gem).lower() if buy_gem else None,
             self.offer.open == open if open is not None else None,

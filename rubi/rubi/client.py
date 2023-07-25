@@ -659,7 +659,7 @@ class Client:
     # TODO: i would like to remove pay_gem and buy_gem and follow the same pattern as the get_trades method but do not want to cause breaking changes
     def get_offers(
         self,
-        first: int = 10000000, # TODO: decide on a default value
+        first: int = 10000000,  # TODO: decide on a default value
         order_by: str = "timestamp",
         order_direction: str = "desc",
         formatted: bool = True,
@@ -692,18 +692,17 @@ class Client:
 
     def get_trades(
         self,
-        first: int = 10000000, # TODO: decide on a default value
+        first: int = 10000000,  # TODO: decide on a default value
         order_by: str = "timestamp",
         order_direction: str = "desc",
         formatted: bool = True,
         book_side: OrderSide = OrderSide.NEUTRAL,
         taker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,        
+        pair_name: Optional[str] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ) -> pd.DataFrame:
-
         # handle the pair_name parameter
         if pair_name:
             base, quote = pair_name.split("/")

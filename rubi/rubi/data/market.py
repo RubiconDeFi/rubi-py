@@ -96,12 +96,11 @@ class MarketData:
         maker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
-        pay_gem: Optional[Union[ChecksumAddress, str]] = None,  
-        buy_gem: Optional[Union[ChecksumAddress, str]] = None, 
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-
     ) -> pd.DataFrame:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
@@ -248,11 +247,11 @@ class MarketData:
             )
             fields = self.offer_query.offers_fields(query)
             df = self.offer_query.query_offers(fields)
-            df["side"] = "N/A"  
+            df["side"] = "N/A"
 
             return df
 
-    # TODO: add an optional filter by maker when 
+    # TODO: add an optional filter by maker when
     def get_trades(
         self,
         first: int = 1000,  # TODO: maybe this should be a large number by default?
@@ -300,12 +299,12 @@ class MarketData:
             raise ValueError(
                 "Cannot return formatted fields without a network object initialized on the class."
             )
-    
+
         if take_gem is None and give_gem is None:
             all_trades_query = self.trade_query.trades_query(
                 order_by,
                 order_direction,
-                first,  
+                first,
                 taker,
                 from_address,
                 take_gem=take_gem,
@@ -313,9 +312,11 @@ class MarketData:
                 start_time=start_time,
                 end_time=end_time,
             )
-            all_trades_fields = self.trade_query.trades_fields(all_trades_query, formatted)
+            all_trades_fields = self.trade_query.trades_fields(
+                all_trades_query, formatted
+            )
             all_trades_df = self.trade_query.query_trades(all_trades_fields, formatted)
-            all_trades_df["side"] = "N/A" 
+            all_trades_df["side"] = "N/A"
 
             return all_trades_df
 

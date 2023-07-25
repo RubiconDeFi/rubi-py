@@ -191,7 +191,9 @@ class TradeQuery:
         # build the list of where conditions
         where = [
             self.trade.taker == str(taker).lower() if taker else None,
-            self.trade.from_address == str(from_address).lower() if from_address else None,
+            self.trade.from_address == str(from_address).lower()
+            if from_address
+            else None,
             self.trade.take_gem == str(take_gem).lower() if take_gem else None,
             self.trade.give_gem == str(give_gem).lower() if give_gem else None,
             self.trade.timestamp >= start_time if start_time else None,
