@@ -27,6 +27,15 @@ extensions = [
     "sphinx.ext.autosummary",
 ]
 
+autodoc_mock_imports = [
+    "eth_typing",
+    "subgrounds",
+    "web3",
+    "eth_utils",
+    "hexbytes",
+    "eth_account",
+]
+
 templates_path = ["_templates"]
 exclude_patterns = [".DS_Store"]
 
