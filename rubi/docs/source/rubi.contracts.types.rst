@@ -1,13 +1,13 @@
-rubi.contracts.types package
-============================
+rubi.contracts.contract_types package
+=====================================
 
 Submodules
 ----------
 
-rubi.contracts.types.events module
-----------------------------------
+rubi.contracts.contract_types.events module
+-------------------------------------------
 
-.. automodule:: rubi.contracts.types.events
+.. automodule:: rubi.contracts.contract_types.events
    :members:
    :undoc-members:
    :show-inheritance:
