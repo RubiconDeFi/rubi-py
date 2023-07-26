@@ -653,7 +653,7 @@ class Client:
         return self.market.batch_cancel(ids=order_ids, **transaction.args())
 
     ######################################################################
-    # data methods 
+    # data methods
     ######################################################################
 
     # TODO: i would like to remove pay_gem and buy_gem and follow the same pattern as the get_trades method but do not want to cause breaking changes
