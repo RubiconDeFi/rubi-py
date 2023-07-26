@@ -27,6 +27,20 @@ class BaseEvent(ABC):
         self.block_number = block_number
 
     @staticmethod
+    def builder(
+        name: str, **kwargs
+    ) -> Union["EmitOfferEvent", "EmitTakeEvent", "EmitCancelEvent", "EmitSwap"]:
+        match name:
+            case "emitOffer":
+                return EmitOfferEvent(**kwargs)
+            case "emitTake":
+                return EmitTakeEvent(**kwargs)
+            case "emitCancel":
+                return EmitCancelEvent(**kwargs)
+            case "emitSwap":
+                return EmitSwap(**kwargs)
+
+    @staticmethod
     @abstractmethod
     def get_event_contract(
         market: _RubiconMarket, router: _RubiconRouter
@@ -147,7 +161,7 @@ class EmitOfferEvent(BaseMarketEvent):
         buy_gem: ChecksumAddress,
         pay_amt: int,
         buy_amt: int,
-        **args
+        **args,
     ):
         """Initialize an EmitOfferEvent instance.
 
@@ -199,7 +213,7 @@ class EmitTakeEvent(BaseMarketEvent):
         buy_gem: ChecksumAddress,
         take_amt: int,
         give_amt: int,
-        **args
+        **args,
     ):
         """Initialize an EmitTakeEvent instance.
 
@@ -258,7 +272,7 @@ class EmitCancelEvent(BaseMarketEvent):
         buy_gem: ChecksumAddress,
         pay_amt: int,
         buy_amt: int,
-        **args
+        **args,
     ):
         """Initialize an EmitCancelEvent instance.
 
@@ -309,7 +323,7 @@ class EmitFeeEvent(BaseMarketEvent):
         feeTo: ChecksumAddress,
         asset: ChecksumAddress,
         feeAmt: int,
-        **args
+        **args,
     ):
         """Initialize an EmitFeeEvent instance.
 
@@ -399,7 +413,7 @@ class EmitSwap(BaseEvent):
         inputAmount: int,
         realizedFill: int,
         hurdleBuyAmtMin: int,
-        **args
+        **args,
     ):
         """Initialize an EmitSwap instance.
 

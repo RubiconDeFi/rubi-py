@@ -1,20 +1,34 @@
 import logging as log
 import time
+from enum import Enum
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, Type, Dict, Any
+from typing import Optional, Callable, Type, Dict, Any, List
 
 from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
+from hexbytes import HexBytes
 from web3 import Web3
 from web3._utils.filters import LogFilter  # noqa
 from web3.contract import Contract
 from web3.contract.contract import (
     ContractFunction,
 )  # TODO: figure out why jupyter notebook is complaining about this
-from web3.types import ABI, Nonce
+from web3.logs import DISCARD
+from web3.types import ABI, Nonce, TxReceipt, EventData
 
 from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
+
+
+class ContractType(Enum):
+    """Enum to distinguish the type of contract instantiated
+
+    Should only be used internally
+    """
+
+    RUBICON_MARKET = "RUBICON_MARKET"
+    RUBICON_ROUTER = "RUBICON_ROUTER"
+    ERC20 = "ERC20"
 
 
 class BaseContract:
@@ -25,6 +39,8 @@ class BaseContract:
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
+    :param contract_type: the type of contract
+    :type contract_type: ContractType
     :param wallet: a wallet address of the signer (optional, default is None)
     :type wallet: Optional[ChecksumAddress]
     :param key: the private key of the signer (optional, default is None)
@@ -35,6 +51,7 @@ class BaseContract:
         self,
         w3: Web3,
         contract: Contract,
+        contract_type: ContractType,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ):
@@ -46,6 +63,7 @@ class BaseContract:
 
         self.contract = contract
         self.address = contract.address
+        self.contract_type = contract_type
         self.w3 = w3
         self.chain_id = self.w3.eth.chain_id
 
@@ -65,6 +83,7 @@ class BaseContract:
         w3: Web3,
         address: ChecksumAddress,
         contract_abi: ABI,
+        contract_type: ContractType,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> "BaseContract":
@@ -76,6 +95,8 @@ class BaseContract:
         :type address: ChecksumAddress
         :param contract_abi: The ABI of the contract.
         :type contract_abi: ABI
+        :param contract_type: The type of contract we are instantiating.
+        :type contract_type: ContractType
         :param wallet: The wallet address to use for interacting with the contract (optional, default is None).
         :type wallet: Optional[ChecksumAddress]
         :param key: The private key of the wallet (optional, default is None).
@@ -86,7 +107,27 @@ class BaseContract:
 
         contract = w3.eth.contract(address=address, abi=contract_abi)
 
-        return cls(w3=w3, contract=contract, wallet=wallet, key=key)
+        return cls(
+            w3=w3,
+            contract=contract,
+            contract_type=contract_type,
+            wallet=wallet,
+            key=key,
+        )
+
+    ######################################################################
+    # useful methods
+    ######################################################################
+
+    def get_transaction_receipt(self, transaction_hash: str) -> TransactionReceipt:
+        """Get a transaction receipt for the give transaction_hash.
+
+        :param transaction_hash: The transaction hash.
+        :type transaction_hash: str
+        :return: A TransactionReceipt for the transaction hash.
+        :rtype: TransactionReceipt
+        """
+        return self._wait_for_transaction_receipt(transaction_hash=transaction_hash)
 
     ######################################################################
     # event listeners
@@ -285,7 +326,9 @@ class BaseContract:
         return {key: value for key, value in transaction.items() if value is not None}
 
     def _wait_for_transaction_receipt(
-        self, transaction: SignedTransaction
+        self,
+        transaction: Optional[SignedTransaction] = None,
+        transaction_hash: Optional[str] = None,
     ) -> TransactionReceipt:
         """Wait for the transaction receipt and check if the transaction was successful.
 
@@ -293,10 +336,62 @@ class BaseContract:
         :type transaction: SignedTransaction
         """
 
+        if transaction:
+            tx_receipt = self.w3.eth.wait_for_transaction_receipt(transaction.hash)
+        elif transaction_hash:
+            tx_receipt = self.w3.eth.wait_for_transaction_receipt(
+                HexBytes(transaction_hash)
+            )
+        else:
+            raise Exception("Provide either a transaction or a transaction_hash")
+
+        raw_events = self._process_receipt_logs_into_raw_events(receipt=tx_receipt)
+
         result = TransactionReceipt.from_tx_receipt(
-            tx_receipt=self.w3.eth.wait_for_transaction_receipt(transaction.hash)
+            tx_receipt=tx_receipt, raw_events=raw_events
         )
 
         log.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
 
         return result
+
+    def _process_receipt_logs_into_raw_events(
+        self, receipt: TxReceipt
+    ) -> List[BaseEvent | EventData]:
+        """
+        Processes the logs of a given transaction receipt and returns a list of events associated with the transaction.
+
+        :param receipt:
+        :type receipt: TxReceipt
+        :return: The list of events associated with the given transaction receipt
+        :rtype: List[BaseEvent]
+        """
+        match self.contract_type:
+            case ContractType.RUBICON_MARKET:
+                event_names = ["emitTake", "emitOffer", "emitCancel"]
+            case ContractType.RUBICON_ROUTER:
+                event_names = ["emitSwap"]
+            case ContractType.ERC20:
+                event_names = ["Approval", "Transfer"]
+            case _:
+                raise Exception("Unexpected ContractType")
+
+        raw_events = []
+        for event_name in event_names:
+            transaction_events_data = self.contract.events[
+                event_name
+            ]().process_receipt(receipt, DISCARD)
+
+            for event_data in transaction_events_data:
+                if self.contract_type == ContractType.ERC20:
+                    raw_events.append(event_data)
+
+                raw_events.append(
+                    BaseEvent.builder(
+                        name=event_name,
+                        block_number=event_data["blockNumber"],
+                        **event_data["args"],
+                    )
+                )
+
+        return raw_events
