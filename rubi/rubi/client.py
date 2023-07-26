@@ -473,7 +473,7 @@ class Client:
 
         order: NewMarketOrder = transaction.orders[0]  # noqa
 
-        pair = self.get_pair(pair_name=order.pair)
+        pair = self.get_pair(pair_name=order.pair_name)
 
         match order.order_side:
             case OrderSide.BUY:
@@ -512,7 +512,7 @@ class Client:
 
         order: NewLimitOrder = transaction.orders[0]  # noqa
 
-        pair = self.get_pair(pair_name=order.pair)
+        pair = self.get_pair(pair_name=order.pair_name)
 
         match order.order_side:
             case OrderSide.BUY:
@@ -564,7 +564,7 @@ class Client:
 
         for order in transaction.orders:
             order: NewLimitOrder
-            pair = self.get_pair(order.pair)
+            pair = self.get_pair(order.pair_name)
 
             match order.order_side:
                 case OrderSide.BUY:
@@ -606,7 +606,7 @@ class Client:
 
         for order in transaction.orders:
             order: UpdateLimitOrder
-            pair = self.get_pair(order.pair)
+            pair = self.get_pair(order.pair_name)
 
             order_ids.append(order.order_id)
 

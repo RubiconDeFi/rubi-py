@@ -270,13 +270,13 @@ class GridBot(BaseEventTradingFramework):
             if (
                 order.order_side == active_order.order_side
                 and abs(
-                    order.price - self.grids[order.pair].round_to_grid_tick(active_order.price)
+                    order.price - self.grids[order.pair_name].round_to_grid_tick(active_order.price)
                 ) < self.allowed_order_price_differential
             ):
                 if order.size >= active_order.remaining_size():
                     order.size = order.size - active_order.remaining_size()
 
-                    if order.size < self.grids[order.pair].min_order_size_in_base:
+                    if order.size < self.grids[order.pair_name].min_order_size_in_base:
                         return True
                 else:
                     return True
@@ -291,7 +291,7 @@ class GridBot(BaseEventTradingFramework):
                     if order.size >= pending_order.size:
                         order.size = order.size - pending_order.size
 
-                    if order.size < self.grids[order.pair].min_order_size_in_base:
+                    if order.size < self.grids[order.pair_name].min_order_size_in_base:
                         return True
                     else:
                         return True

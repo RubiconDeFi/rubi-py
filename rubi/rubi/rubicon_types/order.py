@@ -79,7 +79,7 @@ class BaseNewOrder:
         order_side: OrderSide,
     ):
         """constructor method."""
-        self.pair = pair_name
+        self.pair_name = pair_name
         self.order_side = order_side
         self.order_type = order_type
 
