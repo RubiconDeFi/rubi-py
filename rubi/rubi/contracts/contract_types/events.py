@@ -27,6 +27,20 @@ class BaseEvent(ABC):
         self.block_number = block_number
 
     @staticmethod
+    def builder(
+        name: str, **kwargs
+    ) -> Union["EmitOfferEvent", "EmitTakeEvent", "EmitCancelEvent", "EmitSwap"]:
+        match name:
+            case "emitOffer":
+                return EmitOfferEvent(**kwargs)
+            case "emitTake":
+                return EmitTakeEvent(**kwargs)
+            case "emitCancel":
+                return EmitCancelEvent(**kwargs)
+            case "emitSwap":
+                return EmitSwap(**kwargs)
+
+    @staticmethod
     @abstractmethod
     def get_event_contract(
         market: _RubiconMarket, router: _RubiconRouter

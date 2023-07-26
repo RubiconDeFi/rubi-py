@@ -4,7 +4,7 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts.base_contract import BaseContract
+from rubi.contracts.base_contract import BaseContract, ContractType
 from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
@@ -27,11 +27,18 @@ class RubiconRouter(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
+        contract_type: ContractType = ContractType.RUBICON_ROUTER,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> None:
         """constructor method"""
-        super().__init__(w3=w3, contract=contract, wallet=wallet, key=key)
+        super().__init__(
+            w3=w3,
+            contract=contract,
+            contract_type=ContractType.RUBICON_ROUTER,
+            wallet=wallet,
+            key=key,
+        )
 
     @classmethod
     def from_network(
@@ -55,6 +62,7 @@ class RubiconRouter(BaseContract):
             w3=network.w3,
             address=network.rubicon.router.address,
             contract_abi=network.rubicon.router.abi,
+            contract_type=ContractType.RUBICON_ROUTER,
             wallet=wallet,
             key=key,
         )

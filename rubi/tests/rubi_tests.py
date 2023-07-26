@@ -8,6 +8,7 @@ from web3 import Web3
 from web3.contract import Contract
 from subgrounds import Subgrounds
 
+from contracts.contract_types.transaction_reciept import TransactionStatus
 from rubi import (
     Network,
     Client,
@@ -219,6 +220,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == market_order.pair
+        assert event.order_side == market_order.order_side
+        assert event.order_type == OrderType.MARKET
+        assert event.size == market_order.size
+        assert event.price == Decimal("2")
+        assert event.market_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -279,6 +293,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == market_order.pair
+        assert event.order_side == market_order.order_side
+        assert event.order_type == OrderType.MARKET
+        assert event.size == market_order.size
+        assert event.price == Decimal("1")
+        assert event.market_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -337,6 +364,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == limit_order.pair
+        assert event.order_side == limit_order.order_side
+        assert event.order_type == OrderType.LIMIT
+        assert event.size == limit_order.size
+        assert event.price == limit_order.price
+        assert event.limit_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -390,6 +430,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == limit_order.pair
+        assert event.order_side == limit_order.order_side
+        assert event.order_type == OrderType.LIMIT
+        assert event.size == limit_order.size
+        assert event.price == limit_order.price
+        assert event.limit_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -444,6 +497,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == limit_order.pair
+        assert event.order_side == limit_order.order_side
+        assert event.order_type == OrderType.MARKET
+        assert event.size == limit_order.size
+        assert event.price == Decimal("2")
+        assert event.market_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -505,6 +571,19 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 1
+
+        event: OrderEvent = result.events[0]
+
+        assert event.pair_name == limit_order.pair
+        assert event.order_side == limit_order.order_side
+        assert event.order_type == OrderType.MARKET
+        assert event.size == limit_order.size
+        assert event.price == Decimal("1")
+        assert event.market_order_owner == test_client_for_account_1.wallet
 
         cow_amount_after_order = cow_erc20_for_account_1.balance_of(
             cow_erc20_for_account_1.wallet
@@ -591,6 +670,19 @@ class TestClient:
 
         # Check that cancel txn was a success
         assert cancel_result.status == 1
+        assert cancel_result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(cancel_result.events) == 1
+
+        event: OrderEvent = cancel_result.events[0]
+
+        assert event.pair_name == cancel_limit_order.pair
+        assert event.order_type == OrderType.CANCEL
+        assert event.order_side == limit_order.order_side
+        assert event.price == limit_order.price
+        assert event.size == limit_order.size
+        assert event.limit_order_owner == test_client_for_account_1.wallet
 
         orderbook_after_cancel = test_client_for_account_1.get_orderbook(
             pair_name=pair_name
@@ -634,6 +726,20 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 2
+
+        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
+            event: OrderEvent = result.events[i]
+
+            assert event.pair_name == limit_order.pair
+            assert event.order_type == OrderType.LIMIT
+            assert event.order_side == limit_order.order_side
+            assert event.price == limit_order.price
+            assert event.size == limit_order.size
+            assert event.limit_order_owner == test_client_for_account_1.wallet
 
         # Check that offers has been placed in the market
         orderbook_after_transaction = test_client_for_account_1.get_orderbook(
@@ -680,6 +786,27 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 4
+
+        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
+            event: OrderEvent = result.events[i]
+
+            assert event.pair_name == limit_order.pair
+            assert event.order_type == OrderType.LIMIT
+            assert event.order_side == limit_order.order_side
+            assert event.price == limit_order.price
+            assert event.size == limit_order.size
+            assert event.limit_order_owner == test_client_for_account_2.wallet
+
+        for i in range(2, 4):
+            event: OrderEvent = result.events[i]
+
+            assert event.pair_name == limit_order_1.pair
+            assert event.order_type == OrderType.CANCEL
+            assert event.limit_order_owner == test_client_for_account_2.wallet
 
         # Check that offers has been placed in the market
         orderbook_after_update = test_client_for_account_2.get_orderbook(
@@ -716,6 +843,17 @@ class TestClient:
 
         # Check that transaction was a success
         assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the event we expected
+        assert len(result.events) == 2
+
+        for i, cancel_order in enumerate([cancel_order_1, cancel_order_2]):
+            event: OrderEvent = result.events[i]
+
+            assert event.pair_name == cancel_order.pair
+            assert event.order_type == OrderType.CANCEL
+            assert event.limit_order_owner == test_client_for_account_2.wallet
 
         # Check that offers has been placed in the market
         orderbook_after_transaction = test_client_for_account_2.get_orderbook(
