@@ -3,7 +3,7 @@ from _decimal import Decimal
 from multiprocessing import Queue
 from threading import Thread
 from time import sleep
-from typing import Union, List, Optional, Dict, Type, Any, Callable, TypedDict
+from typing import Union, List, Optional, Dict, Type, Any, Callable
 
 import pandas as pd
 from eth_typing import ChecksumAddress
