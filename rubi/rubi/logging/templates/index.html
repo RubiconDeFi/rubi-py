@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            background-color: #ffcccc;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 3px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Log Viewer</h1>
+    <ul>
+        {% for log in logs %}
+            <li>{{ log }}</li>
+        {% endfor %}
+    </ul>
+    <script>
+        // Fetch logs from the API endpoint and update the page every 5 seconds
+        function fetchLogs() {
+            fetch('/api/logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logsList = document.querySelector('ul');
+                    logsList.innerHTML = '';
+                    data.forEach(log => {
+                        const logItem = document.createElement('li');
+                        logItem.textContent = log;
+                        logsList.appendChild(logItem);
+                    });
+                });
+        }
+
+        setInterval(fetchLogs, 5000);  // Refresh logs every 5 seconds
+    </script>
+</body>
+</html>

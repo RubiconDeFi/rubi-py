@@ -60,6 +60,12 @@ manage nonces themselves. When a user does not provide a nonce, we derive it fro
 we also wait for the transaction to be confirmed before continuing. If the transaction fails, an exception is raised and
 the program is exited. The user can override this behavior by managing nonces themselves.
 
+#### - Logging to an external source
+
+Rubi provides a built in Flask front end that allows you to view generated logs through your localhost. To enable this, please add `LOGGING_URL= http://localhost:5000/api/logs` to your `.env` file. If you would like to send logs to a custom port, add your own URL. 
+
+See `logging_config.py` for the configuration. Using `from logging_config import logger` allows you to create your own logs and view them on the frontend. 
+
 ### SDK Disclaimer
 
 This codebase is in Alpha and could contain bugs or change significantly between versions. Contributing through Issues
