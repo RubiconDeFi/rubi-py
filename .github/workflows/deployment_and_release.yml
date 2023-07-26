@@ -1,14 +1,14 @@
 name: Deployment to PyPi and Github releases for rubi-py
 
 on:
-  push:
+  pull_request:
     branches: ["master"]
+    types: ["closed"]
 
 jobs:
   # Build the deploy the latest rubi-py code onto Test PyPi
   test-deployment: 
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' #&& github.ref == 'refs/heads/master'
     if: "!contains(github.event.pull_request.labels.*.name, 'skip deployment')"
     steps:
       - uses: actions/checkout@v3
