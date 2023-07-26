@@ -653,39 +653,77 @@ class Client:
         return self.market.batch_cancel(ids=order_ids, **transaction.args())
 
     ######################################################################
-    # data methods (raw data) TODO: once we have cleanly formatted data functions, we can switch to only exposing those
+    # data methods 
     ######################################################################
 
+    # TODO: i would like to remove pay_gem and buy_gem and follow the same pattern as the get_trades method but do not want to cause breaking changes
     def get_offers(
         self,
-        maker: Optional[str] = None,
-        from_address: Optional[str] = None,
+        first: int = 10000000,  # TODO: decide on a default value
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = None,
-        pay_gem: Optional[str] = None,
-        buy_gem: Optional[str] = None,
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        first: Optional[int] = 1000,
-        order_by: Optional[str] = "timestamp",
-        order_direction: Optional[str] = "desc",
-        formatted: Optional[bool] = True,
     ) -> pd.DataFrame:
         df = self.market_data.get_offers(
-            maker,
-            from_address,
-            pair_name,
-            book_side,
-            pay_gem,
-            buy_gem,
-            open,
-            start_time,
-            end_time,
-            first,
-            order_by,
-            order_direction,
-            formatted,
+            maker=maker,
+            from_address=from_address,
+            pair_name=pair_name,
+            book_side=book_side,
+            pay_gem=pay_gem,
+            buy_gem=buy_gem,
+            open=open,
+            start_time=start_time,
+            end_time=end_time,
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            formatted=formatted,
+        )
+        return df
+
+    def get_trades(
+        self,
+        first: int = 10000000,  # TODO: decide on a default value
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_name: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+    ) -> pd.DataFrame:
+        # handle the pair_name parameter
+        if pair_name:
+            base, quote = pair_name.split("/")
+            base_asset = ERC20.from_network(name=base, network=self.network).address
+            quote_asset = ERC20.from_network(name=quote, network=self.network).address
+        else:
+            base_asset = None
+            quote_asset = None
+
+        df = self.market_data.get_trades(
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            book_side=book_side,
+            formatted=formatted,
+            taker=taker,
+            from_address=from_address,
+            take_gem=base_asset,
+            give_gem=quote_asset,
+            start_time=start_time,
+            end_time=end_time,
         )
         return df
 

@@ -4,6 +4,7 @@ currency: "ETH"
 rpc_url: "https://goerli-rollup.arbitrum.io/rpc"
 explorer_url: "https://goerli-rollup-explorer.arbitrum.io"
 market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Arbitrum_Goerli"
+market_data_fallback_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-arbitrum-goerli"
 
 rubicon:
  market:

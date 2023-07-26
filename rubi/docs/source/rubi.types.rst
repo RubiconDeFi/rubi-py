@@ -1,29 +1,29 @@
-rubi.types package
-==================
+rubi.rubicon_types package
+==========================
 
 Submodules
 ----------
 
-rubi.types.order module
------------------------
+rubi.rubicon_types.order module
+-------------------------------
 
-.. automodule:: rubi.types.order
+.. automodule:: rubi.rubicon_types.order
    :members:
    :undoc-members:
    :show-inheritance:
 
-rubi.types.orderbook module
----------------------------
+rubi.rubicon_types.orderbook module
+-----------------------------------
 
-.. automodule:: rubi.types.orderbook
+.. automodule:: rubi.rubicon_types.orderbook
    :members:
    :undoc-members:
    :show-inheritance:
 
-rubi.types.pair module
-----------------------
+rubi.rubicon_types.pair module
+------------------------------
 
-.. automodule:: rubi.types.pair
+.. automodule:: rubi.rubicon_types.pair
    :members:
    :undoc-members:
    :show-inheritance:

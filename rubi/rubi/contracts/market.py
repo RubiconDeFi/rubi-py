@@ -220,7 +220,7 @@ class RubiconMarket(BaseContract):
         buy_amt: int,
         buy_gem: ChecksumAddress,
         pos: int = 0,
-        rounding: bool = True,
+        rounding: bool = False,
         owner: Optional[ChecksumAddress] = None,
         recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
@@ -241,7 +241,7 @@ class RubiconMarket(BaseContract):
         :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
             to insert the offer at
         :type pos: int
-        :param rounding: add rounding to match "close enough" orders, defaults to True
+        :param rounding: add rounding to match "close enough" orders, defaults to False
         :type: rounding: bool
         :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class.
             (optional, default is None)
