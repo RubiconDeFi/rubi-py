@@ -61,6 +61,14 @@ transaction_result = client.place_limit_order(
 
 log.info(transaction_result)
 
+# Get the offer id from the transaction result
+events = transaction_result.raw_events
+for event in events:
+    if isinstance(event, EmitOfferEvent):
+        offer_id = event.id
+
+log.info(offer_id)
+
 # Print events and order books
 while True:
     message = queue.get()
