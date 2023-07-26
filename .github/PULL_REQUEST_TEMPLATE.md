@@ -23,6 +23,7 @@
 
 ## What type of change was this 
 
+- [ ] none - deployment should be skipped
 - [ ] fix - fixing bugs and adding small changes (X.X.X+1)
 - [ ] feat - introducing a new feature (X.X+1.X)
 - [ ] breaking - a breaking API change (X+1.X.X)
