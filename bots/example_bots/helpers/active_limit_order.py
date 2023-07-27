@@ -48,3 +48,7 @@ class ActiveLimitOrder:
 
     def remaining_size(self) -> Decimal:
         return self.size - self.filled_size
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))

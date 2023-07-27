@@ -214,3 +214,149 @@ Additionally, it should be noted that you can override the addresses found in ``
 
 This will result in the client being instantiated with the address of
 ``USDC`` as ``0xFAKEfakeFAKEfakeFAKEfakeFAKEfakeFAKEfake``.
+
+rubi data methods
+-----------------
+
+In this section, we will go through some methods in the ``Client`` and ``MarketData`` classes of the Rubicon package, specifically the ``get_offers`` and ``get_trades`` methods. We'll also illustrate how to use these methods with a basic example at the end.
+
+The `get_offers` Method
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This method is used to retrieve offers placed on the market contract. Users can filter the offers based on various parameters including the maker's address, transaction origin address, tokens involved in the transaction, etc.
+
+Here's the signature of the method:
+
+.. code-block:: python
+
+    def get_offers(
+        self,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_name: Optional[str] = None,
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+    ) -> pd.DataFrame:
+
+The method accepts the following parameters:
+
+.. list-table:: 
+   :header-rows: 1
+
+   * - Parameter
+     - Description
+   * - `first`
+     - Number of offers to return
+   * - `order_by`
+     - Field to order the offers by. Default is "timestamp"
+   * - `order_direction`
+     - Direction to order the offers by. Default is "desc"
+   * - `formatted`
+     - Whether or not to return the dataframe with formatted fields (requires node connection)
+   * - `book_side`
+     - Specifies which side of the order book to consider
+   * - `maker`
+     - The address of the maker of the offer
+   * - `from_address`
+     - The address that originated the transaction that created the offer
+   * - `pair_name`
+     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
+   * - `pay_gem`
+     - The address of the token that the maker is offering. Optional, overrides the `pair_name` if provided
+   * - `buy_gem`
+     - The address of the token that the maker is requesting. Optional, overrides the `pair_name` if provided
+   * - `open`
+     - Whether or not the offer is still active
+   * - `start_time`
+     - The unix timestamp of the earliest offer to return
+   * - `end_time`
+     - The unix timestamp of the latest offer to return
+
+The `get_trades` Method
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This method is used to retrieve trades that have occurred on the market contract. Similar to `get_offers`, users can filter the trades based on various parameters including the taker's address, transaction origin address, tokens involved in the transaction, etc.
+
+Here's the signature of the method:
+
+.. code-block:: python
+
+    def get_trades(
+        self,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_name: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+    ) -> pd.DataFrame:
+
+The method accepts the following parameters:
+
+.. list-table:: 
+   :header-rows: 1
+
+   * - Parameter
+     - Description
+   * - `first`
+     - Number of trades to return
+   * - `order_by`
+     - Field to order the trades by. Default is "timestamp"
+   * - `order_direction`
+     - Direction to order the trades by. Default is "desc"
+   * - `formatted`
+     - Whether or not to return the dataframe with formatted fields (requires node connection)
+   * - `book_side`
+     - Specifies which side of the order book to consider
+   * - `taker`
+     - The address of the taker of the trade
+   * - `from_address`
+     - The address that originated the transaction that created the trade (helpful when transactions go through the router)
+   * - `pair_name`
+     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
+   * - `start_time`
+     - The unix timestamp of the earliest trade to return
+   * - `end_time`
+     - The unix timestamp of the latest trade to return
+
+Retrieving Offer Data
+^^^^^^^^^^^^^^^^^^^^^
+
+In the example below, we will retrieve WETH/USDC offer data for a given time range on the network of the node connection.
+
+.. code-block:: python
+
+    weth_usdc_offers = client.get_offers(
+        pair_name="WETH/USDC",
+        book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
+        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
+        start_time=1688187600,
+        end_time=1690606800,
+    )
+
+Retrieving Trade Data
+^^^^^^^^^^^^^^^^^^^^^
+
+In the example below, we will access WETH/USDC trade data for a given time range on the network of the node connection.
+
+.. code-block:: python
+
+    weth_usdc_trades = client.get_trades(
+        pair_name="WETH/USDC",
+        book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
+        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
+        start_time=1688187600,
+        end_time=1690606800,
+    )

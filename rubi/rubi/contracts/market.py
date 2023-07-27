@@ -4,7 +4,7 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts.base_contract import BaseContract
+from rubi.contracts.base_contract import BaseContract, ContractType
 from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
@@ -27,11 +27,18 @@ class RubiconMarket(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
+        contract_type: ContractType = ContractType.RUBICON_MARKET,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> None:
         """constructor method"""
-        super().__init__(w3=w3, contract=contract, wallet=wallet, key=key)
+        super().__init__(
+            w3=w3,
+            contract=contract,
+            contract_type=ContractType.RUBICON_MARKET,
+            wallet=wallet,
+            key=key,
+        )
 
     @classmethod
     def from_network(
@@ -55,6 +62,7 @@ class RubiconMarket(BaseContract):
             w3=network.w3,
             address=network.rubicon.market.address,
             contract_abi=network.rubicon.market.abi,
+            contract_type=ContractType.RUBICON_MARKET,
             wallet=wallet,
             key=key,
         )
@@ -220,7 +228,7 @@ class RubiconMarket(BaseContract):
         buy_amt: int,
         buy_gem: ChecksumAddress,
         pos: int = 0,
-        rounding: bool = True,
+        rounding: bool = False,
         owner: Optional[ChecksumAddress] = None,
         recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
@@ -241,7 +249,7 @@ class RubiconMarket(BaseContract):
         :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
             to insert the offer at
         :type pos: int
-        :param rounding: add rounding to match "close enough" orders, defaults to True
+        :param rounding: add rounding to match "close enough" orders, defaults to False
         :type: rounding: bool
         :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class.
             (optional, default is None)

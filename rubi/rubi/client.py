@@ -15,7 +15,12 @@ from rubi.contracts import (
     ERC20,
     TransactionReceipt,
     EmitFeeEvent,
+    EmitSwap,
+    EmitOfferEvent,
+    EmitTakeEvent,
+    EmitCancelEvent,
 )
+from rubi.data import MarketData
 from rubi.network import (
     Network,
 )
@@ -34,8 +39,6 @@ from rubi.rubicon_types import (
     NewCancelOrder,
     UpdateLimitOrder,
 )
-
-from rubi.data import MarketData
 
 
 class Client:
@@ -464,8 +467,8 @@ class Client:
 
         :param transaction: Transaction object containing the market order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed market order.
-        :rtype: str
+        :return: The transaction receipt of the executed market order.
+        :rtype: TransactionReceipt
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -477,7 +480,7 @@ class Client:
 
         match order.order_side:
             case OrderSide.BUY:
-                return self.market.buy_all_amount(
+                transaction_receipt = self.market.buy_all_amount(
                     buy_gem=pair.base_asset.address,
                     buy_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.quote_asset.address,
@@ -487,7 +490,7 @@ class Client:
                     **transaction.args(),
                 )
             case OrderSide.SELL:
-                return self.market.sell_all_amount(
+                transaction_receipt = self.market.sell_all_amount(
                     pay_gem=pair.base_asset.address,
                     pay_amt=pair.base_asset.to_integer(order.size),
                     buy_gem=pair.quote_asset.address,
@@ -496,6 +499,10 @@ class Client:
                     ),
                     **transaction.args(),
                 )
+            case _:
+                raise Exception("OrderSide must be BUY or SELL")
+
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
 
     def place_limit_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a limit order transaction by executing the specified transaction object. The transaction object should
@@ -503,8 +510,8 @@ class Client:
 
         :param transaction: Transaction object containing the limit order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed limit order.
-        :rtype: str
+        :return: The transaction receipt of the executed limit order.
+        :rtype: TransactionReceipt
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -516,7 +523,7 @@ class Client:
 
         match order.order_side:
             case OrderSide.BUY:
-                return self.market.offer(
+                transaction_receipt = self.market.offer(
                     pay_amt=pair.quote_asset.to_integer(order.price * order.size),
                     pay_gem=pair.quote_asset.address,
                     buy_amt=pair.base_asset.to_integer(order.size),
@@ -524,13 +531,17 @@ class Client:
                     **transaction.args(),
                 )
             case OrderSide.SELL:
-                return self.market.offer(
+                transaction_receipt = self.market.offer(
                     pay_amt=pair.base_asset.to_integer(order.size),
                     pay_gem=pair.base_asset.address,
                     buy_amt=pair.quote_asset.to_integer(order.price * order.size),
                     buy_gem=pair.quote_asset.address,
                     **transaction.args(),
                 )
+            case _:
+                raise Exception("OrderSide must be BUY or SELL")
+
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
 
     def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
@@ -538,8 +549,8 @@ class Client:
 
         :param transaction: Transaction object containing the cancel order.
         :type transaction: Transaction
-        :return: The transaction hash of the executed cancel order.
-        :rtype: str
+        :return: The transaction receipt of the executed cancel order.
+        :rtype: TransactionReceipt
         :raises Exception: If the transaction contains more than one order.
         """
         if len(transaction.orders) > 1:
@@ -547,15 +558,19 @@ class Client:
 
         order: NewCancelOrder = transaction.orders[0]  # noqa
 
-        return self.market.cancel(id=order.order_id, **transaction.args())
+        transaction_receipt = self.market.cancel(
+            id=order.order_id, **transaction.args()
+        )
+
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
 
     def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Place multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit orders.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit orders.
-        :rtype: str
+        :return: The transaction receipt of the executed batch limit orders.
+        :rtype: TransactionReceipt
         """
         pay_amts = []
         pay_gems = []
@@ -582,7 +597,7 @@ class Client:
                     )
                     buy_gems.append(pair.quote_asset.address)
 
-        return self.market.batch_offer(
+        transaction_receipt = self.market.batch_offer(
             pay_amts=pay_amts,
             pay_gems=pay_gems,
             buy_amts=buy_amts,
@@ -590,13 +605,15 @@ class Client:
             **transaction.args(),
         )
 
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+
     def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Update multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order updates.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit order updates.
-        :rtype: str
+        :return: The transaction receipt of the executed batch limit order updates.
+        :rtype: TransactionReceipt
         """
         order_ids = []
         pay_amts = []
@@ -626,7 +643,7 @@ class Client:
                     )
                     buy_gems.append(pair.quote_asset.address)
 
-        return self.market.batch_requote(
+        transaction_receipt = self.market.batch_requote(
             ids=order_ids,
             pay_amts=pay_amts,
             pay_gems=pay_gems,
@@ -635,13 +652,15 @@ class Client:
             **transaction.args(),
         )
 
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+
     def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Cancel multiple limit orders in a batch transaction.
 
         :param transaction: Transaction object containing multiple limit order cancellations.
         :type transaction: Transaction
-        :return: The transaction hash of the executed batch limit order cancellations.
-        :rtype: str
+        :return: The transaction receipt of the executed batch limit order cancellations.
+        :rtype: TransactionReceipt
         """
         order_ids = []
 
@@ -650,42 +669,84 @@ class Client:
 
             order_ids.append(order.order_id)
 
-        return self.market.batch_cancel(ids=order_ids, **transaction.args())
+        transaction_receipt = self.market.batch_cancel(
+            ids=order_ids, **transaction.args()
+        )
+
+        return self._handle_transaction_receipt_raw_events(transaction_receipt)
 
     ######################################################################
-    # data methods (raw data) TODO: once we have cleanly formatted data functions, we can switch to only exposing those
+    # data methods
     ######################################################################
 
+    # TODO: i would like to remove pay_gem and buy_gem and follow the same pattern as the get_trades method but do not want to cause breaking changes
     def get_offers(
         self,
-        maker: Optional[str] = None,
-        from_address: Optional[str] = None,
+        first: int = 10000000,  # TODO: decide on a default value
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
-        book_side: Optional[OrderSide] = None,
-        pay_gem: Optional[str] = None,
-        buy_gem: Optional[str] = None,
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        first: Optional[int] = 1000,
-        order_by: Optional[str] = "timestamp",
-        order_direction: Optional[str] = "desc",
-        formatted: Optional[bool] = True,
     ) -> pd.DataFrame:
         df = self.market_data.get_offers(
-            maker,
-            from_address,
-            pair_name,
-            book_side,
-            pay_gem,
-            buy_gem,
-            open,
-            start_time,
-            end_time,
-            first,
-            order_by,
-            order_direction,
-            formatted,
+            maker=maker,
+            from_address=from_address,
+            pair_name=pair_name,
+            book_side=book_side,
+            pay_gem=pay_gem,
+            buy_gem=buy_gem,
+            open=open,
+            start_time=start_time,
+            end_time=end_time,
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            formatted=formatted,
+        )
+        return df
+
+    def get_trades(
+        self,
+        first: int = 10000000,  # TODO: decide on a default value
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_name: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+    ) -> pd.DataFrame:
+        # handle the pair_name parameter
+        if pair_name:
+            base, quote = pair_name.split("/")
+            base_asset = ERC20.from_network(name=base, network=self.network).address
+            quote_asset = ERC20.from_network(name=quote, network=self.network).address
+        else:
+            base_asset = None
+            quote_asset = None
+
+        df = self.market_data.get_trades(
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            book_side=book_side,
+            formatted=formatted,
+            taker=taker,
+            from_address=from_address,
+            take_gem=base_asset,
+            give_gem=quote_asset,
+            start_time=start_time,
+            end_time=end_time,
         )
         return df
 
@@ -728,3 +789,49 @@ class Client:
     @staticmethod
     def _check_allowance(pair: Pair, order: BaseNewOrder):
         pass
+
+    def _handle_transaction_receipt_raw_events(
+        self, transaction_receipt: TransactionReceipt
+    ) -> TransactionReceipt:
+        """
+        Transforms the raw transaction receipt events to human-readable events
+
+        :param transaction_receipt:
+        :type transaction_receipt: TransactionReceipt
+        :return: The transaction receipt with human-readable events populated
+        :rtype: TransactionReceipt
+        """
+        events: List[OrderEvent] = []
+        for raw_event in transaction_receipt.raw_events:
+            if (
+                isinstance(raw_event, EmitFeeEvent)
+                or isinstance(raw_event, EmitSwap)
+                or isinstance(raw_event, Dict)
+            ):
+                # TODO: handle these events correctly
+                continue
+            else:
+                raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent]
+
+                event_pair = None
+                for pair in self._pairs.values():
+                    if (
+                        pair.ask_identifier == raw_event.pair
+                        or pair.bid_identifier == raw_event.pair
+                    ):
+                        event_pair = pair
+                        break
+
+                if not event_pair:
+                    # We don't have a pair setup to correctly decode this event
+                    continue
+
+                events.append(
+                    OrderEvent.from_event(
+                        pair=event_pair, event=raw_event, wallet=self.wallet
+                    )
+                )
+
+        transaction_receipt.set_events(events=events)
+
+        return transaction_receipt

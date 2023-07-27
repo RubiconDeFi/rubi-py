@@ -38,6 +38,17 @@ class OrderSide(Enum):
             case OrderSide.SELL:
                 return -1
 
+    def opposite(self) -> "OrderSide":
+        match self:
+            case OrderSide.NEUTRAL:
+                return OrderSide.NEUTRAL
+
+            case OrderSide.BUY:
+                return OrderSide.SELL
+
+            case OrderSide.SELL:
+                return OrderSide.BUY
+
 
 class OrderType(Enum):
     """Enumeration representing the order type."""
@@ -137,6 +148,10 @@ class NewLimitOrder(BaseNewOrder):
 
         self.size = size
         self.price = price
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 class UpdateLimitOrder(BaseNewOrder):

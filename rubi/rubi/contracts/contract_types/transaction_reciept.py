@@ -1,13 +1,34 @@
 from _decimal import Decimal
-from typing import Optional
+from enum import Enum
+from typing import Optional, List, Any
 
 from eth_typing import BlockNumber, ChecksumAddress
 from hexbytes import HexBytes
-from web3.types import Wei, TxReceipt
+from web3.types import Wei, TxReceipt, EventData
+
+from rubi.contracts.contract_types import BaseEvent
 
 
-# TODO: a TxReceipt contains logs which can be decoded into events that were emitted by calling the contract function.
-#  It may be useful in future to add the logs field to the TransactionReceipt object and decode them into objects.
+class TransactionStatus(Enum):
+    """Enum representing the status of a transaction."""
+
+    SUCCESS = "SUCCESS"
+    FAILURE = "FAILURE"
+
+    def __eq__(self, other):
+        return self.name is other.name and self.value == other.value
+
+    @classmethod
+    def from_int(cls, status: int) -> "TransactionStatus":
+        """
+        Transform the TxReceipt status into an Enum
+        """
+        if status == 0:
+            return cls.FAILURE
+        else:
+            return cls.SUCCESS
+
+
 class TransactionReceipt:
     def __init__(
         self,
@@ -24,6 +45,7 @@ class TransactionReceipt:
         l1_gas_price: Optional[int] = None,
         l1_gas_used: Optional[int] = None,
         l1_fee_scalar: Optional[Decimal] = None,
+        raw_events: Optional[List[BaseEvent]] = None,
     ):
         self.block_number = block_number
         self.contract_address = contract_address
@@ -32,15 +54,21 @@ class TransactionReceipt:
         self.from_address = from_address
         self.to_address = to_address
         self.status = status
+        # Do this so that introducing TransactionStatus is not a breaking change
+        self.transaction_status = TransactionStatus.from_int(status=status)
         self.transaction_hash = transaction_hash
         self.transaction_index = transaction_index
         self.l1_fee = l1_fee
         self.l1_gas_price = l1_gas_price
         self.l1_gas_used = l1_gas_used
         self.l1_fee_scalar = l1_fee_scalar
+        self.raw_events = raw_events
+        self.events = None
 
     @classmethod
-    def from_tx_receipt(cls, tx_receipt: TxReceipt) -> "TransactionReceipt":
+    def from_tx_receipt(
+        cls, tx_receipt: TxReceipt, raw_events: List[BaseEvent | EventData]
+    ) -> "TransactionReceipt":
         return cls(
             block_number=tx_receipt["blockNumber"],
             contract_address=tx_receipt["contractAddress"],
@@ -63,7 +91,12 @@ class TransactionReceipt:
             l1_fee_scalar=None
             if tx_receipt.get("l1FeeScalar") is None
             else Decimal(tx_receipt.get("l1FeeScalar")),
+            raw_events=raw_events,
         )
+
+    # TODO: Any is used to avoid circular dependencies, look at a restructure. These are OrderEvents.
+    def set_events(self, events: List[Any]):
+        self.events = events
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)

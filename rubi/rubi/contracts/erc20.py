@@ -8,7 +8,7 @@ from web3 import Web3
 from web3.contract import Contract
 from web3.types import ABI
 
-from rubi.contracts.base_contract import BaseContract
+from rubi.contracts.base_contract import BaseContract, ContractType
 from rubi.contracts.contract_types import TransactionReceipt
 from rubi.network import Network
 
@@ -31,11 +31,18 @@ class ERC20(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
+        contract_type: ContractType = ContractType.ERC20,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ):
         """constructor method"""
-        super().__init__(w3=w3, contract=contract, wallet=wallet, key=key)
+        super().__init__(
+            w3=w3,
+            contract=contract,
+            contract_type=ContractType.ERC20,
+            wallet=wallet,
+            key=key,
+        )
 
         self.name: str = self.name()
         self.symbol: str = self.symbol()
@@ -87,6 +94,7 @@ class ERC20(BaseContract):
             w3=network.w3,
             address=network.token_addresses[name],
             contract_abi=abi,
+            contract_type=ContractType.ERC20,
             wallet=wallet,
             key=key,
         )
@@ -127,7 +135,12 @@ class ERC20(BaseContract):
             )
 
         return cls.from_address_and_abi(
-            w3=w3, address=address, contract_abi=abi, wallet=wallet, key=key
+            w3=w3,
+            address=address,
+            contract_abi=abi,
+            contract_type=ContractType.ERC20,
+            wallet=wallet,
+            key=key,
         )
 
     ######################################################################
