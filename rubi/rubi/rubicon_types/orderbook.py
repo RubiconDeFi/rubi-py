@@ -84,7 +84,7 @@ class BookSide:
                     size = base_asset.to_decimal(order[0])
                     price = quote_asset.to_decimal(order[1]) / size
 
-                    if levels and levels[-i].price == price:
+                    if levels and levels[-1].price == price:
                         levels[-1].size += size
                     else:
                         levels.append(BookLevel(price=price, size=size))
