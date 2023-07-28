@@ -367,6 +367,7 @@ class DetailedBookSide(BookSide):
                 [order]
             )
             self.offer_to_level[order.id] = self.price_to_level[order.price]
+            self.levels.append(self.price_to_level[order.price])
 
     def remove_order(self, id: int):
         """Remove an order from the detailed book side.
@@ -469,7 +470,7 @@ class DetailedOrderBook(OrderBook):
         :type order: LimitOrder
         """
 
-        match order.side:
+        match order.order_side:
             case OrderSide.BUY:
                 self.bid_ids.add(order.id)
                 self.bids.add_order(order)

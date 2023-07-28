@@ -53,6 +53,7 @@ with open('open_offers.pickle', 'wb') as handle:
     pickle.dump(open_offers, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 '''
+'''
 # load the dataframe
 with open('open_offers.pickle', 'rb') as handle:
     open_offers = pickle.load(handle)
@@ -76,22 +77,27 @@ for offer in offers:
 open_offers = client.market_data.get_limit_orders(
     pair_name="WETH/USDC",
     book_side=OrderSide.NEUTRAL,
-    open=True,
+    open=False,
     #maker=client.wallet,
     first=100,
+    removed_block_start=10000000,
 )
 # print(open_offers)
-'''
 
-#data = (open_offers[0], open_offers[1])
-data = (bids, asks)
+
+data = (open_offers[0], open_offers[1])
+#data = (bids, asks)
 
 # create a detailed order book for WETH/USDC
 book = DetailedOrderBook.from_rubicon_offer_book(data)
 
 # go through and remove all the bids
-best_bid = book.best_bid_offer()
-while best_bid:
+test = book.best_bid_offer()
+test.price = Decimal("4200.69")
+book.add_order(test)
+print(book.best_bid_offer())
+'''
+while best_bid != None:
     print(best_bid)
     print('-------------------------')
     print('the current best bid is: ', best_bid.id)
@@ -100,12 +106,15 @@ while best_bid:
     book.remove_order(best_bid.id)
     best_bid = book.best_bid_offer()
 
-best_bid = book.best_bid_offer()
+print('this should be the first bid: ', first_bid.id)
+book.add_order(first_bid)
+
+print(book.best_bid_offer())
 
 print(best_bid)
 print(best_bid.id)
+'''
+#book.remove_order(best_bid.id)
 
-book.remove_order(best_bid.id)
-
-print(book.best_bid_offer())
-print(book.best_bid_offer().id)
+#print(book.best_bid_offer())
+#print(book.best_bid_offer().id)

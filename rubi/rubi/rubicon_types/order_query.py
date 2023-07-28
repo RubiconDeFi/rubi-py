@@ -132,6 +132,7 @@ class OrderQuery:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        removed_block_start: Optional[int] = None,
         # TODO: there is definitely a clear way to pass these parameters in a more concise way, prolly **kargs
     ):  # TODO: return a typed object (see subgrounds documentation for more info)
         # determine that the parameters are valid
@@ -178,6 +179,7 @@ class OrderQuery:
             self.offer.open == open if open is not None else None,
             self.offer.timestamp >= start_time if start_time else None,
             self.offer.timestamp <= end_time if end_time else None,
+            self.offer.removed_block >= removed_block_start if removed_block_start else None,
         ]
         where = [condition for condition in where if condition is not None]
 

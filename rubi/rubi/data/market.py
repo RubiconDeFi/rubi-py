@@ -411,6 +411,8 @@ class MarketData:
         first: Optional[int] = 1000,
         order_by: Optional[str] = "timestamp",
         order_direction: Optional[str] = "desc",
+        removed_block_start: Optional[int] = None, # TODO: add this to the normal query methods
+        # end_block: Optional[int] = None, # TODO: add this to the normal query methods
     ):  # -> List[LimitOrder]: # TODO: determine how we want to return this data
         # handle the pair_name parameter
         if pair_name:
@@ -433,6 +435,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     buy_fields = self.offer_query.offers_fields(buy_query, False)
                     buy_df = self.offer_query.query_offers(buy_fields, False)
@@ -456,6 +459,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     sell_fields = self.offer_query.offers_fields(sell_query, False)
                     sell_df = self.offer_query.query_offers(sell_fields, False)
@@ -481,6 +485,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     buy_fields = self.offer_query.offers_fields(buy_query, False)
                     buy_df = self.offer_query.query_offers(buy_fields, False)
@@ -499,6 +504,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     sell_fields = self.offer_query.offers_fields(sell_query, False)
                     sell_df = self.offer_query.query_offers(sell_fields, False)
