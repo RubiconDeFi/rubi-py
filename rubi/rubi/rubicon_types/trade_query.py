@@ -14,6 +14,46 @@ from rubi.network import (
     Network,
 )
 
+# TODO: this should be moved to rubi/rubi/rubicon_types/order.py and most likely extend NewMarketOrder
+class Trade: 
+
+    def __init__(
+        self, 
+        # pair_name: str,
+        # order_side: OrderSide,
+        block_number: int,
+        block_index: int,
+        log_index: int,
+        #txn_hash: str,
+        taker: str, # ChecksumAddress
+        from_address: str, # ChecksumAddress
+        take_gem: str, # ChecksumAddress (or ERC20)
+        give_gem: str, # ChecksumAddress (or ERC20)
+        take_amt: int,
+        give_amt: int,
+        order_id: int,
+    ):
+        
+        # self.pair_name = pair_name
+        # self.order_side = order_side
+        self.block_number = block_number
+        self.block_index = block_index
+        self.log_index = log_index
+        #self.txn_hash = txn_hash
+        self.taker = taker
+        self.from_address = from_address
+        self.take_gem = take_gem
+        self.give_gem = give_gem
+        self.take_amt = take_amt
+        self.give_amt = give_amt
+        # self.price = price
+        self.order_id = order_id
+    
+    # def get_size(self): -> Decimal
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 class TradeQuery:
     def __init__(
@@ -229,12 +269,13 @@ class TradeQuery:
             trades.transaction.block_number,
             trades.transaction.block_index,
             trades.index,
+            trades.offer.id,
             trades.offer.maker.id,
             trades.offer.from_address.id,
             trades.offer.transaction.block_number,
             trades.offer.transaction.block_index,
             trades.offer.index,
-        ]
+        ] # TODO: extend this to include the transaction hash 
 
         if formatted:
             fields.append(trades.take_amt_formatted)
@@ -268,6 +309,7 @@ class TradeQuery:
                 "block_number",
                 "block_index",
                 "log_index",
+                "offer_id",
                 "maker",
                 "maker_from_address",
                 "offer_block_number",
@@ -285,6 +327,7 @@ class TradeQuery:
                 "take_amt",
                 "give_amt",
                 "timestamp",
+                "offer_id",
                 "maker",
                 "maker_from_address",
                 "block_number",
@@ -296,6 +339,7 @@ class TradeQuery:
         else:
             df.columns = [col.replace("takes_", "") for col in df.columns]
             df.columns = [col.replace("_id", "") for col in df.columns]
+            df["offer"] = df["offer"].apply(lambda x: int(x, 16))
 
             # TODO: decide whether we should return the unformatted fields or not
             if formatted:
@@ -327,3 +371,34 @@ class TradeQuery:
 
         # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
         return df
+    
+    # TODO: update this to be a market order 
+    def dataframe_to_trades(
+        self, 
+        df: pd.DataFrame, 
+        # pair_name: str,
+    ) -> List[Trade]: 
+        
+        # TODO: update this to be a market order
+        def row_to_trade(row: pd.Series) -> Trade:
+
+            # TODO: make sure this can handle both the formatted query and the unformatted query options
+            return Trade(
+                # pair_name=pair_name,
+                # order_side=OrderSide,
+                block_number=row['block_number'],
+                block_index=row['block_index'],
+                log_index=row['log_index'],
+                #txn_hash=row['txn_hash'],
+                taker=row['taker'],
+                from_address=row['from_address'],
+                take_gem=row['take_gem_address'], # TODO: this should be handled based on formatted or unformatted query
+                give_gem=row['give_gem_address'], # TODO: this should be handled based on formatted or unformatted query
+                take_amt=row['take_amt_raw'], # TODO: this should be handled based on formatted or unformatted query
+                give_amt=row['give_amt_raw'], # TODO: this should be handled based on formatted or unformatted query
+                order_id=row['offer'],
+            )
+        
+        return df.apply(row_to_trade, axis=1).tolist()
+
+    

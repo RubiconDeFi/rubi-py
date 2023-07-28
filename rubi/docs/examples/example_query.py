@@ -43,7 +43,7 @@ open_offers = client.get_offers(
     book_side=OrderSide.NEUTRAL,
     open=False,
     maker=client.wallet,
-    first=100,
+    first=10,
     formatted=False,
 )
 print(open_offers)
@@ -51,34 +51,61 @@ print(open_offers)
 # pickle the dataframe
 with open('open_offers.pickle', 'wb') as handle:
     pickle.dump(open_offers, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 '''
 # load the dataframe
 with open('open_offers.pickle', 'rb') as handle:
     open_offers = pickle.load(handle)
 
-print(open_offers.shape)
-print(open_offers.columns)
-print(open_offers.head(1))
-
 offers = client.market_data.offer_query.dataframe_to_limit_orders(
     df=open_offers,
     pair_name="WETH/USDC",)
-print(offers)
+
+# iterate through list and make bids/asks
+bids = []
+asks = []
+for offer in offers:
+    if offer.order_side == OrderSide.BUY:
+        bids.append(offer)
+    else:
+        asks.append(offer)
 
 '''
+
 # query the open WETH/USDC offers for your wallet
 open_offers = client.market_data.get_limit_orders(
     pair_name="WETH/USDC",
     book_side=OrderSide.NEUTRAL,
-    open=False,
-    maker=client.wallet,
+    open=True,
+    #maker=client.wallet,
     first=100,
 )
 # print(open_offers)
+'''
 
-data = (open_offers[0], open_offers[1])
+#data = (open_offers[0], open_offers[1])
+data = (bids, asks)
 
 # create a detailed order book for WETH/USDC
 book = DetailedOrderBook.from_rubicon_offer_book(data)
+
+# go through and remove all the bids
+best_bid = book.best_bid_offer()
+while best_bid:
+    print(best_bid)
+    print('-------------------------')
+    print('the current best bid is: ', best_bid.id)
+    print('the current best price is: ', best_bid.price)
+    print('-------------------------')
+    book.remove_order(best_bid.id)
+    best_bid = book.best_bid_offer()
+
+best_bid = book.best_bid_offer()
+
+print(best_bid)
+print(best_bid.id)
+
+book.remove_order(best_bid.id)
+
 print(book.best_bid_offer())
-'''
+print(book.best_bid_offer().id)

@@ -512,3 +512,44 @@ class MarketData:
                     )
 
                     return [bids, asks]
+                
+    # TODO: update this to be market order objects
+    # TODO: abstract teh pair name and book side into the client 
+    def get_trades_objects(
+        self,
+        first: int = 10000000,  # TODO: decide on a default value
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        formatted: bool = True,
+        book_side: OrderSide = OrderSide.NEUTRAL,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_name: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+    ): # -> List[Trades]: TODO: update this once we have the market order object
+        
+        # handle the pair_name parameter
+        if pair_name:
+            base, quote = pair_name.split("/")
+            base_asset = ERC20.from_network(name=base, network=self.network).address
+            quote_asset = ERC20.from_network(name=quote, network=self.network).address
+        else:
+            base_asset = None
+            quote_asset = None
+
+        trades = self.get_trades(
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            formatted=formatted,
+            book_side=book_side,
+            taker=taker,
+            from_address=from_address,
+            take_gem=base_asset,
+            give_gem=quote_asset,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        return self.trade_query.dataframe_to_trades(trades)

@@ -220,6 +220,7 @@ class DetailedBookLevel(BookLevel):
 
     @classmethod
     def from_rubicon_offers(cls, orders: List[LimitOrder]):
+
         price = orders[0].price
         size = sum(order.get_size() for order in orders)
 
@@ -376,10 +377,16 @@ class DetailedBookSide(BookSide):
 
         if id in self.offer_to_level:
             self.offer_to_level[id].remove_order(id)
-            del self.offer_to_level[id]
+            
+            if self.offer_to_level[id].orders == []:
+                try:
+                    del self.price_to_level[self.offer_to_level[id].price]
+                    self.levels.remove(self.offer_to_level[id])
 
-            if self.offer_to_level[id].size == 0:
-                del self.price_to_level[self.offer_to_level[id].price]
+                except:
+                    raise ValueError('Level not found.')
+
+            del self.offer_to_level[id]
 
         else:
             raise ValueError(
@@ -400,7 +407,11 @@ class DetailedBookSide(BookSide):
         :return: The price of the best level.
         :rtype: Decimal
         """
-        return self.levels[0].price
+
+        if self.levels == []:
+            return None # TODO: decide if this is the best path forward
+        else:
+            return self.levels[0].price
 
     def best_offer(self) -> LimitOrder:
         """Returns the best offer on the book side.
@@ -408,7 +419,11 @@ class DetailedBookSide(BookSide):
         :return: The best offer.
         :rtype: LimitOrder
         """
-        return self.levels[0].orders[0]
+
+        if self.levels == []:
+            return None # TODO: decide if this is the best path forward
+        else:
+            return self.levels[0].orders[0]
 
     # remove_liquidity_from_book is inherited from BookSide
     # def remove_liquidity_from_book(self, price: Decimal, size: Decimal):

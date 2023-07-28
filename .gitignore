@@ -157,3 +157,6 @@ bot_config.yaml
 
 # playground
 playground.py
+
+# pickle files
+.pickle

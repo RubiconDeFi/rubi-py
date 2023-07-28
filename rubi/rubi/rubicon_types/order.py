@@ -281,6 +281,8 @@ class LimitOrder(BaseNewOrder):
         price: Optional[Decimal] = None,
         removed_timestamp: Optional[int] = None,
         removed_block_number: Optional[int] = None,
+        removed_block_index: Optional[int] = None,
+        removed_log_index: Optional[int] = None,
     ):
         # TODO: this is really an open discussion... we need an identifier for when the order was created that is inclusive of the: block, txn_index, and log_index
         # TODO: we will probably want to discuss the base_amt, base_amt_original, base_amt_filled, quote_amt, quote_amt_original, and quote_amt_filled. not sure if this is the best way to represent this data
@@ -311,6 +313,8 @@ class LimitOrder(BaseNewOrder):
         self.price = price
         self.removed_timestamp = removed_timestamp
         self.removed_block_number = removed_block_number
+        self.removed_block_index = removed_block_index
+        self.removed_log_index = removed_log_index
 
         if self.price is None:
             self.price = quote_asset.to_decimal(
@@ -340,6 +344,8 @@ class LimitOrder(BaseNewOrder):
         self,
         removed_timestamp: Optional[int] = None,
         removed_block_number: Optional[int] = None,
+        removed_block_index: Optional[int] = None,
+        removed_log_index: Optional[int] = None,
     ):
         """A method to update the order when it is cancelled."""
 
@@ -348,6 +354,8 @@ class LimitOrder(BaseNewOrder):
         self.quote_amt = 0
         self.removed_timestamp = removed_timestamp
         self.removed_block_number = removed_block_number
+        self.removed_block_index = removed_block_index
+        self.removed_log_index = removed_log_index
 
     # TODO: do we want a function to return the asset amounts as decimals? or should we just use the ERC20.to_decimal() function?
     def get_size(self) -> Decimal:

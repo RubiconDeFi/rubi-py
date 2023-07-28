@@ -3,8 +3,8 @@ chain_id: 10
 currency: "ETH"
 rpc_url: "https://mainnet.optimism.io"
 explorer_url: "https://optimistic.etherscan.io/"
-market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev"
-market_data_fallback_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-optimism-mainnet"
+market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Internal"
+market_data_fallback_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Internal"
 
 rubicon:
  market:

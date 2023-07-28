@@ -213,6 +213,8 @@ class OrderQuery:
             offers.open,
             offers.removed_timestamp,
             offers.removed_block,
+            offers.removed_block_index,
+            offers.removed_log_index,
             offers.transaction.id,
             offers.transaction.block_number,
             offers.transaction.block_index,
@@ -368,12 +370,10 @@ class OrderQuery:
                 quote_amt_filled=quote_asset_amt_filled,
                 open=row["open"],
                 price=None,  # we want to calculate this on the fly based on direction
-                removed_timestamp=row.get(
-                    "removed_timestamp", None
-                ),  # Use None if 'removed_timestamp' doesn't exist
-                removed_block_number=row.get(
-                    "removed_block", None
-                ),  # Use None if 'removed_block' doesn't exist
+                removed_timestamp=row.get("removed_timestamp", None),  
+                removed_block_number=row.get("removed_block", None),
+                removed_block_index=row.get("removed_block_index", None), # offers.removed_block_index,
+                removed_log_index=row.get("removed_log_index", None),    # offers.removed_log_index,
             )
 
         return df.apply(row_to_limitorder, axis=1).tolist()
