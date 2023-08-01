@@ -61,7 +61,7 @@ class OrderType(Enum):
     CANCEL = "CANCEL"
 
 
-class BaseNewOrder:
+class BaseOrder:
     """Base class for representing a new order.
 
     :param pair_name: The name of the trading pair.
@@ -79,12 +79,12 @@ class BaseNewOrder:
         order_side: OrderSide,
     ):
         """constructor method."""
-        self.pair = pair_name
+        self.pair_name = pair_name
         self.order_side = order_side
         self.order_type = order_type
 
 
-class NewMarketOrder(BaseNewOrder):
+class NewMarketOrder(BaseOrder):
     """Class representing a new market order.
 
     :param pair_name: The name of the pair being traded e.g. WETH/USDC.
@@ -122,7 +122,7 @@ class NewMarketOrder(BaseNewOrder):
             self.worst_execution_price = worst_execution_price
 
 
-class NewLimitOrder(BaseNewOrder):
+class NewLimitOrder(BaseOrder):
     """Class representing a new limit order
 
     :param pair_name: The name of the pair being traded e.g. WETH/USDC.
@@ -153,7 +153,7 @@ class NewLimitOrder(BaseNewOrder):
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
-class UpdateLimitOrder(BaseNewOrder):
+class UpdateLimitOrder(BaseOrder):
     """Class representing an update to an existing limit order
 
     :param pair_name: The name of the pair being traded e.g. WETH/USDC.
@@ -188,7 +188,75 @@ class UpdateLimitOrder(BaseNewOrder):
         self.price = price
 
 
-class NewCancelOrder(BaseNewOrder):
+class ActiveLimitOrder(BaseOrder):
+    """Class representing an existing limit order
+
+    :param pair_name: The name of the pair being traded e.g. WETH/USDC.
+    :type pair_name: str
+    :param order_side: The side of the order (BUY or SELL).
+    :type order_side: OrderSide
+    :param order_id: The ID of the order to update.
+    :type order_id: int
+    :param order_owner: The address of the owner of the order
+    :type order_owner: ChecksumAddress
+    :param size: The updated size of the order.
+    :type size: Decimal
+    :param price: The updated price of the order.
+    :type price: Decimal
+    :param filled_size: The amount of the order that has been filled
+    :type filled_size: Decimal
+    """
+
+    def __init__(
+        self,
+        pair_name: str,
+        order_side: OrderSide,
+        order_id: int,
+        order_owner: ChecksumAddress,
+        size: Decimal,
+        price: Decimal,
+        filled_size: Decimal = Decimal("0"),
+    ):
+        """constructor method"""
+        super().__init__(
+            pair_name=pair_name,
+            order_type=OrderType.LIMIT,
+            order_side=order_side,
+        )
+
+        self.order_id = order_id
+        self.order_owner = order_owner
+        self.size = size
+        self.price = price
+        self.filled_size = filled_size
+
+    @property
+    def remaining_size(self) -> Decimal:
+        return self.size - self.filled_size
+
+    @classmethod
+    def from_order_event(cls, order_event: "OrderEvent") -> "ActiveLimitOrder":
+        if order_event.order_type != OrderType.LIMIT:
+            raise Exception("event must have LIMIT as order_type.")
+
+        return cls(
+            pair_name=order_event.pair_name,
+            order_side=order_event.order_side,
+            order_id=order_event.limit_order_id,
+            order_owner=order_event.limit_order_owner,
+            size=order_event.size,
+            price=order_event.price,
+        )
+
+    def update_with_take(self, order_event: "OrderEvent"):
+        self.filled_size += order_event.size
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
+
+
+class NewCancelOrder(BaseOrder):
     """Class representing a limit order cancellation
 
     :param pair_name: The name of the trading pair.
@@ -208,15 +276,12 @@ class NewCancelOrder(BaseNewOrder):
         self.order_id = order_id
 
 
-# TODO: add a new class for a limit order object that is returned from the subgraph
-
-
 class Transaction:
     """
     Class representing a transaction to be executed on chain
 
     :param orders: The list of orders to include in the transaction.
-    :type orders: List[BaseNewOrder]
+    :type orders: List[BaseOrder]
     :param nonce: The nonce for the transaction (optional).
     :type nonce: int
     :param gas: The gas limit for the transaction (optional).
@@ -229,7 +294,7 @@ class Transaction:
 
     def __init__(
         self,
-        orders: List[BaseNewOrder],
+        orders: List[BaseOrder],
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
