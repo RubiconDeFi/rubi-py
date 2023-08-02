@@ -35,9 +35,11 @@ from rubi.rubicon_types import (
     FeeEvent,
     OrderEvent,
     Transaction,
-    BaseNewOrder,
+    BaseOrder,
     NewCancelOrder,
     UpdateLimitOrder,
+    ActiveLimitOrder,
+    OrderType,
 )
 
 logger = log.getLogger(__name__)
@@ -80,6 +82,7 @@ class Client:
             network=self.network, wallet=self.wallet, key=self.key
         )
 
+        # TODO a Dict of { symbol: ERC20 }, investigate
         self.tokens = self.get_network_tokens()
         self._pairs: Dict[str, Pair] = {}
 
@@ -88,6 +91,9 @@ class Client:
         self.market_data = MarketData.from_network_with_tokens(
             network=self.network, network_tokens=self.tokens
         )
+
+        # Order tracking
+        self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
 
     @classmethod
     def from_http_node_url(
@@ -456,6 +462,8 @@ class Client:
                     pair=pair, event=raw_event, wallet=self.wallet
                 )
 
+                self._update_active_limit_orders(order_events=[event])
+
             self.message_queue.put(event)
 
     ######################################################################
@@ -478,7 +486,7 @@ class Client:
 
         order: NewMarketOrder = transaction.orders[0]  # noqa
 
-        pair = self.get_pair(pair_name=order.pair)
+        pair = self.get_pair(pair_name=order.pair_name)
 
         match order.order_side:
             case OrderSide.BUY:
@@ -521,7 +529,7 @@ class Client:
 
         order: NewLimitOrder = transaction.orders[0]  # noqa
 
-        pair = self.get_pair(pair_name=order.pair)
+        pair = self.get_pair(pair_name=order.pair_name)
 
         match order.order_side:
             case OrderSide.BUY:
@@ -543,7 +551,15 @@ class Client:
             case _:
                 raise Exception("OrderSide must be BUY or SELL")
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt
+        )
+
+        self._update_active_limit_orders(
+            order_events=processed_transaction_receipt.events
+        )
+
+        return processed_transaction_receipt
 
     def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
         """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
@@ -564,7 +580,15 @@ class Client:
             id=order.order_id, **transaction.args()
         )
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt
+        )
+
+        self._update_active_limit_orders(
+            order_events=processed_transaction_receipt.events
+        )
+
+        return processed_transaction_receipt
 
     def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Place multiple limit orders in a batch transaction.
@@ -581,7 +605,7 @@ class Client:
 
         for order in transaction.orders:
             order: NewLimitOrder
-            pair = self.get_pair(order.pair)
+            pair = self.get_pair(order.pair_name)
 
             match order.order_side:
                 case OrderSide.BUY:
@@ -607,7 +631,15 @@ class Client:
             **transaction.args(),
         )
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt
+        )
+
+        self._update_active_limit_orders(
+            order_events=processed_transaction_receipt.events
+        )
+
+        return processed_transaction_receipt
 
     def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Update multiple limit orders in a batch transaction.
@@ -625,7 +657,7 @@ class Client:
 
         for order in transaction.orders:
             order: UpdateLimitOrder
-            pair = self.get_pair(order.pair)
+            pair = self.get_pair(order.pair_name)
 
             order_ids.append(order.order_id)
 
@@ -654,7 +686,15 @@ class Client:
             **transaction.args(),
         )
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt
+        )
+
+        self._update_active_limit_orders(
+            order_events=processed_transaction_receipt.events
+        )
+
+        return processed_transaction_receipt
 
     def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
         """Cancel multiple limit orders in a batch transaction.
@@ -675,7 +715,15 @@ class Client:
             ids=order_ids, **transaction.args()
         )
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt
+        )
+
+        self._update_active_limit_orders(
+            order_events=processed_transaction_receipt.events
+        )
+
+        return processed_transaction_receipt
 
     ######################################################################
     # data methods
@@ -789,7 +837,7 @@ class Client:
 
     # TODO: implement this and use check transactions before they go through to prevent failure
     @staticmethod
-    def _check_allowance(pair: Pair, order: BaseNewOrder):
+    def _check_allowance(pair: Pair, order: BaseOrder):
         pass
 
     def _handle_transaction_receipt_raw_events(
@@ -837,3 +885,42 @@ class Client:
         transaction_receipt.set_events(events=events)
 
         return transaction_receipt
+
+    def _update_active_limit_orders(self, order_events: List[OrderEvent]) -> None:
+        for order_event in order_events:
+            order_event: OrderEvent
+            if order_event.limit_order_owner != self.wallet:
+                continue
+
+            match order_event.order_type:
+                case OrderType.LIMIT:
+                    if self.active_limit_orders.get(order_event.limit_order_id):
+                        # If we are already tracking the order then don't add it again
+                        continue
+
+                    self.active_limit_orders[
+                        order_event.limit_order_id
+                    ] = ActiveLimitOrder.from_order_event(order_event=order_event)
+                case OrderType.LIMIT_TAKEN:
+                    taken_order = self.active_limit_orders[order_event.limit_order_id]
+
+                    if taken_order.remaining_size - order_event.size <= Decimal("0"):
+                        self._delete_active_limit_order(
+                            order_id=order_event.limit_order_id
+                        )
+                    else:
+                        self.active_limit_orders[
+                            order_event.limit_order_id
+                        ].update_with_take(order_event=order_event)
+                case OrderType.CANCEL:
+                    self._delete_active_limit_order(order_id=order_event.limit_order_id)
+                case OrderType.LIMIT_DELETED:
+                    self._delete_active_limit_order(order_id=order_event.limit_order_id)
+
+    def _delete_active_limit_order(self, order_id: int) -> None:
+        try:
+            del self.active_limit_orders[order_id]
+        except KeyError:
+            log.debug(
+                f"Limit order {order_id} already removed from active limit orders."
+            )
