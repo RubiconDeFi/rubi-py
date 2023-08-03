@@ -921,6 +921,6 @@ class Client:
         try:
             del self.active_limit_orders[order_id]
         except KeyError:
-            log.debug(
+            logger.debug(
                 f"Limit order {order_id} already removed from active limit orders."
             )
