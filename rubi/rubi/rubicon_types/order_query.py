@@ -364,6 +364,7 @@ class OrderQuery:
                 log_index=row["index"],  # Assume 0 if 'log_index' column doesn't exist
                 txn_hash=row["transaction"],
                 maker=self.network.w3.to_checksum_address(row["maker"]),
+                from_address=self.network.w3.to_checksum_address(row["from_address"]),
                 base_asset=base_asset,
                 quote_asset=quote_asset,
                 base_amt=base_asset_amt - base_asset_amt_filled,

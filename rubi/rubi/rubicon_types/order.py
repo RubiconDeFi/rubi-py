@@ -269,6 +269,7 @@ class LimitOrder(BaseNewOrder):
         log_index: int,
         txn_hash: str,
         maker: ChecksumAddress,
+        from_address: ChecksumAddress,
         base_asset: ERC20, # TODO: we probably do not want to actually have to pass this object around, and could store values as decimals
         quote_asset: ERC20,
         base_amt: int,
@@ -301,6 +302,7 @@ class LimitOrder(BaseNewOrder):
         self.log_index = log_index
         self.txn_hash = txn_hash
         self.maker = maker
+        self.from_address = from_address
         self.base_asset = base_asset
         self.quote_asset = quote_asset
         self.base_amt = base_amt
@@ -366,6 +368,15 @@ class LimitOrder(BaseNewOrder):
         """
 
         return self.base_asset.to_decimal(self.base_amt)
+    
+    def get_value(self) -> Decimal:
+        """Returns the value of the order.
+
+        :return: The value of the order.
+        :rtype: Decimal
+        """
+
+        return self.quote_asset.to_decimal(self.quote_amt)
 
     # repr
     def __repr__(self):

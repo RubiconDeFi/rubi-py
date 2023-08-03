@@ -55,8 +55,8 @@ print(weth_usdc_offers.columns)
 print(weth_usdc_trades.columns)
 
 network = Network(
-   graph=None,
    client=client,
+   graphs=None,
    pair_names=[],
    book_histories=[],
 )
@@ -97,8 +97,9 @@ for offer in offers:
    
    offer_ids.append(offer.id)
 
-   if offer.id == 2050831: 
+   if offer.id in [15012, 32761]: 
       print('found the offer')
+      print(offer)
 
    book.add_order(offer)
 
@@ -138,6 +139,18 @@ print('there are a total of ', len(book.bid_ids), ' bids')
 print(len(book.bid_ids))
 print('there are a total of ', len(book.ask_ids), ' asks')
 print(len(book.ask_ids))
+
+for bid in book.bid_ids: 
+   bid_order = book.get_order(bid)
+   #print(bid_order)
+
+
+# attempt to build the network 
+network.build_graph(
+   pair_name="WETH/USDC",
+   # graph_type
+   # book_history
+)
 
 #print(book)
 
