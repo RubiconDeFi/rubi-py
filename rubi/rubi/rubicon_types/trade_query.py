@@ -25,8 +25,8 @@ class Trade:
         block_index: int,
         log_index: int,
         #txn_hash: str,
-        taker: str, # ChecksumAddress
-        from_address: str, # ChecksumAddress
+        taker: ChecksumAddress, # ChecksumAddress
+        from_address: ChecksumAddress, # ChecksumAddress
         take_gem: str, # ChecksumAddress (or ERC20)
         give_gem: str, # ChecksumAddress (or ERC20)
         take_amt: int,
@@ -391,8 +391,8 @@ class TradeQuery:
                 block_index=row['block_index'],
                 log_index=row['log_index'],
                 #txn_hash=row['txn_hash'],
-                taker=row['taker'],
-                from_address=row['from_address'],
+                taker=self.network.w3.to_checksum_address(row["taker"]),
+                from_address=self.network.w3.to_checksum_address(row["from_address"]),
                 take_gem=row['take_gem_address'], # TODO: this should be handled based on formatted or unformatted query
                 give_gem=row['give_gem_address'], # TODO: this should be handled based on formatted or unformatted query
                 take_amt=row['take_amt_raw'], # TODO: this should be handled based on formatted or unformatted query

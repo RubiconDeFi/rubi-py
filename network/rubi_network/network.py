@@ -69,7 +69,7 @@ class Network: # TODO: i feel like this may have conflict with networkx naming s
         # graph_type
     ): 
         
-        self.graphs[pair_name] = nx.Graph() # TODO: we will probably want to support multiple graph types
+        self.graphs[pair_name] = nx.DiGraph() # TODO: we will probably want to support multiple graph types
 
     def build_graph(
         self, 
@@ -124,8 +124,8 @@ class Network: # TODO: i feel like this may have conflict with networkx naming s
                         graph.nodes[maker]['data'].add_order(event)
 
                     elif isinstance(event, Trade):
+                        
                         taker = event.from_address
-                        # maker = event.offer_from_address
                         order = book.get_order(event.order_id)
                         maker = order.from_address
 
@@ -147,7 +147,10 @@ class Network: # TODO: i feel like this may have conflict with networkx naming s
 
                         # update the edge
                         if not graph.has_edge(maker, taker):
-                            graph.add_edge(maker, taker, data=Edge())
+                            graph.add_edge(maker, taker, data=Edge(
+                                maker=graph.nodes[maker]['data'],
+                                taker=graph.nodes[taker]['data'],
+                            ))
                         graph.edges[maker, taker]['data'].add_market_order(event)
 
                     elif isinstance(event, Cancel):

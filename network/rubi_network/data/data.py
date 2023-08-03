@@ -182,8 +182,8 @@ class BookHistory:
                 block_index=row['block_index'],
                 log_index=row['log_index'],
                 #txn_hash=row['txn_hash'],
-                taker=row['taker'],
-                from_address=row['from_address'],
+                taker=self.client.network.w3.to_checksum_address(row["taker"]), #  row['taker'],
+                from_address=self.client.network.w3.to_checksum_address(row["from_address"]), # row['from_address'],
                 take_gem=row['take_gem_address'], # TODO: this should be handled based on formatted or unformatted query
                 give_gem=row['give_gem_address'], # TODO: this should be handled based on formatted or unformatted query
                 take_amt=row['take_amt_raw'], # TODO: this should be handled based on formatted or unformatted query

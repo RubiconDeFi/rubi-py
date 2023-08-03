@@ -22,3 +22,21 @@ def find_pure_pairs(g):
                     pure_pairs.append(pair)
 
     return pure_pairs
+
+def find_pure_node(g):
+    # Returns a list of pure takers [node] where node has only taken from one other node
+    
+    pure_takers = []
+    pure_makers = []
+    for node in g.nodes:
+        edges = list(g.in_edges(node, data=True))  # Get the incoming edges for the node
+        
+        if len(edges) == 1:  # If the node has only taken from one other node
+            _, _, edge_data = edges[0]
+            if edge_data['data'].relative_taker_volume == 1 and edge_data['data'].relative_taker_trades == 1:
+                pure_takers.append(node.taker.trader_id)
+            elif edge_data['data'].relative_maker_volume == 1 and edge_data['data'].relative_maker_trades == 1:
+                pure_makers.append(node.maker.trader_id)
+
+    return {'takers': pure_takers, 'makers': pure_makers}
+

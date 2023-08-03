@@ -38,7 +38,7 @@ class TraderNode:
     def add_fill(self, usd_amt):
 
         self.fills += 1   
-        self.usd_traded += usd_amt
+        self.usd_filled += usd_amt
 
     # TODO: assumes that we are always dealing with a stable pair
     def add_order(self, order: LimitOrder): 
@@ -50,8 +50,6 @@ class TraderNode:
         self.make_offer(usd_amt)
 
     def add_fill_trade(self, market_order: Trade):
-
-        self.book.market_order(market_order)
 
         # determines the stable amount
         if market_order.take_gem in self.stables: 
@@ -91,15 +89,45 @@ class TraderNode:
             self.add_cancel(event)
         else: 
             raise Exception("Error: event type not supported")
+        
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
     
 class Edge: # TODO: we may want to use bidirectional edges
 
     def __init__(
             self, 
+            maker: TraderNode,
+            taker: TraderNode,
         ):
 
         self.usd_amt = 0
         self.trades = 0
+        self.maker = maker
+        self.taker = taker
+
+        if self.maker.usd_filled > 0:
+            self.relative_maker_volume = self.usd_amt / self.maker.usd_filled
+        else:
+            self.relative_maker_volume = 0
+        
+        if self.maker.fills > 0:
+            self.relative_maker_trades = self.trades / self.maker.fills
+        else:
+            self.relative_maker_trades = 0
+
+        if self.taker.usd_traded > 0:
+            self.relative_taker_volume = self.usd_amt / self.taker.usd_traded
+        else:
+            self.relative_taker_volume = 0
+        
+        if self.taker.trades > 0:
+            self.relative_taker_trades = self.trades / self.taker.trades
+        else:
+            self.relative_taker_trades = 0    
+        
+        
 
         # useful for now
         # Optimism specific
@@ -126,3 +154,7 @@ class Edge: # TODO: we may want to use bidirectional edges
             usd_amt = market_order.give_amt / (10 ** decimals)
 
         self.add_trade(usd_amt)
+
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))

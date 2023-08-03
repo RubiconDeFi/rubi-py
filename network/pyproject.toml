@@ -10,6 +10,7 @@ python = "^3.10"
 python-dotenv = "1.0.0"
 networkx = "^3.1"
 numpy = "^1.25.1"
+pyvis = "^0.3.2"
 
 [build-system]
 requires = ["poetry-core"]
@@ -17,3 +18,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 rubi = { path = "../rubi", develop = true }
+ipykernel = "^6.25.0"
