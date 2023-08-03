@@ -42,6 +42,8 @@ from rubi.rubicon_types import (
     OrderType,
 )
 
+logger = log.getLogger(__name__)
+
 
 class Client:
     """This class is a client for Rubicon. It aims to provide a simple and understandable interface when interacting
@@ -173,7 +175,7 @@ class Client:
             if current_base_asset_allowance == Decimal(
                 "0"
             ) or current_quote_asset_allowance == Decimal("0"):
-                log.warning(
+                logger.warning(
                     "allowance for base or quote asset is zero. this may cause issues when placing orders"
                 )
 
@@ -365,12 +367,12 @@ class Client:
 
                 self.message_queue.put(order_book)
             except PairDoesNotExistException:
-                log.warning(
+                logger.warning(
                     "pair does not exist in client. shutting down orderbook poller"
                 )
                 polling = False
             except Exception as e:
-                log.error(e)
+                logger.error(e)
             sleep(poll_time)
 
     ######################################################################
@@ -827,7 +829,7 @@ class Client:
     def _update_asset_allowance(
         asset: ERC20, spender: ChecksumAddress, new_allowance: Decimal
     ) -> None:
-        log.info(
+        logger.info(
             asset.approve(
                 spender=spender, amount=asset.to_integer(number=new_allowance)
             )
@@ -919,6 +921,6 @@ class Client:
         try:
             del self.active_limit_orders[order_id]
         except KeyError:
-            log.debug(
+            logger.debug(
                 f"Limit order {order_id} already removed from active limit orders."
             )

@@ -9,19 +9,19 @@ include = ["network_config/**/*"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-sphinx = "7.0.1"
-web3 = "6.5.0"
-hexbytes = "0.3.0"
+sphinx = "7.1.1"
+web3 = "6.7.0"
+hexbytes = "0.3.1"
 attributedict = "0.3.0"
-eth-abi = "4.0.0"
-pytest = "7.3.1"
-eth-tester = "0.9.0b1"
-py-evm = "0.7.0a2"
-eth-utils = "2.1.0"
+eth-abi = "4.1.0"
+pytest = "7.4.0"
+eth-tester = "0.9.1b1"
+py-evm = "0.7.0a4"
+eth-utils = "2.2.0"
 subgrounds = { version = "1.6.0", extras = ["dash"] }
-pyyaml = "6.0.0"
-python-semantic-release = "7.34.3"
-black = "^23.3.0"
+pyyaml = "6.0.1"
+python-semantic-release = "8.0.4"
+black = "23.7.0"
 
 [tool.poetry.group.dev.dependencies]
 python-dotenv = "0.21.1"

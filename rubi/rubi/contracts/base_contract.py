@@ -19,6 +19,8 @@ from web3.types import ABI, Nonce, TxReceipt, EventData
 
 from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
 
+logger = log.getLogger(__name__)
+
 
 class ContractType(Enum):
     """Enum to distinguish the type of contract instantiated
@@ -71,7 +73,7 @@ class BaseContract:
         self.signing_permissions = wallet is not None and key is not None
 
         if self.signing_permissions:
-            log.info(f"instantiated {self.__class__} with signing rights")
+            logger.info(f"instantiated {self.__class__} with signing rights")
 
             # Force typing as my editors inspection is throwing a tantrum
             self.wallet = wallet  # type: ChecksumAddress
@@ -214,14 +216,14 @@ class BaseContract:
                 for event_data in event_filter.get_new_entries():
                     event_handler(pair_name, event_type, event_data)
             except Exception as e:
-                log.error(e)
+                logger.error(e)
 
                 # The filter has been deleted by the node and needs to be recreated
                 if "filter not found" in str(e):
                     event_filter = event_type.create_event_filter(
                         contract=contract, argument_filters=argument_filters
                     )
-                    log.info(f"event filter for: {event_type} has been recreated")
+                    logger.info(f"event filter for: {event_type} has been recreated")
 
                 # TODO: this is a hack to detect if a PairDoesNotExistException is raised and polling should stop.
                 #  Currently an additional except PairDoesNotExistException as e: cannot be added as this causes a
@@ -283,7 +285,9 @@ class BaseContract:
             transaction_dict=txn, private_key=self.key
         )
 
-        log.debug(f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}")
+        logger.debug(
+            f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}"
+        )
         self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         return self._wait_for_transaction_receipt(transaction=signed_txn)
@@ -351,7 +355,7 @@ class BaseContract:
             tx_receipt=tx_receipt, raw_events=raw_events
         )
 
-        log.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
+        logger.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
 
         return result
 

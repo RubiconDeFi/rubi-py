@@ -12,6 +12,8 @@ from web3.types import EventData
 _RubiconMarket = TypeVar("_RubiconMarket")
 _RubiconRouter = TypeVar("_RubiconRouter")
 
+logger = log.getLogger(__name__)
+
 
 class BaseEvent(ABC):
     """Base class for events to define the structure of an Event from a Rubicon contract."""
@@ -87,7 +89,7 @@ class BaseEvent(ABC):
         :param event_data: The data of the event.
         :type event_data: EventData
         """
-        log.info(event_data)
+        logger.info(event_data)
 
     @staticmethod
     @abstractmethod
