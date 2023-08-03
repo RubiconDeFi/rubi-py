@@ -106,28 +106,13 @@ class Edge: # TODO: we may want to use bidirectional edges
         self.trades = 0
         self.maker = maker
         self.taker = taker
+        self.relative_maker_volume = 0
+        self.relative_maker_trades = 0
+        self.relative_taker_volume = 0
+        self.relative_taker_trades = 0
 
-        if self.maker.usd_filled > 0:
-            self.relative_maker_volume = self.usd_amt / self.maker.usd_filled
-        else:
-            self.relative_maker_volume = 0
-        
-        if self.maker.fills > 0:
-            self.relative_maker_trades = self.trades / self.maker.fills
-        else:
-            self.relative_maker_trades = 0
+        # stats related to the offers
 
-        if self.taker.usd_traded > 0:
-            self.relative_taker_volume = self.usd_amt / self.taker.usd_traded
-        else:
-            self.relative_taker_volume = 0
-        
-        if self.taker.trades > 0:
-            self.relative_taker_trades = self.trades / self.taker.trades
-        else:
-            self.relative_taker_trades = 0    
-        
-        
 
         # useful for now
         # Optimism specific
@@ -142,6 +127,26 @@ class Edge: # TODO: we may want to use bidirectional edges
 
         self.trades += 1
         self.usd_amt += usd_amt
+
+        if self.maker.usd_filled > 0:
+            self.relative_maker_volume = self.usd_amt / self.maker.usd_filled
+        else:
+            self.relative_maker_volume = 0
+        
+        if self.maker.fills > 0:
+            self.relative_maker_trades = self.trades / self.maker.fills
+        else:
+            self.relative_maker_trades = 0
+        
+        if self.taker.usd_traded > 0:
+            self.relative_taker_volume = self.usd_amt / self.taker.usd_traded
+        else:
+            self.relative_taker_volume = 0
+        
+        if self.taker.trades > 0:
+            self.relative_taker_trades = self.trades / self.taker.trades
+        else:
+            self.relative_taker_trades = 0
 
     def add_market_order(self, market_order: Trade): 
 
