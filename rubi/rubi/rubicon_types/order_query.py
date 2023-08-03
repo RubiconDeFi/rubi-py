@@ -260,6 +260,8 @@ class OrderQuery:
                 "open",
                 "removed_timestamp",
                 "removed_block",
+                "removed_block_index",
+                "removed_log_index",
                 "transaction",
                 "transaction_block_number",
                 "transaction_block_index",

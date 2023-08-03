@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 from rubi import ERC20
 from rubi.rubicon_types.order import OrderSide, LimitOrder
+from .trade_query import Trade
 
 
 class BookLevel:
@@ -301,8 +302,15 @@ class DetailedBookSide(BookSide):
     :type levels: List[DetailedBookLevel]
     """
 
-    def __init__(self, book_side: OrderSide, levels: List[DetailedBookLevel]):
+    def __init__(
+            self, 
+            book_side: OrderSide, 
+            levels: List[DetailedBookLevel] = None, 
+        ):
         """constructor method."""
+        if levels is None:
+            levels = []
+
         super().__init__(book_side, levels)
 
         # TODO: decide if this is the best path forward
@@ -444,8 +452,18 @@ class DetailedOrderBook(OrderBook):
     :type asks: DetailedBookSide
     """
 
-    def __init__(self, bids: DetailedBookSide, asks: DetailedBookSide):
+    def __init__(
+        self, 
+        bids: DetailedBookSide = None, 
+        asks: DetailedBookSide = None,
+    ):
         """constructor method."""
+        if bids is None:
+            bids = DetailedBookSide(book_side=OrderSide.BUY)
+        if asks is None:
+            asks = DetailedBookSide(book_side=OrderSide.SELL)
+
+
         super().__init__(bids, asks)
 
         self.bid_ids = {bid_id for bid_id in self.bids.offer_to_level.keys()}
@@ -511,6 +529,28 @@ class DetailedOrderBook(OrderBook):
             self.asks.update_order(id, base_amt_filled, quote_amt_filled)
         else:
             raise ValueError(f"Order with id {id} not found.")
+        
+    def market_order(self, market_order: Trade): # TODO: update this to be a market order object
+
+        id = market_order.order_id
+        order = self.get_order(id)
+        if order is None:
+            #print(f"Order with id {id} not found.")
+            return None
+
+        # determine what is the base_amt and quote_amt
+        # TODO: we should have a side on the DetailedMarketOrder object when we create it
+        if order.base_asset.address == market_order.take_gem: 
+            base_amt = market_order.take_amt
+            quote_amt = market_order.give_amt
+        elif order.base_asset.address == market_order.give_gem:
+            base_amt = market_order.give_amt
+            quote_amt = market_order.take_amt
+        else:
+            raise ValueError(f"Order with id {id} did not match the market order pair.")
+
+        # update the order
+        self.update_order(id, base_amt, quote_amt)
 
     # TODO: determine if there is any need to modify the best_bid, best_ask, mid_price, and spread methods
     # def best_bid(self) -> Decimal:
@@ -536,4 +576,20 @@ class DetailedOrderBook(OrderBook):
         return self.asks.best_offer()
 
     # TODO:
-    # def get_order(self, id: int) -> LimitOrder:
+    def get_order(self, id: int) -> LimitOrder:
+
+        if id in self.bid_ids:
+            side = self.bids
+        if id in self.ask_ids:
+            side = self.asks
+        else: 
+            #print(f"Order with id {id} not found.")
+            return None
+            #raise ValueError(f"Order with id {id} not found.")
+        
+        if id in side.offer_to_level: 
+            level = side.offer_to_level[id]
+
+        for order in level.orders:
+            if order.id == id:
+                return order

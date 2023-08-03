@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "network"
+name = "rubi_network"
 version = "0.1.0"
 description = "A network analysis framework using the rubi-py client library."
 authors = ["denver <denver@rubicon.finance>"]

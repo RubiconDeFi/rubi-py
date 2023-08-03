@@ -269,7 +269,7 @@ class LimitOrder(BaseNewOrder):
         log_index: int,
         txn_hash: str,
         maker: ChecksumAddress,
-        base_asset: ERC20,
+        base_asset: ERC20, # TODO: we probably do not want to actually have to pass this object around, and could store values as decimals
         quote_asset: ERC20,
         base_amt: int,
         quote_amt: int,

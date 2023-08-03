@@ -101,6 +101,7 @@ class MarketData:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        removed_block_start: Optional[int] = None,
     ) -> pd.DataFrame:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
@@ -159,6 +160,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     buy_fields = self.offer_query.offers_fields(buy_query, formatted)
                     buy_df = self.offer_query.query_offers(buy_fields, formatted)
@@ -180,6 +182,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     sell_fields = self.offer_query.offers_fields(sell_query, formatted)
                     sell_df = self.offer_query.query_offers(sell_fields, formatted)
@@ -201,6 +204,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     buy_fields = self.offer_query.offers_fields(buy_query, formatted)
                     buy_df = self.offer_query.query_offers(buy_fields, formatted)
@@ -219,6 +223,7 @@ class MarketData:
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        removed_block_start=removed_block_start,
                     )
                     sell_fields = self.offer_query.offers_fields(sell_query, formatted)
                     sell_df = self.offer_query.query_offers(sell_fields, formatted)
@@ -244,6 +249,7 @@ class MarketData:
                 open=open,
                 start_time=start_time,
                 end_time=end_time,
+                removed_block_start=removed_block_start,
             )
             fields = self.offer_query.offers_fields(query)
             df = self.offer_query.query_offers(fields)

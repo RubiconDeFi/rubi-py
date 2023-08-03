@@ -19,7 +19,7 @@ class Trade:
 
     def __init__(
         self, 
-        # pair_name: str,
+        pair_name: str,
         # order_side: OrderSide,
         block_number: int,
         block_index: int,
@@ -34,7 +34,7 @@ class Trade:
         order_id: int,
     ):
         
-        # self.pair_name = pair_name
+        self.pair_name = pair_name
         # self.order_side = order_side
         self.block_number = block_number
         self.block_index = block_index
@@ -364,6 +364,7 @@ class TradeQuery:
                         "offer_transaction_block_number": "offer_block_number",
                         "offer_transaction_block_index": "offer_block_index",
                         "offer_index": "offer_log_index",
+                        "offer_id": "offer",
                     }
                 )
                 # TODO: we could also get smart with displaying price dependent upon the pair_name and direction of the

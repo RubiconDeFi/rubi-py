@@ -695,8 +695,14 @@ class Client:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        removed_block_start: Optional[int] = None,
+        
     ) -> pd.DataFrame:
         df = self.market_data.get_offers(
+            first=first,
+            order_by=order_by,
+            order_direction=order_direction,
+            formatted=formatted,
             maker=maker,
             from_address=from_address,
             pair_name=pair_name,
@@ -706,10 +712,7 @@ class Client:
             open=open,
             start_time=start_time,
             end_time=end_time,
-            first=first,
-            order_by=order_by,
-            order_direction=order_direction,
-            formatted=formatted,
+            removed_block_start=removed_block_start,
         )
         return df
 
@@ -771,6 +774,27 @@ class Client:
                 raise Exception(f"Token address: {address} invalid from network: {e}")
 
         return network_tokens
+    
+    def get_token(self, token_address: str) -> ERC20:
+        """Returns an ERC20 object for the token address passed from the token_map if it exists or add it to the
+        self.tokens if it does not exist.
+        """
+
+        if not self.tokens:
+            raise ValueError("No network object initialized on the class.")
+        else:
+            try:
+                token_address = self.network.w3.to_checksum_address(token_address)
+
+                if token_address not in self.tokens:
+                    self.tokens[token_address] = ERC20.from_address(
+                        w3=self.network.w3, address=token_address
+                    )
+
+                return self.tokens[token_address]
+
+            except:
+                raise ValueError(f"Token address: {token_address} is invalid.")
 
     # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
     #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
