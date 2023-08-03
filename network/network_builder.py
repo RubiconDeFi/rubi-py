@@ -80,11 +80,11 @@ network = Network.from_df(
 )
 
 history = network.book_histories["WETH/USDC"]
-offers = history.offers[0]
-trades = history.trades[0]
-cancels = history.cancels[0]
+offers = history.offers[0] # TODO: figure out why this is not a list 
+trades = history.trades[0] # TODO: figure out why this is not a list
+cancels = history.cancels 
 
-print(offers[0])
+print(cancels[0])
 
 offer_ids = []
 
@@ -97,6 +97,9 @@ for offer in offers:
    
    offer_ids.append(offer.id)
 
+   if offer.id == 2050831: 
+      print('found the offer')
+
    book.add_order(offer)
 
 trade_ids = []
@@ -106,17 +109,35 @@ for trade in trades:
    trade_ids.append(trade.order_id)
 
 # find the trade_ids that are not in the offer_ids
-cancel_ids = list(set(offer_ids) - set(trade_ids))
+for trade in trade_ids:
+   if trade not in offer_ids:
+      print('id not found in offers: ')
+      print(trade)
+
+for cancel in cancels: 
+   book.remove_order(cancel.id)
+      
 
 print(len(offer_ids))
 print(len(trade_ids))
-print(len(cancel_ids))
+
 
 print()
 
 print(offer_ids[0])
 print(trade_ids[0])
-print(cancel_ids[0])
+
+#print(book.bid_ids)
+
+if 2050831 in book.bid_ids:
+   print('found the bid')
+if 2050831 in book.ask_ids:
+   print('found the ask')
+
+print('there are a total of ', len(book.bid_ids), ' bids')
+print(len(book.bid_ids))
+print('there are a total of ', len(book.ask_ids), ' asks')
+print(len(book.ask_ids))
 
 #print(book)
 

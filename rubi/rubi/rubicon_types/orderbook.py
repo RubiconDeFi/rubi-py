@@ -495,6 +495,8 @@ class DetailedOrderBook(OrderBook):
             case OrderSide.SELL:
                 self.ask_ids.add(order.id)
                 self.asks.add_order(order)
+            case OrderSide.NEUTRAL:
+                raise ValueError("Order side cannot be NEUTRAL.")
 
     def remove_order(self, id: int):
         """Remove an order from the detailed order book.
@@ -510,7 +512,7 @@ class DetailedOrderBook(OrderBook):
             self.asks.remove_order(id)
             self.ask_ids.remove(id)
         else:
-            raise ValueError(f"Order with id {id} not found.")
+            raise ValueError(f"Order with id {id} not found at Book level.")
 
     def update_order(self, id: int, base_amt_filled: int, quote_amt_filled: int):
         """Update an order in the detailed order book.
@@ -535,7 +537,7 @@ class DetailedOrderBook(OrderBook):
         id = market_order.order_id
         order = self.get_order(id)
         if order is None:
-            #print(f"Order with id {id} not found.")
+            print(f"Order with id {id} not returned by get_order method.")
             return None
 
         # determine what is the base_amt and quote_amt
@@ -580,10 +582,10 @@ class DetailedOrderBook(OrderBook):
 
         if id in self.bid_ids:
             side = self.bids
-        if id in self.ask_ids:
+        elif id in self.ask_ids:
             side = self.asks
         else: 
-            #print(f"Order with id {id} not found.")
+            print(f"Order with id {id} not found in bids or asks.")
             return None
             #raise ValueError(f"Order with id {id} not found.")
         
