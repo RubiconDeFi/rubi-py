@@ -7,6 +7,13 @@ from .data import BookHistory, Cancel, TraderNode, Edge
 
 from rubi import LimitOrder, Trade
 
+import time
+import dash
+from dash import dcc
+import dash_cytoscape as cyto
+from dash import html
+from dash.dependencies import Input, Output
+
 # TODO: this should contain everything needed to spin up a PyEVMBackend preconfigured per network 
 class Network: # TODO: i feel like this may have conflict with networkx naming somewhere
 
@@ -76,6 +83,8 @@ class Network: # TODO: i feel like this may have conflict with networkx naming s
         pair_name: str,
         # graph_type
         # book_history
+        display = False,
+        delay = 0.5,
     ):
         
         # try to get the book history
@@ -155,6 +164,39 @@ class Network: # TODO: i feel like this may have conflict with networkx naming s
 
                     elif isinstance(event, Cancel):
                         book.remove_order(event.id)
+
+                    ###############################
+                    # Dash visualizations
+                    ###############################
+                    if display:
+                        nodes, edges = self.get_cytoscape_elements(pair_name)
+                        print(f"we are updating a total of {len(nodes)} and {len(edges)} edges")
+                        app = self.create_dash_app(nodes, edges)
+                        app.run_server(debug=True)
+
+                        time.sleep(delay)
+    
+    ###############################
+    # Dash visualizations
+    ############################### 
+    def get_cytoscape_elements(self, pair_name):
+        graph = self.graphs.get(pair_name)
+        nodes = [{'data': {'id': node}} for node in graph.nodes()]
+        edges = [{'data': {'source': source, 'target': target}} for source, target in graph.edges()]
+        print(nodes, edges)
+        return nodes, edges
+
+    def create_dash_app(self, nodes, edges):
+        app = dash.Dash(__name__)
+        app.layout = html.Div([
+            cyto.Cytoscape(
+                id='cytoscape',
+                layout={'name': 'circle'},
+                style={'width': '100%', 'height': '800px'},
+                elements=nodes + edges,
+            )
+        ])
+        return app
         
     
     def __repr__(self):
