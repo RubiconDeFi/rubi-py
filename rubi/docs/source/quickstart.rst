@@ -95,21 +95,22 @@ Finally we are ready to instantiate a client
 .. note:: In the above example we are connecting to the optimism goerli testnet. Make sure the node you are using is an optimism goerli node.
 
 Having instantiated a client you are now ready to start interacting with the Rubicon protocol. In order to use the
-client to read or trade against a specific pair you will need to first add the pair to the client.
+client to read or trade against a specific pair you will first need to approve the ``RubiconMarket`` contract
 
 .. code-block:: python
+    # Approve WETH
+    weth_approval = RubiconMarketApproval(token="WETH", amount=Decimal("1"))
 
-    # add the WETH/USDC pair to the client
-    # the base asset is WETH and the quote asset is USDC
-    client.add_pair(
-        pair_name="WETH/USDC",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
-    )
+    client.approve(approval=weth_approval)
+
+    # Approve USDC
+    usdc_approval = RubiconMarketApproval(token="USDC", amount=Decimal("2000"))
+
+    client.approve(approval=usdc_approval)
 
 .. note:: The allowances in the code above approve the ``RubiconMarket`` contract to transact up to that amount on your wallets behalf. This is necessary in order to create offers on the protocol.
 
-Now with a pair created you can place your first limit order on Rubicon the decentralized world orderbook!
+Now having approved the `RubiconMarket`` you can place your first limit order on Rubicon the decentralized world orderbook!
 
 .. code-block:: python
 
@@ -120,61 +121,25 @@ Now with a pair created you can place your first limit order on Rubicon the dece
         price=Decimal("1914.13")
     )
 
-    client.place_limit_order(
-        transaction=Transaction(
-            orders=[limit_order]
-        )
-    )
-
-That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.
+    client.place_limit_order(limit_order=limit_order)
 
 READ ONLY rubi client
 ^^^^^^^^^^^^^^^^^^^^^^
 
 To create a read only :ref:`rubi client <client>` follow the steps above except when creating your ``.env`` file DO NOT
-add a ``WALLET`` or ``KEY``. Instead your ``.env`` file should only contain the following
+add a ``KEY``. Instead your ``.env`` file should only contain the following
 
 .. code-block:: text
 
     HTTP_NODE_URL = <an optimism http node url>
+    WALLET = <the wallet that is being used to sign transactions and pay gas for said transactions>
+
 
 The :ref:`rubi client <client>` will then be instantiated without signing rights. You will still have read access to all
-the Rubicon contracts.
+the Rubicon contracts. And additionally will be able to simulate transactions against the chain you have connected to.
 
-That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.
-
-rubi client pairs and tokens
+rubi client custom tokens
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The :ref:`rubi client <client>` uses the notion of a ``pair`` to effectively translate from offers on the Rubicon
-protocol to the more understandable notions of bids and asks.
-
-
-Whenever you want to trade a specific set of tokens you will first need to add this pair to the client
-
-.. code-block:: python
-
-    # add the WETH/USDC pair to the client
-    # the base asset is WETH and the quote asset is USDC
-    client.add_pair(
-        pair_name="WETH/USDC",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
-    )
-
-If you add the ``WETH/USDC`` pair as in the above example then you are saying you want to think of trading ``WETH`` in
-terms of ``USDC``. In other words, all orders and the client orderbook will price ``WETH`` in terms of ``USDC``, so for
-example, if you wanted to create a new limit order you would say I want to sell ``1 WETH`` for ``2000 USDC``. It should
-be noted that there is no need to price assets in stable coin terms. In fact, being in defi it probably makes more sense
-to price things in terms of ``WETH`` ;).
-
-.. code-block:: python
-
-    client.add_pair(
-        pair_name="USDC/WETH",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
-    )
 
 By default when you instantiate a :ref:`rubi client <client>` you will only be able to create pairs from the tokens
 found in the ``token_addresses`` section of the ``network.yaml`` config for the chain you are connected to. This set of
@@ -360,3 +325,5 @@ In the example below, we will access WETH/USDC trade data for a given time range
         start_time=1688187600,
         end_time=1690606800,
     )
+
+That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.

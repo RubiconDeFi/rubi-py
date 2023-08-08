@@ -5,8 +5,8 @@ from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
-from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import Client, OrderEvent
+from rubi import EmitOfferEvent, NewLimitOrder, OrderSide
 
 # load from env file
 load_dotenv("../../local.env")
@@ -36,12 +36,7 @@ client = Client.from_http_node_url(
     message_queue=queue,
 )
 
-# add the WETH/USDC pair to the client
-client.add_pair(
-    pair_name="WETH/USDC",
-    base_asset_allowance=Decimal("1"),
-    quote_asset_allowance=Decimal("2000"),
-)
+# TODO: allowance
 
 # start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
 client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
@@ -55,19 +50,14 @@ limit_order = NewLimitOrder(
     price=Decimal("1914.13"),
 )
 
-transaction_result = client.place_limit_order(
-    transaction=Transaction(orders=[limit_order])
-)
+result = client.limit_order(order=limit_order)
 
-log.info(transaction_result)
+log.info(result)
 
 # Get the offer id from the transaction result
-events = transaction_result.raw_events
-for event in events:
-    if isinstance(event, EmitOfferEvent):
-        offer_id = event.id
+offer: OrderEvent = result.events[0]
 
-log.info(offer_id)
+log.info(offer.limit_order_id)
 
 # Print events and order books
 while True:

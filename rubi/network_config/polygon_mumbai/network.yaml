@@ -7,10 +7,8 @@ market_data_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubi
 market_data_fallback_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-polygon-mumbai"
 
 rubicon:
- market:
-  address: "0x10418D9e730fa659b0Baf0b640ee41FcF4EA2aaE"
- router:
-  address: "0xbA81dF0251A017C2fB687e5469a897529442f008"
+ market: "0x10418D9e730fa659b0Baf0b640ee41FcF4EA2aaE"
+ router: "0xbA81dF0251A017C2fB687e5469a897529442f008"
 
 token_addresses:
  WETH: "0xE412a307764cCBE02E055e926516ebD74230cfE0"

@@ -45,8 +45,8 @@ def deploy_erc20(
     *args,
 ) -> Contract:
     deploy_address = ethereum_tester_provider.ethereum_tester.get_accounts()[0]
-    account_1_address = account_1["address"]
-    account_2_address = account_2["address"]
+    account_1_address = account_1["wallet"]
+    account_2_address = account_2["wallet"]
 
     path = (
         f"{os.path.dirname(os.path.realpath(__file__))}/../../"

@@ -47,21 +47,30 @@ class TransactionReceipt:
         l1_fee_scalar: Optional[Decimal] = None,
         raw_events: Optional[List[BaseEvent]] = None,
     ):
+        # Block number
         self.block_number = block_number
-        self.contract_address = contract_address
-        self.effective_gas_price = effective_gas_price
-        self.gas_used = gas_used
+
+        # Addresses
         self.from_address = from_address
         self.to_address = to_address
-        self.status = status
-        # Do this so that introducing TransactionStatus is not a breaking change
+        self.created_contract_at_address = contract_address
+
+        # Transaction cost
+        self.gas_used = gas_used
+        self.transaction_cost_in_eth = self._calc_gas_cost_in_eth(
+            effective_gas_price=effective_gas_price,
+            gas_used=gas_used,
+            l1_gas_price=l1_gas_price,
+            l1_gas_used=l1_gas_used,
+            l1_fee_scalar=l1_fee_scalar,
+        )
+
+        # Transaction details
         self.transaction_status = TransactionStatus.from_int(status=status)
-        self.transaction_hash = transaction_hash
-        self.transaction_index = transaction_index
-        self.l1_fee = l1_fee
-        self.l1_gas_price = l1_gas_price
-        self.l1_gas_used = l1_gas_used
-        self.l1_fee_scalar = l1_fee_scalar
+        self.transaction_hash = transaction_hash.hex()
+        self.position_in_block = transaction_index
+
+        # Transaction Events
         self.raw_events = raw_events
         self.events = None
 
@@ -94,10 +103,31 @@ class TransactionReceipt:
             raw_events=raw_events,
         )
 
-    # TODO: Any is used to avoid circular dependencies, look at a restructure. These are OrderEvents.
+    # TODO: Any is used to avoid circular dependencies, look at a restructure. These are OrderEvents | ApprovalEvents |
+    #  TransferEvents.
     def set_events(self, events: List[Any]):
         self.events = events
 
+    @staticmethod
+    def _calc_gas_cost_in_eth(
+        gas_used: int,
+        effective_gas_price: Wei,
+        l1_gas_price: Optional[int] = None,
+        l1_gas_used: Optional[int] = None,
+        l1_fee_scalar: Optional[Decimal] = None,
+    ) -> Decimal:
+        if not (l1_gas_price and l1_gas_used and l1_fee_scalar):
+            return None
+
+        return (
+            Decimal(effective_gas_price * gas_used)
+            + (l1_gas_price * l1_gas_used * l1_fee_scalar)
+        ) / Decimal(10**18)
+
     def __repr__(self):
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        items = (
+            "{}={!r}".format(k, self.__dict__[k])
+            for k in self.__dict__
+            if k != "raw_events"
+        )
         return "{}({})".format(type(self).__name__, ", ".join(items))

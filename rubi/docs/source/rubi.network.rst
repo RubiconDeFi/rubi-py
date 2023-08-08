@@ -11,3 +11,11 @@ rubi.network.network module
    :members:
    :undoc-members:
    :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: rubi.network
+   :members:
+   :undoc-members:
+   :show-inheritance:

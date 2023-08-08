@@ -28,11 +28,7 @@ complexity of interacting with the protocol directly. For example you can use th
         price=Decimal("1914.13")
     )
 
-    client.place_limit_order(
-        transaction=Transaction(
-            orders=[limit_order]
-        )
-    )
+    client.place_limit_order(limit_order=limit_order)
 
 However the :ref:`client <client>` also enables access to the underlying smart contracts that power the Rubicon
 protocol.
@@ -49,8 +45,8 @@ objects on the :ref:`client <client>`.
 
 .. code-block:: python
 
-    client.market  # RubiconMarket
-    client.router  # RubiconRouter
+    client.network.market  # RubiconMarket
+    client.network.router  # RubiconRouter
 
 .. _RubiconMarket:
 

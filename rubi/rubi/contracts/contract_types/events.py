@@ -29,9 +29,20 @@ class BaseEvent(ABC):
         self.block_number = block_number
 
     @staticmethod
-    def builder(
+    def from_raw(
         name: str, **kwargs
-    ) -> Union["EmitOfferEvent", "EmitTakeEvent", "EmitCancelEvent", "EmitSwap"]:
+    ) -> Optional[
+        Union[
+            "EmitOfferEvent",
+            "EmitTakeEvent",
+            "EmitCancelEvent",
+            "EmitDeleteEvent",
+            "EmitFeeEvent",
+            "EmitSwap",
+            "EmitApproval",
+            "EmitTransfer",
+        ]
+    ]:
         match name:
             case "emitOffer":
                 return EmitOfferEvent(**kwargs)
@@ -39,8 +50,18 @@ class BaseEvent(ABC):
                 return EmitTakeEvent(**kwargs)
             case "emitCancel":
                 return EmitCancelEvent(**kwargs)
+            case "emitDelete":
+                return EmitDeleteEvent(**kwargs)
+            case "emitFee":
+                return EmitFeeEvent(**kwargs)
             case "emitSwap":
                 return EmitSwap(**kwargs)
+            case "Approval":
+                return EmitApproval(**kwargs)
+            case "Transfer":
+                return EmitTransfer(**kwargs)
+            case _:
+                logger.debug(f"Cannot parse {name} events")
 
     @staticmethod
     @abstractmethod
@@ -468,3 +489,100 @@ class EmitSwap(BaseEvent):
         filters = {}
 
         return {key: value for key, value in filters.items() if value is not None}
+
+
+######################################################################
+# erc20 events
+######################################################################
+
+
+class EmitApproval(BaseEvent):
+    def __init__(
+        self,
+        address: ChecksumAddress,
+        guy: ChecksumAddress,
+        src: ChecksumAddress,
+        wad: int,
+        **args,
+    ):
+        """Initialize an EmitApproval instance.
+
+        :param address: The address of the ERC20 transferred.
+        :type address: ChecksumAddress
+        :param guy: The address approved as a spender.
+        :type guy: ChecksumAddress
+        :param src: The address that gave approval to the spender.
+        :type src: ChecksumAddress
+        :param wad: The approval amount.
+        :type wad: int
+        :param args: Additional arguments for the event.
+        :type args: dict
+        """
+        super().__init__(**args)
+
+        self.address = address
+        self.guy = guy
+        self.src = src
+        self.wad = wad
+
+    @staticmethod
+    def get_event_contract(
+        market: _RubiconMarket, router: _RubiconRouter
+    ) -> Union[_RubiconMarket, _RubiconRouter]:
+        raise Exception("This method doesn't make sense on this class")
+
+    @staticmethod
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
+        raise Exception("This method doesn't make sense on this class")
+
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
+        raise Exception("This method doesn't make sense on this class")
+
+
+class EmitTransfer(BaseEvent):
+    def __init__(
+        self,
+        address: ChecksumAddress,
+        dst: ChecksumAddress,
+        src: ChecksumAddress,
+        wad: int,
+        **args,
+    ):
+        """Initialize an EmitTransfer instance.
+
+        :param address: The address of the ERC20 transferred.
+        :type address: ChecksumAddress
+        :param dst: The destination address of the transfer.
+        :type dst: ChecksumAddress
+        :param src: The source address of the transfer.
+        :type src: ChecksumAddress
+        :param wad: The amount transferred.
+        :type wad: int
+        :param args: Additional arguments for the event.
+        :type args: dict
+        """
+        super().__init__(**args)
+
+        self.address = address
+        self.dst = dst
+        self.src = src
+        self.wad = wad
+
+    @staticmethod
+    def get_event_contract(
+        market: _RubiconMarket, router: _RubiconRouter
+    ) -> Union[_RubiconMarket, _RubiconRouter]:
+        raise Exception("This method doesn't make sense on this class")
+
+    @staticmethod
+    def create_event_filter(
+        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+    ) -> LogFilter:
+        raise Exception("This method doesn't make sense on this class")
+
+    @staticmethod
+    def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
+        raise Exception("This method doesn't make sense on this class")

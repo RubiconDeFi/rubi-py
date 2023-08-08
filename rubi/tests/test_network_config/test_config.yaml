@@ -7,12 +7,10 @@ market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_
 market_data_fallback_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet"
 
 rubicon:
- market:
-  address: "0x506407f25B746C39807c03A96DD595a6BE223211"
- router:
-  address: "0x3AbA34a8C9616eA927225C045EEa5d5b51a7a6FC"
+ market: "0x274b028b03A250cA03644E6c578D81f019eE1323"
+ router: "0x351eAf2762576796012E23f06384a75da2D10A42"
 
 token_addresses:
- COW: "0x6ABc1231d85D422c9Fe25b5974B4C0D4AB85d9b5"
- BLZ: "0xb37b4399880AfEF7025755d65C193363966b8b89"
- ETH: "0x710c1A969cbC8ab5644571697824c655ffBDE926"
+ COW: "0x2f2254751532C5b08bD0c9e230322774697C036E"
+ BLZ: "0x9745F12252f929cF19BAFF03dff5dd849090df12"
+ ETH: "0xA3795886F267Fb8f90fDE4181f288Dc691641B60"

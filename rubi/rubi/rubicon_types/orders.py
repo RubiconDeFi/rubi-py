@@ -1,10 +1,12 @@
 from _decimal import Decimal
 from enum import Enum
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union
 
 from eth_typing import ChecksumAddress
+from web3 import Web3
 
-from rubi.contracts.contract_types.events import (
+from rubi.contracts import (
+    ERC20,
     BaseEvent,
     EmitOfferEvent,
     EmitCancelEvent,
@@ -12,7 +14,6 @@ from rubi.contracts.contract_types.events import (
     EmitDeleteEvent,
     EmitFeeEvent,
 )
-from rubi.rubicon_types.pair import Pair
 
 
 class OrderSide(Enum):
@@ -276,58 +277,6 @@ class NewCancelOrder(BaseOrder):
         self.order_id = order_id
 
 
-class Transaction:
-    """
-    Class representing a transaction to be executed on chain
-
-    :param orders: The list of orders to include in the transaction.
-    :type orders: List[BaseOrder]
-    :param nonce: The nonce for the transaction (optional).
-    :type nonce: int
-    :param gas: The gas limit for the transaction (optional).
-    :type gas: int
-    :param max_fee_per_gas: The maximum fee per gas for the transaction (optional).
-    :type max_fee_per_gas: int
-    :param max_priority_fee_per_gas: The maximum priority fee per gas for the transaction (optional).
-    :type max_priority_fee_per_gas: int
-    """
-
-    def __init__(
-        self,
-        orders: List[BaseOrder],
-        nonce: Optional[int] = None,
-        gas: Optional[int] = None,
-        max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None,
-    ):
-        """constructor method"""
-        if len(orders) < 1:
-            raise Exception(
-                "Transaction cannot be instantiated with an empty order list"
-            )
-
-        self.orders = orders
-        self.nonce = nonce
-        self.gas = gas
-        self.max_fee_per_gas = max_fee_per_gas
-        self.max_priority_fee_per_gas = max_priority_fee_per_gas
-
-    def args(self) -> Dict:
-        """Creates a dictionary of not None arguments to pass to contract functions.
-
-        :return: dictionary of arguments used to send transactions.
-        :rtype: Dict
-        """
-        args = {
-            "nonce": self.nonce,
-            "gas": self.gas,
-            "max_fee_per_gas": self.max_fee_per_gas,
-            "max_priority_fee_per_gas": self.max_priority_fee_per_gas,
-        }
-
-        return {key: value for key, value in args.items() if value is not None}
-
-
 class OrderEvent:
     """Class to represent Rubicon Market events as an order
 
@@ -371,12 +320,18 @@ class OrderEvent:
 
     @classmethod
     def from_event(
-        cls, pair: Pair, event: BaseEvent, wallet: ChecksumAddress
+        cls,
+        base_asset: ERC20,
+        quote_asset: ERC20,
+        event: BaseEvent,
+        wallet: ChecksumAddress,
     ) -> "OrderEvent":
         """Create an OrderEvent from a BaseEvent emitted by the Rubicon Market.
 
-        :param pair: The asset pair associated with the event.
-        :type pair: Pair
+        :param base_asset: The base asset associated with the event.
+        :type base_asset: ERC20
+        :param quote_asset: The quote asset associated with the event.
+        :type quote_asset: ERC20
         :param event: The event to convert.
         :type event: BaseEvent
         :param wallet: The wallet address associated with the event.
@@ -386,11 +341,16 @@ class OrderEvent:
         :raises Exception: If the event cannot be converted into an OrderEvent. This occurs if the Base event has a type
             other than EmitOfferEvent, EmitCancelEvent, EmitTakeEvent or EmitDeleteEvent
         """
+        bid_identifier = cls._bid_identifier(
+            base_asset=base_asset, quote_asset=quote_asset
+        )
+
         if isinstance(event, EmitOfferEvent):
-            if pair.bid_identifier == event.pair:
+            if bid_identifier == event.pair:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.BUY,
                     order_type=OrderType.LIMIT,
                     base_amt=event.buy_amt,
@@ -399,17 +359,19 @@ class OrderEvent:
             else:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.SELL,
                     order_type=OrderType.LIMIT,
                     base_amt=event.pay_amt,
                     quote_amt=event.buy_amt,
                 )
         elif isinstance(event, EmitCancelEvent):
-            if pair.bid_identifier == event.pair:
+            if bid_identifier == event.pair:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.BUY,
                     order_type=OrderType.CANCEL,
                     base_amt=event.buy_amt,
@@ -418,7 +380,8 @@ class OrderEvent:
             else:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.SELL,
                     order_type=OrderType.CANCEL,
                     base_amt=event.pay_amt,
@@ -428,10 +391,11 @@ class OrderEvent:
             # This is nuanced as we can either receive a take event for a market order or limit order we placed. When
             # we take the bid_identifier indicates selling into the bids while the ask identifier indicates buying
             # into the asks. While the reverse is true for when we make.
-            if pair.bid_identifier == event.pair:
+            if bid_identifier == event.pair:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.BUY if wallet == event.maker else OrderSide.SELL,
                     order_type=OrderType.LIMIT_TAKEN
                     if wallet == event.maker
@@ -442,7 +406,8 @@ class OrderEvent:
             else:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=OrderSide.SELL if wallet == event.maker else OrderSide.BUY,
                     order_type=OrderType.LIMIT_TAKEN
                     if wallet == event.maker
@@ -451,10 +416,11 @@ class OrderEvent:
                     quote_amt=event.give_amt,
                 )
         elif isinstance(event, EmitDeleteEvent):
-            if pair.bid_identifier == event.pair:
+            if bid_identifier == event.pair:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=None,
                     order_type=OrderType.LIMIT_DELETED,
                     base_amt=None,
@@ -463,7 +429,8 @@ class OrderEvent:
             else:
                 return cls._build_order(
                     event=event,
-                    pair=pair,
+                    base_asset=base_asset,
+                    quote_asset=quote_asset,
                     side=None,
                     order_type=OrderType.LIMIT_DELETED,
                     base_amt=None,
@@ -477,7 +444,8 @@ class OrderEvent:
     def _build_order(
         cls,
         event: Union[EmitOfferEvent, EmitCancelEvent, EmitTakeEvent, EmitDeleteEvent],
-        pair: Pair,
+        base_asset: ERC20,
+        quote_asset: ERC20,
         side: Optional[OrderSide],
         order_type: OrderType,
         base_amt: Optional[int],
@@ -487,8 +455,10 @@ class OrderEvent:
 
         :param event: The event data.
         :type event: Union[EmitOfferEvent, EmitCancelEvent, EmitTakeEvent]
-        :param pair: The asset pair associated with the event.
-        :type pair: Pair
+        :param base_asset: The base asset associated with the event.
+        :type base_asset: ERC20
+        :param quote_asset: The quote asset associated with the event.
+        :type quote_asset: ERC20
         :param side: The order side.
         :type side: Optional[OrderSide]
         :param order_type: The order type.
@@ -500,8 +470,8 @@ class OrderEvent:
         :return: The constructed OrderEvent.
         :rtype: OrderEvent
         """
-        size = pair.base_asset.to_decimal(base_amt) if base_amt else None
-        price = pair.quote_asset.to_decimal(quote_amt) / size if quote_amt else None
+        size = base_asset.to_decimal(base_amt) if base_amt else None
+        price = quote_asset.to_decimal(quote_amt) / size if quote_amt else None
 
         return cls(
             limit_order_id=event.id,
@@ -509,12 +479,22 @@ class OrderEvent:
             market_order_owner=event.taker
             if isinstance(event, EmitTakeEvent)
             else None,
-            pair_name=pair.name,
+            pair_name=f"{base_asset.symbol}/{quote_asset.symbol}",
             order_side=side,
             order_type=order_type,
             size=size,
             price=price,
         )
+
+    @staticmethod
+    def _bid_identifier(base_asset: ERC20, quote_asset: ERC20) -> str:
+        return Web3.solidity_keccak(
+            abi_types=["address", "address"],
+            values=[
+                quote_asset.address,
+                base_asset.address,
+            ],
+        ).hex()
 
     def __repr__(self):
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
@@ -541,25 +521,17 @@ class FeeEvent:
     @classmethod
     def from_event(
         cls,
-        pair: Pair,
+        pair_name: str,
+        asset: ERC20,
         event: EmitFeeEvent,
     ) -> "FeeEvent":
-        if event.asset == pair.base_asset.address:
-            fee = pair.base_asset.to_decimal(event.fee_amt)
-            asset_symbol = pair.base_asset.symbol
-        elif event.asset == pair.quote_asset.address:
-            fee = pair.quote_asset.to_decimal(event.fee_amt)
-            asset_symbol = pair.quote_asset.symbol
-        else:
-            raise Exception("Unexpected fee asset")
-
         return cls(
             id=event.id,
-            pair_name=pair.name,
+            pair_name=pair_name,
             fee_to=event.fee_to,
             market_order_owner=event.taker,
-            fee=fee,
-            fee_asset=asset_symbol,
+            fee=asset.to_decimal(event.fee_amt),
+            fee_asset=asset.symbol,
         )
 
     def __repr__(self):

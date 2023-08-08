@@ -4,20 +4,18 @@ from typing import Dict
 
 import yaml
 from pytest import mark
-from subgrounds import Subgrounds
 from web3 import Web3
-from web3.contract import Contract
 
-from contracts.contract_types.transaction_reciept import TransactionStatus
+from contracts.contract_types.transaction_reciept import (
+    TransactionStatus,
+)
 from rubi import (
     Network,
     Client,
     RubiconMarket,
     RubiconRouter,
-    ERC20,
     NewMarketOrder,
     OrderSide,
-    Transaction,
     NewLimitOrder,
     EmitOfferEvent,
     OrderEvent,
@@ -30,18 +28,20 @@ from rubi import (
     OrderBook,
     FeeEvent,
     UpdateLimitOrder,
+    RubiconRouterApproval,
+    ApprovalEvent,
+    Transfer,
+    TransferEvent,
 )
 
 
 class TestNetwork:
-    def test_init_from_yaml(
-        self, test_network: Network, web3: Web3, subgrounds: Subgrounds
-    ):
+    def test_init_from_yaml(self, test_network: Network, web3: Web3):
         path = f"{os.path.dirname(os.path.abspath(__file__))}/test_network_config"
         with open(f"{path}/test_config.yaml", "r") as file:
             network_config = yaml.safe_load(file)
 
-        network = Network(path=path, w3=web3, subgrounds=subgrounds, **network_config)
+        network = Network(w3=web3, **network_config)
 
         assert network.name == test_network.name
         assert network.chain_id == test_network.chain_id
@@ -53,94 +53,124 @@ class TestNetwork:
 class TestClient:
     def test_init(self, account_1: Dict, test_network: Network):
         client = Client(
-            network=test_network, wallet=account_1["address"], key=account_1["key"]
+            network=test_network, wallet=account_1["wallet"], key=account_1["key"]
         )
         # Test client creation
         assert isinstance(client, Client)
         # Test if the wallet attribute is set correctly when a valid wallet address is provided.
-        assert client.wallet == account_1["address"]
+        assert client.wallet == account_1["wallet"]
         # Test if the key attribute is set correctly when a key is provided.
-        assert client.key == account_1["key"]
+        assert client._key == account_1["key"]
         # Test if the market/router have correct types and are init
-        assert isinstance(client.market, RubiconMarket)
-        assert isinstance(client.router, RubiconRouter)
-        # Test if the _pairs attribute is initialized as an empty dictionary.
-        assert len(client._pairs.keys()) == 0
+        assert isinstance(client.network.rubicon_market, RubiconMarket)
+        assert isinstance(client.network.rubicon_router, RubiconRouter)
         # Test if the message_queue attribute is set to None when no queue is provided.
         assert client.message_queue is None
 
     ######################################################################
-    # pair tests
+    # generic method tests
     ######################################################################
 
-    def test_add_pair(self, test_client: Client, cow: Contract, eth: Contract):
-        pair_name = "COW/ETH"
+    def test_get_nonce(self, test_client_for_account_1: Client):
+        result = test_client_for_account_1.get_nonce()
 
-        test_client.add_pair(pair_name=pair_name)
+        assert result == 3
 
-        assert len(test_client.get_pairs_list()) == 1
-        assert test_client.get_pairs_list()[0] == pair_name
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_get_transaction_receipt(self, test_client_for_account_2: Client):
+        # This is the transaction hash of an offer placed on the Rubicon Market
+        result = test_client_for_account_2.get_transaction_receipt(
+            "0x72e0f2e712770a886f963ab6a12b2b4d003aa786c18e3df1373909738049b8ed"
+        )
 
-        pair = test_client.get_pair(pair_name=pair_name)
-        assert pair.base_asset.address == cow.address
-        assert pair.quote_asset.address == eth.address
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
-    def test_update_pair_allowance(
-        self,
-        rubicon_market: Contract,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
+        # See that we interpreted the offer correctly
+        offer: EmitOfferEvent = result.raw_events[0]  # noqa
+
+        assert offer.pay_gem == test_client_for_account_2.network.tokens["ETH"].address
+        assert offer.pay_amt == 1 * 10**18
+        assert offer.buy_gem == test_client_for_account_2.network.tokens["COW"].address
+        assert offer.buy_amt == 1 * 10**18
+
+    def test_execute_transaction(self, test_client_for_account_1: Client):
+        # This is the transaction hash of an offer placed on the Rubicon Market
+        approval = RubiconRouterApproval(token="COW", amount=Decimal("1"))
+
+        transaction = test_client_for_account_1.approve(approval=approval)
+
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
+
+        assert result.transaction_status == TransactionStatus.SUCCESS
+        assert result.transaction_hash is not None
+
+    ######################################################################
+    # erc20 method tests
+    ######################################################################
+
+    def test_get_allowance(self, test_client_for_account_1: Client):
+        allowance = test_client_for_account_1.get_allowance(
+            token="COW",
+            spender=test_client_for_account_1.network.rubicon_market.address,
+        )
+
+        assert allowance == Decimal("1.157920892373161954235709850E+59")
+
+    def test_approve(self, test_client_for_account_1: Client):
+        approval = RubiconRouterApproval(token="COW", amount=Decimal("1"))
+
+        transaction = test_client_for_account_1.approve(approval=approval)
+
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
+
+        # Check transaction was a success
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        assert len(result.events) >= 1
+
+        approval_event: ApprovalEvent = result.events[0]
+
+        assert (
+            approval_event.spender
+            == test_client_for_account_1.network.rubicon_router.address
+        )
+        assert approval_event.source == test_client_for_account_1.wallet
+        assert approval_event.amount == approval.amount
+
+        # Check allowance after approval
+        allowance = test_client_for_account_1.get_allowance(
+            token="COW",
+            spender=test_client_for_account_1.network.rubicon_router.address,
+        )
+
+        assert allowance == approval.amount
+
+    def test_transfer(
+        self, test_client_for_account_1: Client, test_client_for_account_2: Client
     ):
-        pair_name = "COW/ETH"
-
-        initial_cow_allowance = cow_erc20_for_account_1.allowance(
-            owner=cow_erc20_for_account_1.wallet, spender=rubicon_market.address
-        )
-        initial_eth_allowance = eth_erc20_for_account_1.allowance(
-            owner=eth_erc20_for_account_1.wallet, spender=rubicon_market.address
+        transfer = Transfer(
+            token="COW",
+            amount=Decimal("1"),
+            recipient=test_client_for_account_1.network.rubicon_market.address,
         )
 
-        # in fixtures these are initialized with the max approval value
-        max_approval = 2**256 - 1
+        transaction = test_client_for_account_1.transfer(transfer=transfer)
 
-        assert initial_cow_allowance == max_approval
-        assert initial_eth_allowance == max_approval
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
-        test_client_for_account_1.update_pair_allowance(
-            pair_name=pair_name,
-            new_base_asset_allowance=Decimal("12"),
-            new_quote_asset_allowance=Decimal("100"),
+        # Check transaction was a success
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        assert len(result.events) == 1
+
+        transfer_event: TransferEvent = result.events[0]
+
+        assert (
+            transfer_event.recipient
+            == test_client_for_account_1.network.rubicon_market.address
         )
-
-        new_cow_allowance = cow_erc20_for_account_1.allowance(
-            owner=cow_erc20_for_account_1.wallet, spender=rubicon_market.address
-        )
-        new_eth_allowance = eth_erc20_for_account_1.allowance(
-            owner=eth_erc20_for_account_1.wallet, spender=rubicon_market.address
-        )
-
-        assert new_cow_allowance != initial_cow_allowance
-        assert new_cow_allowance == cow_erc20_for_account_1.to_integer(Decimal("12"))
-
-        assert new_eth_allowance != initial_eth_allowance
-        assert new_eth_allowance == eth_erc20_for_account_1.to_integer(Decimal("100"))
-
-    def test_delete_pair(
-        self, test_client_for_account_1: Client, cow: Contract, eth: Contract
-    ):
-        pair_name = "COW/ETH"
-
-        assert len(test_client_for_account_1.get_pairs_list()) == 1
-        assert test_client_for_account_1.get_pairs_list()[0] == pair_name
-
-        pair = test_client_for_account_1.get_pair(pair_name)
-        assert pair.base_asset.address == cow.address
-        assert pair.quote_asset.address == eth.address
-
-        test_client_for_account_1.remove_pair(pair_name)
-
-        assert len(test_client_for_account_1.get_pairs_list()) == 0
+        assert transfer_event.source == test_client_for_account_1.wallet
+        assert transfer_event.amount == transfer.amount
 
     ######################################################################
     # orderbook tests
@@ -192,20 +222,15 @@ class TestClient:
     ######################################################################
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_place_buy_market_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_place_buy_market_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         market_order = NewMarketOrder(
             pair_name=pair_name,
@@ -214,18 +239,20 @@ class TestClient:
             worst_execution_price=Decimal("2"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_1.market_order(order=market_order)
 
-        result = test_client_for_account_1.place_market_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == market_order.pair_name
         assert event.order_side == market_order.order_side
@@ -234,24 +261,24 @@ class TestClient:
         assert event.price == Decimal("2")
         assert event.market_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # Check that account 1 had paid and received assets accounting for fees
         # received 1 COW
         assert round(
-            cow_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["COW"].to_decimal(
                 cow_amount_after_order - cow_amount_before_order
             ),
             3,
         ) == Decimal("1")
         # paid 2 ETH
         assert round(
-            eth_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["ETH"].to_decimal(
                 eth_amount_after_order - eth_amount_before_order
             ),
             3,
@@ -265,20 +292,15 @@ class TestClient:
         assert orderbook.asks.levels[0].price == Decimal("3")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_place_sell_market_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_place_sell_market_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         market_order = NewMarketOrder(
             pair_name=pair_name,
@@ -287,18 +309,20 @@ class TestClient:
             worst_execution_price=Decimal("1"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_1.market_order(order=market_order)
 
-        result = test_client_for_account_1.place_market_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == market_order.pair_name
         assert event.order_side == market_order.order_side
@@ -307,24 +331,24 @@ class TestClient:
         assert event.price == Decimal("1")
         assert event.market_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # Check that account 1 had paid and received assets accounting for fees
         # received 1 COW
         assert round(
-            cow_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["COW"].to_decimal(
                 cow_amount_after_order - cow_amount_before_order
             ),
             3,
         ) == Decimal("-1")
         # paid 1 ETH
         assert round(
-            eth_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["ETH"].to_decimal(
                 eth_amount_after_order - eth_amount_before_order
             ),
             3,
@@ -336,20 +360,15 @@ class TestClient:
         assert len(orderbook.bids.levels) == 0
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_place_buy_limit_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_place_buy_limit_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         limit_order = NewLimitOrder(
             pair_name="COW/ETH",
@@ -358,18 +377,20 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == limit_order.pair_name
         assert event.order_side == limit_order.order_side
@@ -378,18 +399,18 @@ class TestClient:
         assert event.price == limit_order.price
         assert event.limit_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # no cow should have changed hands yet
         assert cow_amount_before_order == cow_amount_after_order
         # 0.75 ETH being held in escrow for the Limit Order
         assert round(
-            eth_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["ETH"].to_decimal(
                 eth_amount_after_order - eth_amount_before_order
             ),
             4,
@@ -412,20 +433,15 @@ class TestClient:
         assert active_limit_order.filled_size == Decimal("0")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_place_sell_limit_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_place_sell_limit_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         limit_order = NewLimitOrder(
             pair_name="COW/ETH",
@@ -434,18 +450,20 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == limit_order.pair_name
         assert event.order_side == limit_order.order_side
@@ -454,16 +472,16 @@ class TestClient:
         assert event.price == limit_order.price
         assert event.limit_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # 0.5 COW being held in escrow for the Limit Order
         assert round(
-            cow_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["COW"].to_decimal(
                 cow_amount_after_order - cow_amount_before_order
             ),
             4,
@@ -489,19 +507,16 @@ class TestClient:
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_place_buy_limit_order_that_crosses_the_spread(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
+        self, test_client_for_account_1: Client
     ):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # There is a SELL limit order already in the book with a size of 1 and price of 2 so this should match with that
         limit_order = NewLimitOrder(
@@ -511,18 +526,20 @@ class TestClient:
             price=Decimal("1000"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == limit_order.pair_name
         assert event.order_side == limit_order.order_side
@@ -531,24 +548,24 @@ class TestClient:
         assert event.price == Decimal("2")
         assert event.market_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # Check that account 1 had paid and received assets accounting for fees
         # received 1 COW
         assert round(
-            cow_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["COW"].to_decimal(
                 cow_amount_after_order - cow_amount_before_order
             ),
             3,
         ) == Decimal("1")
         # paid 2 ETH even though we were willing to pay 1000 eth
         assert round(
-            eth_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["ETH"].to_decimal(
                 eth_amount_after_order - eth_amount_before_order
             ),
             3,
@@ -566,19 +583,16 @@ class TestClient:
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_place_sell_limit_order_that_crosses_the_spread(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
+        self, test_client_for_account_1: Client
     ):
         pair_name = "COW/ETH"
 
-        cow_amount_before_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_before_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_before_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_before_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # There is a BUY limit order already in the book with a size of 1 and price of 1 so this should match with that
         limit_order = NewLimitOrder(
@@ -588,18 +602,20 @@ class TestClient:
             price=Decimal("1"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        event: OrderEvent = result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
         assert event.pair_name == limit_order.pair_name
         assert event.order_side == limit_order.order_side
@@ -608,24 +624,24 @@ class TestClient:
         assert event.price == Decimal("1")
         assert event.market_order_owner == test_client_for_account_1.wallet
 
-        cow_amount_after_order = cow_erc20_for_account_1.balance_of(
-            cow_erc20_for_account_1.wallet
-        )
-        eth_amount_after_order = eth_erc20_for_account_1.balance_of(
-            eth_erc20_for_account_1.wallet
-        )
+        cow_amount_after_order = test_client_for_account_1.network.tokens[
+            "COW"
+        ].balance_of(test_client_for_account_1.wallet)
+        eth_amount_after_order = test_client_for_account_1.network.tokens[
+            "ETH"
+        ].balance_of(test_client_for_account_1.wallet)
 
         # Check that account 1 had paid and received assets accounting for fees
         # received 1 COW
         assert round(
-            cow_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["COW"].to_decimal(
                 cow_amount_after_order - cow_amount_before_order
             ),
             3,
         ) == Decimal("-1")
         # paid 1 ETH
         assert round(
-            eth_erc20_for_account_1.to_decimal(
+            test_client_for_account_1.network.tokens["ETH"].to_decimal(
                 eth_amount_after_order - eth_amount_before_order
             ),
             3,
@@ -640,12 +656,7 @@ class TestClient:
         assert len(test_client_for_account_1.active_limit_orders) == 0
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_cancel_limit_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_cancel_limit_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
         test_client_for_account_1.start_event_poller(
@@ -660,12 +671,12 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Get limit order ID from message queue
         limit_order_id = message_queue.get(block=True).limit_order_id
@@ -693,26 +704,28 @@ class TestClient:
         )
 
         # Cancel the limit order
-        cancel_limit_order = NewCancelOrder(
-            pair_name=pair_name, order_id=limit_order_id
+        cancel_order = NewCancelOrder(pair_name=pair_name, order_id=limit_order_id)
+
+        cancel_transaction = test_client_for_account_1.cancel_limit_order(
+            order=cancel_order
         )
 
-        cancel_transaction = Transaction(orders=[cancel_limit_order])
-
-        cancel_result = test_client_for_account_1.cancel_limit_order(
+        cancel_result = test_client_for_account_1.execute_transaction(
             transaction=cancel_transaction
         )
 
         # Check that cancel txn was a success
-        assert cancel_result.status == 1
         assert cancel_result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(cancel_result.events) == 1
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), cancel_result.events)
+        )
 
-        event: OrderEvent = cancel_result.events[0]
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
 
-        assert event.pair_name == cancel_limit_order.pair_name
+        assert event.pair_name == cancel_order.pair_name
         assert event.order_type == OrderType.CANCEL
         assert event.order_side == limit_order.order_side
         assert event.price == limit_order.price
@@ -755,21 +768,24 @@ class TestClient:
             price=Decimal("0.5"),
         )
 
-        batch_transaction = Transaction(orders=[limit_order_1, limit_order_2])
+        orders = [limit_order_1, limit_order_2]
 
-        result = test_client_for_account_1.batch_place_limit_orders(
-            transaction=batch_transaction
-        )
+        transaction = test_client_for_account_1.batch_limit_orders(orders=orders)
+
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 2
+        # Check that we received the order events we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
+
+        assert len(order_events) == 2
 
         for i, limit_order in enumerate([limit_order_1, limit_order_2]):
-            event: OrderEvent = result.events[i]
+            event: OrderEvent = order_events[i]
 
             assert event.pair_name == limit_order.pair_name
             assert event.order_type == OrderType.LIMIT
@@ -798,6 +814,60 @@ class TestClient:
         assert test_client_for_account_1.active_limit_orders[5].price == Decimal("0.5")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_batch_place_limit_orders_on_different_pairs(
+        self, test_client_for_account_1: Client
+    ):
+        cow_pair_name = "COW/ETH"
+        blz_pair_name = "COW/ETH"
+
+        limit_order_1 = NewLimitOrder(
+            pair_name=cow_pair_name,
+            order_side=OrderSide.BUY,
+            size=Decimal("1"),
+            price=Decimal("1.5"),
+        )
+
+        limit_order_2 = NewLimitOrder(
+            pair_name=blz_pair_name,
+            order_side=OrderSide.BUY,
+            size=Decimal("1"),
+            price=Decimal("0.5"),
+        )
+
+        orders = [limit_order_1, limit_order_2]
+
+        transaction = test_client_for_account_1.batch_limit_orders(orders=orders)
+
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
+
+        # Check that transaction was a success
+
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the order events we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
+
+        assert len(order_events) == 2
+
+        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
+            event: OrderEvent = order_events[i]
+
+            assert event.pair_name == limit_order.pair_name
+            assert event.order_type == OrderType.LIMIT
+            assert event.order_side == limit_order.order_side
+            assert event.price == limit_order.price
+            assert event.size == limit_order.size
+            assert event.limit_order_owner == test_client_for_account_1.wallet
+
+        # Check that the limit orders are being tracked
+        assert len(test_client_for_account_1.active_limit_orders) == 2
+
+        assert test_client_for_account_1.active_limit_orders[4].price == Decimal("1.5")
+        assert test_client_for_account_1.active_limit_orders[5].price == Decimal("0.5")
+
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_batch_update_limit_orders(self, test_client_for_account_2: Client):
         pair_name = "COW/ETH"
 
@@ -805,7 +875,7 @@ class TestClient:
             pair_name=pair_name
         )
 
-        limit_order_1 = UpdateLimitOrder(
+        update_limit_order_1 = UpdateLimitOrder(
             order_id=2,
             pair_name="COW/ETH",
             order_side=OrderSide.SELL,
@@ -813,7 +883,7 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        limit_order_2 = UpdateLimitOrder(
+        update_limit_order_2 = UpdateLimitOrder(
             order_id=3,
             pair_name="COW/ETH",
             order_side=OrderSide.SELL,
@@ -821,34 +891,37 @@ class TestClient:
             price=Decimal("2.5"),
         )
 
-        batch_transaction = Transaction(orders=[limit_order_1, limit_order_2])
+        orders = [update_limit_order_1, update_limit_order_2]
 
-        result = test_client_for_account_2.batch_update_limit_orders(
-            transaction=batch_transaction
-        )
+        transaction = test_client_for_account_2.batch_update_limit_orders(orders=orders)
+
+        result = test_client_for_account_2.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 4
+        # Check that we received the order events we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
 
-        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
-            event: OrderEvent = result.events[i]
+        assert len(order_events) == 4
+
+        for i in range(0, 2):
+            event: OrderEvent = order_events[i]
+
+            assert event.pair_name == update_limit_order_1.pair_name
+            assert event.order_type == OrderType.CANCEL
+            assert event.limit_order_owner == test_client_for_account_2.wallet
+
+        for i, limit_order in enumerate([update_limit_order_1, update_limit_order_2]):
+            event: OrderEvent = order_events[i + 2]
 
             assert event.pair_name == limit_order.pair_name
             assert event.order_type == OrderType.LIMIT
             assert event.order_side == limit_order.order_side
             assert event.price == limit_order.price
             assert event.size == limit_order.size
-            assert event.limit_order_owner == test_client_for_account_2.wallet
-
-        for i in range(2, 4):
-            event: OrderEvent = result.events[i]
-
-            assert event.pair_name == limit_order_1.pair_name
-            assert event.order_type == OrderType.CANCEL
             assert event.limit_order_owner == test_client_for_account_2.wallet
 
         # Check that offers has been placed in the market
@@ -883,21 +956,24 @@ class TestClient:
 
         cancel_order_2 = NewCancelOrder(pair_name="COW/ETH", order_id=3)
 
-        batch_transaction = Transaction(orders=[cancel_order_1, cancel_order_2])
+        orders = [cancel_order_1, cancel_order_2]
 
-        result = test_client_for_account_2.batch_cancel_limit_orders(
-            transaction=batch_transaction
-        )
+        transaction = test_client_for_account_2.batch_cancel_limit_orders(orders=orders)
+
+        result = test_client_for_account_2.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        # Check that we received the event we expected
-        assert len(result.events) == 2
+        # Check that we received the order events we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
+
+        assert len(order_events) == 2
 
         for i, cancel_order in enumerate([cancel_order_1, cancel_order_2]):
-            event: OrderEvent = result.events[i]
+            event: OrderEvent = order_events[i]
 
             assert event.pair_name == cancel_order.pair_name
             assert event.order_type == OrderType.CANCEL
@@ -935,12 +1011,12 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Get message from message queue put there by event poller
         message = message_queue.get(block=True)
@@ -973,12 +1049,12 @@ class TestClient:
             worst_execution_price=Decimal("2"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_1.market_order(order=market_order)
 
-        result = test_client_for_account_1.place_market_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Get message from message queue put there by event poller
         message = message_queue.get(block=True)
@@ -1006,12 +1082,12 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Get limit order ID from message queue
         limit_order_id = message_queue.get(block=True).limit_order_id
@@ -1026,18 +1102,18 @@ class TestClient:
         )
 
         # Cancel the buy limit order
-        cancel_limit_order = NewCancelOrder(
-            pair_name=pair_name, order_id=limit_order_id
+        cancel_order = NewCancelOrder(pair_name=pair_name, order_id=limit_order_id)
+
+        cancel_transaction = test_client_for_account_1.cancel_limit_order(
+            order=cancel_order
         )
 
-        cancel_transaction = Transaction(orders=[cancel_limit_order])
-
-        cancel_result = test_client_for_account_1.cancel_limit_order(
+        cancel_result = test_client_for_account_1.execute_transaction(
             transaction=cancel_transaction
         )
 
         # Check that cancel txn was a success
-        assert cancel_result.status == 1
+        assert cancel_result.transaction_status == TransactionStatus.SUCCESS
 
         # Get message from message queue put there by event poller
         message = message_queue.get(block=True)
@@ -1075,12 +1151,12 @@ class TestClient:
             worst_execution_price=Decimal("4"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_1.market_order(order=market_order)
 
-        result = test_client_for_account_1.place_market_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Check that 1 ask was filled and the other is partially remaining
         orderbook_after_order = test_client_for_account_1.get_orderbook(
@@ -1114,12 +1190,12 @@ class TestClient:
             worst_execution_price=Decimal("2"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_1.market_order(order=market_order)
 
-        result = test_client_for_account_1.place_market_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
+        assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Get message from message queue put there by event poller (Fee event)
         message = message_queue.get(block=True)
@@ -1154,12 +1230,11 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = Transaction(orders=[limit_order])
+        transaction = test_client_for_account_1.limit_order(order=limit_order)
 
-        result = test_client_for_account_1.place_limit_order(transaction=transaction)
+        result = test_client_for_account_1.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
         assert len(test_client_for_account_1.active_limit_orders) == 1
@@ -1175,12 +1250,11 @@ class TestClient:
             worst_execution_price=Decimal("1"),
         )
 
-        transaction = Transaction(orders=[market_order])
+        transaction = test_client_for_account_2.market_order(order=market_order)
 
-        result = test_client_for_account_2.place_market_order(transaction=transaction)
+        result = test_client_for_account_2.execute_transaction(transaction=transaction)
 
         # Check that transaction was a success
-        assert result.status == 1
         assert result.transaction_status == TransactionStatus.SUCCESS
 
         # Check that message was received but account_1 client

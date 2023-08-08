@@ -9,8 +9,8 @@ include = ["network_config/**/*"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-sphinx = "7.1.1"
-web3 = "6.7.0"
+sphinx = "7.1.2"
+web3 = "6.8.0"
 hexbytes = "0.3.1"
 attributedict = "0.3.0"
 eth-abi = "4.1.0"
@@ -18,7 +18,7 @@ pytest = "7.4.0"
 eth-tester = "0.9.1b1"
 py-evm = "0.7.0a4"
 eth-utils = "2.2.0"
-subgrounds = { version = "1.6.0", extras = ["dash"] }
+subgrounds = { version = "1.6.1", extras = ["dash"] }
 pyyaml = "6.0.1"
 python-semantic-release = "8.0.4"
 black = "23.7.0"

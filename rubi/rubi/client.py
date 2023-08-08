@@ -3,24 +3,22 @@ from _decimal import Decimal
 from multiprocessing import Queue
 from threading import Thread
 from time import sleep
-from typing import Union, List, Optional, Dict, Type, Any, Callable
+from typing import Union, List, Optional, Dict, Type, Any, Callable, Tuple
 
 import pandas as pd
 from eth_typing import ChecksumAddress
-from web3.types import EventData, Nonce
+from web3.types import EventData, Nonce, TxParams
 
 from rubi.contracts import (
-    RubiconMarket,
-    RubiconRouter,
     ERC20,
     TransactionReceipt,
     EmitFeeEvent,
-    EmitSwap,
     EmitOfferEvent,
     EmitTakeEvent,
     EmitCancelEvent,
+    EmitApproval,
+    EmitTransfer,
 )
-from rubi.data import MarketData
 from rubi.network import (
     Network,
 )
@@ -28,18 +26,20 @@ from rubi.rubicon_types import (
     OrderSide,
     NewMarketOrder,
     NewLimitOrder,
-    Pair,
     OrderBook,
-    PairDoesNotExistException,
     BaseEvent,
     FeeEvent,
     OrderEvent,
-    Transaction,
-    BaseOrder,
     NewCancelOrder,
     UpdateLimitOrder,
     ActiveLimitOrder,
     OrderType,
+    Approval,
+    RubiconMarketApproval,
+    RubiconRouterApproval,
+    Transfer,
+    ApprovalEvent,
+    TransferEvent,
 )
 
 logger = log.getLogger(__name__)
@@ -70,27 +70,13 @@ class Client:
         """constructor method."""
         self.network = network
 
+        self.message_queue = message_queue  # type: Queue | None
+
+        # Authentication
         self.wallet = (
             self.network.w3.to_checksum_address(wallet) if wallet else wallet
         )  # type: ChecksumAddress |  None
-        self.key = key  # type: str |  None
-
-        self.market = RubiconMarket.from_network(
-            network=self.network, wallet=self.wallet, key=self.key
-        )
-        self.router = RubiconRouter.from_network(
-            network=self.network, wallet=self.wallet, key=self.key
-        )
-
-        # TODO a Dict of { symbol: ERC20 }, investigate
-        self.tokens = self.get_network_tokens()
-        self._pairs: Dict[str, Pair] = {}
-
-        self.message_queue = message_queue  # type: Queue | None
-
-        self.market_data = MarketData.from_network_with_tokens(
-            network=self.network, network_tokens=self.tokens
-        )
+        self._key = key  # type: str |  None
 
         # Order tracking
         self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
@@ -99,193 +85,39 @@ class Client:
     def from_http_node_url(
         cls,
         http_node_url: str,
-        custom_token_addresses_file: Optional[str] = None,
         message_queue: Optional[Queue] = None,
         wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
+        custom_token_addresses_file: Optional[str] = None,
+        with_subgraph: bool = True,
     ):
         """Initialize a Client using a http_node_url.
 
         :param http_node_url: URL of the HTTP node.
         :type http_node_url: str
-        :param custom_token_addresses_file: The name of a yaml file (relative to the current working directory) with
-            custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
-            (optional, default is None).
-        :type custom_token_addresses_file: Optional[str]
         :param message_queue: Optional message queue for processing events (optional, default is None).
         :type message_queue: Optional[Queue]
         :param wallet: Wallet address (optional, default is None).
         :type wallet: Optional[Union[ChecksumAddress, str]]
         :param key: Key for the wallet (optional, default is None).
         :type key: str
+        :param custom_token_addresses_file: The name of a yaml file (relative to the current working directory) with
+            custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
+            (optional, default is None).
+        :type custom_token_addresses_file: Optional[str]
+        :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
+        :type with_subgraph: bool
         """
-        network = Network.from_config(
+        network = Network.from_http_node_url(
             http_node_url=http_node_url,
             custom_token_addresses_file=custom_token_addresses_file,
+            with_subgraph=with_subgraph,
         )
 
         return cls(network=network, message_queue=message_queue, wallet=wallet, key=key)
 
     ######################################################################
-    # pair methods
-    ######################################################################
-
-    def add_pair(
-        self,
-        pair_name: str,
-        base_asset_allowance: Optional[Decimal] = None,
-        quote_asset_allowance: Optional[Decimal] = None,
-    ) -> None:
-        """Add a Pair to the Client. This method creates a Pair instance and adds it to the Client's internal
-        _pairs dictionary. Additionally, this method updates the spender allowance of the Rubicon Market for both
-        base asset and the quote asset.
-
-        :param pair_name: Name of the Pair in the format "<base_asset>/<quote_asset>".
-        :type pair_name: str
-        :param base_asset_allowance: Allowance for the base asset (optional, default is None).
-        :type base_asset_allowance: Optional[Decimal]
-        :param quote_asset_allowance: Allowance for the quote asset (optional, default is None).
-        :type quote_asset_allowance: Optional[Decimal]
-        """
-
-        base, quote = pair_name.split("/")
-
-        base_asset = ERC20.from_network(
-            name=base, network=self.network, wallet=self.wallet, key=self.key
-        )
-        quote_asset = ERC20.from_network(
-            name=quote, network=self.network, wallet=self.wallet, key=self.key
-        )
-
-        current_base_asset_allowance = None
-        current_quote_asset_allowance = None
-
-        if self.wallet is not None and self.key is not None:
-            current_base_asset_allowance = base_asset.to_decimal(
-                number=base_asset.allowance(
-                    owner=self.wallet, spender=self.market.address
-                )
-            )
-            current_quote_asset_allowance = quote_asset.to_decimal(
-                number=quote_asset.allowance(
-                    owner=self.wallet, spender=self.market.address
-                )
-            )
-
-            if current_base_asset_allowance == Decimal(
-                "0"
-            ) or current_quote_asset_allowance == Decimal("0"):
-                logger.warning(
-                    "allowance for base or quote asset is zero. this may cause issues when placing orders"
-                )
-
-        self._pairs[f"{base}/{quote}"] = Pair(
-            name=pair_name,
-            base_asset=base_asset,
-            quote_asset=quote_asset,
-            current_base_asset_allowance=current_base_asset_allowance,
-            current_quote_asset_allowance=current_quote_asset_allowance,
-        )
-
-        # only edit allowance if client has signing rights
-        if self.wallet is not None and self.key is not None:
-            self.update_pair_allowance(
-                pair_name=pair_name,
-                new_base_asset_allowance=base_asset_allowance,
-                new_quote_asset_allowance=quote_asset_allowance,
-            )
-
-    def get_pairs_list(self) -> List[str]:
-        """Get a list of all pair names in the clients internal _pairs dictionary.
-
-        :return: List of pair names.
-        :rtype: List[str]
-        """
-        return list(self._pairs.keys())
-
-    def update_pair_allowance(
-        self,
-        pair_name: str,
-        new_base_asset_allowance: Optional[Decimal] = None,
-        new_quote_asset_allowance: Optional[Decimal] = None,
-    ) -> None:
-        """Update the allowance for the base and quote assets of a pair if the current allowance is different from the
-        new allowance. This method also updates the Pair data structure so that the allowance can be read without having
-        to do a call to the chain.
-
-        :param pair_name: Name of the pair.
-        :type pair_name: str
-        :param new_base_asset_allowance: New allowance for the base asset. (optional, default is None).
-        :type new_base_asset_allowance: Optional[Decimal]
-        :param new_quote_asset_allowance: New allowance for the quote asset. (optional, default is None).
-        :type new_quote_asset_allowance: Optional[Decimal]
-        :raises PairDoesNotExistException: If the pair does not exist in the clients internal _pairs dict.
-        """
-        pair = self.get_pair(pair_name=pair_name)
-
-        if (
-            new_base_asset_allowance is not None
-            and pair.current_base_asset_allowance != new_base_asset_allowance
-        ):
-            self._update_asset_allowance(
-                asset=pair.base_asset,
-                spender=self.market.address,
-                new_allowance=new_base_asset_allowance,
-            )
-            pair.update_base_asset_allowance(
-                new_base_asset_allowance=new_base_asset_allowance
-            )
-
-        if (
-            new_quote_asset_allowance is not None
-            and pair.current_quote_asset_allowance != new_quote_asset_allowance
-        ):
-            self._update_asset_allowance(
-                asset=pair.quote_asset,
-                spender=self.market.address,
-                new_allowance=new_quote_asset_allowance,
-            )
-            pair.update_quote_asset_allowance(
-                new_quote_asset_allowance=new_quote_asset_allowance
-            )
-
-    def get_pair(self, pair_name: str) -> Pair:
-        """Retrieves the Pair object associated with the specified pair name. If the pair does not exist
-        in the client, it raises a PairDoesNotExistException.
-
-        :param pair_name: Name of the pair.
-        :type pair_name: str
-        :return: The Pair object.
-        :rtype: Pair
-        :raises PairDoesNotExistException: If the pair does not exist in the client.
-        """
-        pair = self._pairs.get(pair_name)
-
-        if pair is None:
-            raise PairDoesNotExistException(
-                "add pair to the client using the add_pair method before placing orders for the pair"
-            )
-
-        return pair
-
-    def remove_pair(self, pair_name: str) -> None:
-        """Removes a pair from the client. It updates the pair's asset allowances
-        to zero and deletes the pair and its corresponding order book from the client.
-
-        :param pair_name: Name of the pair to remove.
-        :type pair_name: str
-        :raises PairDoesNotExistException: If the pair does not exist in the client before removal.
-        """
-        self.update_pair_allowance(
-            pair_name=pair_name,
-            new_base_asset_allowance=Decimal("0"),
-            new_quote_asset_allowance=Decimal("0"),
-        )
-
-        del self._pairs[pair_name]
-
-    ######################################################################
-    # nonce methods
+    # transaction methods
     ######################################################################
 
     def get_nonce(self) -> Nonce:
@@ -295,6 +127,170 @@ class Client:
         :rtype: Nonce
         """
         return self.network.w3.eth.get_transaction_count(self.wallet)
+
+    def get_transaction_receipt(
+        self,
+        transaction_hash: str,
+        pair_names: Optional[List[str]] = None,
+    ) -> TransactionReceipt:
+        """Get the transaction receipt for a given transaction hash.
+
+        :param transaction_hash: The transaction hash.
+        :type transaction_hash: str
+        :param pair_names: If handling a transaction that interacted with the rubicon market we can decode events into
+            human-readable format if we know the pairs in the transaction. (defaults to None and no decoding is done)
+        :type pair_names: Optional[List[str]]
+        :return: A TransactionReceipt for the transaction hash.
+        :rtype: TransactionReceipt
+        :return:
+        """
+
+        transaction_receipt = self.network.transaction_handler.get_transaction_receipt(
+            transaction_hash=transaction_hash,
+        )
+
+        return self._handle_transaction_receipt_raw_events(
+            transaction_receipt=transaction_receipt,
+            pair_names=pair_names,
+        )
+
+    def execute_transaction(self, transaction: TxParams) -> TransactionReceipt:
+        """Execute the passed transaction.
+
+        :param transaction: The transaction hash.
+        :type transaction: TxParams
+        :return: A TransactionReceipt of the executed transaction.
+        :rtype: TransactionReceipt
+        :return:
+        """
+
+        pair_names = transaction["pair_names"] if "pair_names" in transaction else None
+
+        transaction_receipt = self.network.transaction_handler.execute_transaction(
+            transaction=transaction, key=self._key
+        )
+
+        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
+            transaction_receipt=transaction_receipt,
+            pair_names=pair_names,
+        )
+
+        if pair_names:
+            self._update_active_limit_orders(
+                events=processed_transaction_receipt.events
+            )
+
+        return processed_transaction_receipt
+
+    ######################################################################
+    # token methods
+    ######################################################################
+
+    def get_allowance(self, token: str, spender: ChecksumAddress) -> Decimal:
+        """Get a spenders allowance for a certain token.
+
+        :param token: The token to check the allowance of
+        :type token: str
+        :param spender: The spender address
+        :type spender: ChecksumAddress
+        :return: The allowance of the spender
+        :rtype: Decimal
+        """
+
+        allowance = self.network.tokens[token].allowance(
+            owner=self.wallet, spender=spender
+        )
+
+        return self.network.tokens[token].to_decimal(allowance)
+
+    # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
+    #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
+    #  See: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+    def approve(
+        self,
+        approval: Approval,
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """
+        Construct an approval transaction.
+
+        :param approval: The approval of a spender of an ERC20
+        :type approval: Approval | RubiconMarketApproval | RubiconRouterApproval
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The built transaction.
+        :rtype: TxParams
+        """
+        amount = self.network.tokens[approval.token].to_integer(approval.amount)
+        spender = approval.spender
+
+        if isinstance(approval, RubiconMarketApproval):
+            spender = self.network.rubicon_market.address
+        elif isinstance(approval, RubiconRouterApproval):
+            spender = self.network.rubicon_router.address
+        elif spender is None:
+            raise Exception("A spender must be provided for an approval")
+
+        return self.network.tokens[approval.token].approve(
+            spender=spender,
+            amount=amount,
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
+        )
+
+    def transfer(
+        self,
+        transfer: Transfer,
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """
+        Construct a transfer transaction.
+
+        :param transfer: The transfer of an ERC20 to a certain address
+        :type transfer: Transfer
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The built transaction.
+        :rtype: TxParams
+        """
+        amount = self.network.tokens[transfer.token].to_integer(transfer.amount)
+
+        return self.network.tokens[transfer.token].transfer(
+            recipient=transfer.recipient,
+            amount=amount,
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
+        )
 
     ######################################################################
     # orderbook methods
@@ -309,16 +305,17 @@ class Client:
         :rtype: OrderBook
         :raises PairDoesNotExistException: If the pair does not exist in the client.
         """
-        pair = self.get_pair(pair_name=pair_name)
+        base_asset, quote_asset = pair_name.split("/")
 
-        rubicon_offer_book = self.router.get_book_from_pair(
-            asset=pair.base_asset.address, quote=pair.quote_asset.address
+        rubicon_offer_book = self.network.rubicon_router.get_book_from_pair(
+            asset=self.network.tokens[base_asset].address,
+            quote=self.network.tokens[quote_asset].address,
         )
 
         return OrderBook.from_rubicon_offer_book(
             offer_book=rubicon_offer_book,
-            base_asset=pair.base_asset,
-            quote_asset=pair.quote_asset,
+            base_asset=self.network.tokens[base_asset],
+            quote_asset=self.network.tokens[quote_asset],
         )
 
     def start_orderbook_poller(self, pair_name: str, poll_time: int = 2) -> None:
@@ -336,41 +333,40 @@ class Client:
 
         if self.message_queue is None:
             raise Exception(
-                "orderbook poller is configured to place messages on the message queue. message queue"
-                "cannot be none"
+                "Orderbook poller is configured to place messages on the message queue. Message queue cannot be none"
             )
 
-        # Check that pair is defined before starting
-        pair = self.get_pair(pair_name=pair_name)
+        base_asset, quote_asset = pair_name.split("/")
+        if (
+            base_asset not in self.network.tokens.keys()
+            or quote_asset not in self.network.tokens.keys()
+        ):
+            raise Exception(
+                f"Cannot start orderbook poller for {base_asset}/{quote_asset} as these assets are not in"
+                f"the clients token set: {self.network.tokens.keys()}"
+            )
 
         thread = Thread(
-            target=self._start_orderbook_poller, args=(pair, poll_time), daemon=True
+            target=self._start_orderbook_poller,
+            kwargs={"pair_name": pair_name, "poll_time": poll_time},
+            daemon=True,
         )
         thread.start()
 
-    # TODO: ideally this should use the RubiconMarket events to update itself instead of repeatedly polling the
-    #  get_orderbook method. But it's fine for now.
-    def _start_orderbook_poller(self, pair: Pair, poll_time: int = 2) -> None:
-        """The internal implementation of the order book poller. It continuously retrieves the order book
-        for the specified pair and adds it to the pair order books dictionary and the message queue of the client. The
-        poller will run until the pair is removed from the client.
+    # TODO: look at using a listener instead of poller (we will probably need to listen to events)
+    def _start_orderbook_poller(self, pair_name: str, poll_time: int = 2) -> None:
+        """The internal implementation of the order book poller. It continuously retrieves the order book for the
+        specified pair and adds it to the message queue of the client.
 
-        :param pair: The pair to start the order book poller for.
-        :type pair: Pair
+        :param pair_name: Name of the pair to start the order book poller for.
+        :type pair_name: str
         :param poll_time: Polling interval in seconds, defaults to 2 seconds.
         :type poll_time: int, optional
         """
         polling: bool = True
         while polling:
             try:
-                order_book = self.get_orderbook(pair_name=pair.name)
-
-                self.message_queue.put(order_book)
-            except PairDoesNotExistException:
-                logger.warning(
-                    "pair does not exist in client. shutting down orderbook poller"
-                )
-                polling = False
+                self.message_queue.put(self.get_orderbook(pair_name=pair_name))
             except Exception as e:
                 logger.error(e)
             sleep(poll_time)
@@ -408,14 +404,29 @@ class Client:
         """
         if self.message_queue is None:
             raise Exception(
-                "event poller is configured to place messages on the message queue. message queue"
-                "cannot be none"
+                "Event poller is configured to place messages on the message queue. Message queue"
+                "cannot be none."
             )
 
-        pair = self.get_pair(pair_name)
+        base_asset, quote_asset = pair_name.split("/")
+
+        bid_identifier = self.network.w3.solidity_keccak(
+            abi_types=["address", "address"],
+            values=[
+                self.network.tokens[quote_asset].address,
+                self.network.tokens[base_asset].address,
+            ],
+        ).hex()
+        ask_identifier = self.network.w3.solidity_keccak(
+            abi_types=["address", "address"],
+            values=[
+                self.network.tokens[base_asset].address,
+                self.network.tokens[quote_asset].address,
+            ],
+        ).hex()
 
         argument_filters = event_type.default_filters(
-            bid_identifier=pair.bid_identifier, ask_identifier=pair.ask_identifier
+            bid_identifier=bid_identifier, ask_identifier=ask_identifier
         )
 
         if filters is not None:
@@ -424,7 +435,7 @@ class Client:
             argument_filters.update(filters)
 
         event_type.get_event_contract(
-            market=self.market, router=self.router
+            market=self.network.rubicon_market, router=self.network.rubicon_router
         ).start_event_poller(
             pair_name=pair_name,
             event_type=event_type,
@@ -453,16 +464,24 @@ class Client:
         )
 
         if raw_event.client_filter(wallet=self.wallet):
-            pair = self._pairs.get(pair_name)
 
             if isinstance(raw_event, EmitFeeEvent):
-                event = FeeEvent.from_event(pair=pair, event=raw_event)
+                asset = self.network.tokens[raw_event.asset]
+
+                event = FeeEvent.from_event(
+                    pair_name=pair_name, asset=asset, event=raw_event
+                )
             else:
+                base_asset, quote_asset = pair_name.split("/")
+
                 event = OrderEvent.from_event(
-                    pair=pair, event=raw_event, wallet=self.wallet
+                    base_asset=self.network.tokens[base_asset],
+                    quote_asset=self.network.tokens[quote_asset],
+                    event=raw_event,
+                    wallet=self.wallet,
                 )
 
-                self._update_active_limit_orders(order_events=[event])
+                self._update_active_limit_orders(events=[event])
 
             self.message_queue.put(event)
 
@@ -470,184 +489,275 @@ class Client:
     # order methods
     ######################################################################
 
-    def place_market_order(self, transaction: Transaction) -> TransactionReceipt:
-        """Place a market order transaction by executing the specified transaction object. The transaction
-        object should contain a single order of type NewMarketOrder. The order is retrieved from the transaction and
-        the corresponding market buy or sell method is called based on the order side.
+    def market_order(
+        self,
+        order: NewMarketOrder,
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a new market order transaction. The corresponding market buy or sell method is called based on the
+        order side.
 
-        :param transaction: Transaction object containing the market order.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed market order.
-        :rtype: TransactionReceipt
-        :raises Exception: If the transaction contains more than one order.
+        :param order: The market order to place.
+        :type order: NewMarketOrder
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The transaction to execute the market order.
+        :rtype: TxParams
         """
-        if len(transaction.orders) > 1:
-            raise Exception("call place_order with one order only")
-
-        order: NewMarketOrder = transaction.orders[0]  # noqa
-
-        pair = self.get_pair(pair_name=order.pair_name)
+        base_asset, quote_asset = order.pair_name.split("/")
 
         match order.order_side:
             case OrderSide.BUY:
-                transaction_receipt = self.market.buy_all_amount(
-                    buy_gem=pair.base_asset.address,
-                    buy_amt=pair.base_asset.to_integer(order.size),
-                    pay_gem=pair.quote_asset.address,
-                    max_fill_amount=pair.quote_asset.to_integer(
+                transaction = self.network.rubicon_market.buy_all_amount(
+                    buy_gem=self.network.tokens[base_asset].address,
+                    buy_amt=self.network.tokens[base_asset].to_integer(order.size),
+                    pay_gem=self.network.tokens[quote_asset].address,
+                    max_fill_amount=self.network.tokens[quote_asset].to_integer(
                         order.worst_execution_price * order.size
                     ),
-                    **transaction.args(),
+                    wallet=self.wallet,
+                    nonce=nonce,
+                    gas=gas,
+                    max_fee_per_gas=max_fee_per_gas,
+                    max_priority_fee_per_gas=max_priority_fee_per_gas,
                 )
             case OrderSide.SELL:
-                transaction_receipt = self.market.sell_all_amount(
-                    pay_gem=pair.base_asset.address,
-                    pay_amt=pair.base_asset.to_integer(order.size),
-                    buy_gem=pair.quote_asset.address,
-                    min_fill_amount=pair.quote_asset.to_integer(
+                transaction = self.network.rubicon_market.sell_all_amount(
+                    pay_gem=self.network.tokens[base_asset].address,
+                    pay_amt=self.network.tokens[base_asset].to_integer(order.size),
+                    buy_gem=self.network.tokens[quote_asset].address,
+                    min_fill_amount=self.network.tokens[quote_asset].to_integer(
                         order.worst_execution_price * order.size
                     ),
-                    **transaction.args(),
+                    wallet=self.wallet,
+                    nonce=nonce,
+                    gas=gas,
+                    max_fee_per_gas=max_fee_per_gas,
+                    max_priority_fee_per_gas=max_priority_fee_per_gas,
                 )
             case _:
                 raise Exception("OrderSide must be BUY or SELL")
 
-        return self._handle_transaction_receipt_raw_events(transaction_receipt)
+        transaction["pair_names"] = [order.pair_name]
 
-    def place_limit_order(self, transaction: Transaction) -> TransactionReceipt:
-        """Place a limit order transaction by executing the specified transaction object. The transaction object should
-        contain a single order of type NewLimitOrder.
+        return transaction
 
-        :param transaction: Transaction object containing the limit order.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed limit order.
-        :rtype: TransactionReceipt
-        :raises Exception: If the transaction contains more than one order.
+    def limit_order(
+        self,
+        order: NewLimitOrder,
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a new limit order transaction.
+
+        :param order: The limit order to place.
+        :type order: NewLimitOrder
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The transaction to execute the limit order.
+        :rtype: TxParams
         """
-        if len(transaction.orders) > 1:
-            raise Exception("call place_order with one order only")
-
-        order: NewLimitOrder = transaction.orders[0]  # noqa
-
-        pair = self.get_pair(pair_name=order.pair_name)
+        base_asset, quote_asset = order.pair_name.split("/")
 
         match order.order_side:
             case OrderSide.BUY:
-                transaction_receipt = self.market.offer(
-                    pay_amt=pair.quote_asset.to_integer(order.price * order.size),
-                    pay_gem=pair.quote_asset.address,
-                    buy_amt=pair.base_asset.to_integer(order.size),
-                    buy_gem=pair.base_asset.address,
-                    **transaction.args(),
+                transaction = self.network.rubicon_market.offer(
+                    pay_amt=self.network.tokens[quote_asset].to_integer(
+                        order.price * order.size
+                    ),
+                    pay_gem=self.network.tokens[quote_asset].address,
+                    buy_amt=self.network.tokens[base_asset].to_integer(order.size),
+                    buy_gem=self.network.tokens[base_asset].address,
+                    wallet=self.wallet,
+                    nonce=nonce,
+                    gas=gas,
+                    max_fee_per_gas=max_fee_per_gas,
+                    max_priority_fee_per_gas=max_priority_fee_per_gas,
                 )
             case OrderSide.SELL:
-                transaction_receipt = self.market.offer(
-                    pay_amt=pair.base_asset.to_integer(order.size),
-                    pay_gem=pair.base_asset.address,
-                    buy_amt=pair.quote_asset.to_integer(order.price * order.size),
-                    buy_gem=pair.quote_asset.address,
-                    **transaction.args(),
+                transaction = self.network.rubicon_market.offer(
+                    pay_amt=self.network.tokens[base_asset].to_integer(order.size),
+                    pay_gem=self.network.tokens[base_asset].address,
+                    buy_amt=self.network.tokens[quote_asset].to_integer(
+                        order.price * order.size
+                    ),
+                    buy_gem=self.network.tokens[quote_asset].address,
+                    wallet=self.wallet,
+                    nonce=nonce,
+                    gas=gas,
+                    max_fee_per_gas=max_fee_per_gas,
+                    max_priority_fee_per_gas=max_priority_fee_per_gas,
                 )
             case _:
                 raise Exception("OrderSide must be BUY or SELL")
 
-        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
-            transaction_receipt
-        )
+        transaction["pair_names"] = [order.pair_name]
 
-        self._update_active_limit_orders(
-            order_events=processed_transaction_receipt.events
-        )
+        return transaction
 
-        return processed_transaction_receipt
+    def cancel_limit_order(
+        self,
+        order: NewCancelOrder,
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a new limit order cancellation.
 
-    def cancel_limit_order(self, transaction: Transaction) -> TransactionReceipt:
-        """Place a limit order cancel transaction by executing the specified transaction object. The transaction object
-        should contain a single order of type NewCancelOrder.
-
-        :param transaction: Transaction object containing the cancel order.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed cancel order.
-        :rtype: TransactionReceipt
-        :raises Exception: If the transaction contains more than one order.
+        :param order: The cancel order object.
+        :type order: NewCancelOrder
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The transaction to execute the limit order cancellation.
+        :rtype: TxParams
         """
-        if len(transaction.orders) > 1:
-            raise Exception("call place_order with one order only")
-
-        order: NewCancelOrder = transaction.orders[0]  # noqa
-
-        transaction_receipt = self.market.cancel(
-            id=order.order_id, **transaction.args()
+        transaction = self.network.rubicon_market.cancel(
+            id=order.order_id,
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
-        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
-            transaction_receipt
-        )
+        transaction["pair_names"] = [order.pair_name]
 
-        self._update_active_limit_orders(
-            order_events=processed_transaction_receipt.events
-        )
+        return transaction
 
-        return processed_transaction_receipt
+    def batch_limit_orders(
+        self,
+        orders: List[NewLimitOrder],
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a transaction to place multiple limit orders in a batch.
 
-    def batch_place_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
-        """Place multiple limit orders in a batch transaction.
-
-        :param transaction: Transaction object containing multiple limit orders.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed batch limit orders.
-        :rtype: TransactionReceipt
+        :param orders: The new limits orders to place.
+        :type orders: List[NewLimitOrder]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: Transaction to execute the limit order batch.
+        :rtype: TxParams
         """
         pay_amts = []
         pay_gems = []
         buy_amts = []
         buy_gems = []
 
-        for order in transaction.orders:
-            order: NewLimitOrder
-            pair = self.get_pair(order.pair_name)
+        pair_names: List[str] = []
+        for order in orders:
+            base_asset, quote_asset = order.pair_name.split("/")
+            pair_names.append(order.pair_name)
 
             match order.order_side:
                 case OrderSide.BUY:
                     pay_amts.append(
-                        pair.quote_asset.to_integer(order.price * order.size)
+                        self.network.tokens[quote_asset].to_integer(
+                            order.price * order.size
+                        )
                     )
-                    pay_gems.append(pair.quote_asset.address)
-                    buy_amts.append(pair.base_asset.to_integer(order.size))
-                    buy_gems.append(pair.base_asset.address)
-                case OrderSide.SELL:
-                    pay_amts.append(pair.base_asset.to_integer(order.size))
-                    pay_gems.append(pair.base_asset.address)
+                    pay_gems.append(self.network.tokens[quote_asset].address)
                     buy_amts.append(
-                        pair.quote_asset.to_integer(order.price * order.size)
+                        self.network.tokens[base_asset].to_integer(order.size)
                     )
-                    buy_gems.append(pair.quote_asset.address)
+                    buy_gems.append(self.network.tokens[base_asset].address)
+                case OrderSide.SELL:
+                    pay_amts.append(
+                        self.network.tokens[base_asset].to_integer(order.size)
+                    )
+                    pay_gems.append(self.network.tokens[base_asset].address)
+                    buy_amts.append(
+                        self.network.tokens[quote_asset].to_integer(
+                            order.price * order.size
+                        )
+                    )
+                    buy_gems.append(self.network.tokens[quote_asset].address)
 
-        transaction_receipt = self.market.batch_offer(
+        transaction = self.network.rubicon_market.batch_offer(
             pay_amts=pay_amts,
             pay_gems=pay_gems,
             buy_amts=buy_amts,
             buy_gems=buy_gems,
-            **transaction.args(),
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
-        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
-            transaction_receipt
-        )
+        transaction["pair_names"] = pair_names
 
-        self._update_active_limit_orders(
-            order_events=processed_transaction_receipt.events
-        )
+        return transaction
 
-        return processed_transaction_receipt
+    def batch_update_limit_orders(
+        self,
+        orders: List[UpdateLimitOrder],
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a transaction to update multiple limit orders in a batch.
 
-    def batch_update_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
-        """Update multiple limit orders in a batch transaction.
-
-        :param transaction: Transaction object containing multiple limit order updates.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed batch limit order updates.
-        :rtype: TransactionReceipt
+        :param orders: The new limits orders to place.
+        :type orders: List[NewLimitOrder]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The transaction to execute the update limit order batch.
+        :rtype: TxParams
         """
         order_ids = []
         pay_amts = []
@@ -655,193 +765,284 @@ class Client:
         buy_amts = []
         buy_gems = []
 
-        for order in transaction.orders:
-            order: UpdateLimitOrder
-            pair = self.get_pair(order.pair_name)
+        pair_names: List[str] = []
+        for order in orders:
+            base_asset, quote_asset = order.pair_name.split("/")
+            pair_names.append(order.pair_name)
 
             order_ids.append(order.order_id)
 
             match order.order_side:
                 case OrderSide.BUY:
                     pay_amts.append(
-                        pair.quote_asset.to_integer(order.price * order.size)
+                        self.network.tokens[quote_asset].to_integer(
+                            order.price * order.size
+                        )
                     )
-                    pay_gems.append(pair.quote_asset.address)
-                    buy_amts.append(pair.base_asset.to_integer(order.size))
-                    buy_gems.append(pair.base_asset.address)
-                case OrderSide.SELL:
-                    pay_amts.append(pair.base_asset.to_integer(order.size))
-                    pay_gems.append(pair.base_asset.address)
+                    pay_gems.append(self.network.tokens[quote_asset].address)
                     buy_amts.append(
-                        pair.quote_asset.to_integer(order.price * order.size)
+                        self.network.tokens[base_asset].to_integer(order.size)
                     )
-                    buy_gems.append(pair.quote_asset.address)
+                    buy_gems.append(self.network.tokens[base_asset].address)
+                case OrderSide.SELL:
+                    pay_amts.append(
+                        self.network.tokens[base_asset].to_integer(order.size)
+                    )
+                    pay_gems.append(self.network.tokens[base_asset].address)
+                    buy_amts.append(
+                        self.network.tokens[quote_asset].to_integer(
+                            order.price * order.size
+                        )
+                    )
+                    buy_gems.append(self.network.tokens[quote_asset].address)
 
-        transaction_receipt = self.market.batch_requote(
+        transaction = self.network.rubicon_market.batch_requote(
             ids=order_ids,
             pay_amts=pay_amts,
             pay_gems=pay_gems,
             buy_amts=buy_amts,
             buy_gems=buy_gems,
-            **transaction.args(),
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
-        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
-            transaction_receipt
-        )
+        transaction["pair_names"] = pair_names
 
-        self._update_active_limit_orders(
-            order_events=processed_transaction_receipt.events
-        )
+        return transaction
 
-        return processed_transaction_receipt
+    def batch_cancel_limit_orders(
+        self,
+        orders: List[NewCancelOrder],
+        nonce: Optional[int] = None,
+        gas: Optional[int] = None,
+        max_fee_per_gas: Optional[int] = None,
+        max_priority_fee_per_gas: Optional[int] = None,
+    ) -> TxParams:
+        """Construct a transaction to cancel multiple limit orders in a batch.
 
-    def batch_cancel_limit_orders(self, transaction: Transaction) -> TransactionReceipt:
-        """Cancel multiple limit orders in a batch transaction.
-
-        :param transaction: Transaction object containing multiple limit order cancellations.
-        :type transaction: Transaction
-        :return: The transaction receipt of the executed batch limit order cancellations.
-        :rtype: TransactionReceipt
+        :param orders: List of cancel limit orders
+        :type orders: List[NewCancelOrder]
+        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
+            (optional, default is None)
+        :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
+        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
+            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
+        :type max_fee_per_gas: Optional[int]
+        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
+            estimate the max_priority_fee_per_gas (optional, default is None)
+        :type max_priority_fee_per_gas: Optional[int]
+        :return: The transaction to execute the cancel limit orders batch.
+        :rtype: TxParams
         """
         order_ids = []
 
-        for order in transaction.orders:
-            order: NewCancelOrder
+        pair_names: List[str] = []
+        for order in orders:
+            pair_names.append(order.pair_name)
 
             order_ids.append(order.order_id)
 
-        transaction_receipt = self.market.batch_cancel(
-            ids=order_ids, **transaction.args()
+        transaction = self.network.rubicon_market.batch_cancel(
+            ids=order_ids,
+            wallet=self.wallet,
+            nonce=nonce,
+            gas=gas,
+            max_fee_per_gas=max_fee_per_gas,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
 
-        processed_transaction_receipt = self._handle_transaction_receipt_raw_events(
-            transaction_receipt
-        )
+        transaction["pair_names"] = pair_names
 
-        self._update_active_limit_orders(
-            order_events=processed_transaction_receipt.events
-        )
-
-        return processed_transaction_receipt
+        return transaction
 
     ######################################################################
     # data methods
     ######################################################################
 
-    # TODO: i would like to remove pay_gem and buy_gem and follow the same pattern as the get_trades method but do not want to cause breaking changes
     def get_offers(
         self,
-        first: int = 10000000,  # TODO: decide on a default value
-        order_by: str = "timestamp",
-        order_direction: str = "desc",
-        formatted: bool = True,
-        book_side: OrderSide = OrderSide.NEUTRAL,
-        maker: Optional[Union[ChecksumAddress, str]] = None,
-        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        maker: Optional[ChecksumAddress | str] = None,
+        from_address: Optional[ChecksumAddress | str] = None,
         pair_name: Optional[str] = None,
-        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
-        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
+        book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
     ) -> pd.DataFrame:
-        df = self.market_data.get_offers(
-            maker=maker,
-            from_address=from_address,
-            pair_name=pair_name,
-            book_side=book_side,
-            pay_gem=pay_gem,
-            buy_gem=buy_gem,
-            open=open,
-            start_time=start_time,
-            end_time=end_time,
-            first=first,
-            order_by=order_by,
-            order_direction=order_direction,
-            formatted=formatted,
-        )
+        if pair_name:
+            base_asset, quote_asset = pair_name.split("/")
+
+            match book_side:
+                case OrderSide.BUY:
+                    df = self.network.market_data.get_offers(
+                        maker=maker,
+                        from_address=from_address,
+                        buy_gem=self.network.tokens[base_asset],
+                        pay_gem=self.network.tokens[quote_asset],
+                        side=book_side.value.lower(),
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                case OrderSide.SELL:
+                    df = self.network.market_data.get_offers(
+                        maker=maker,
+                        from_address=from_address,
+                        buy_gem=self.network.tokens[quote_asset],
+                        pay_gem=self.network.tokens[base_asset],
+                        side=book_side.value.lower(),
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                case _:
+                    bids = self.network.market_data.get_offers(
+                        maker=maker,
+                        from_address=from_address,
+                        buy_gem=self.network.tokens[base_asset],
+                        pay_gem=self.network.tokens[quote_asset],
+                        side=OrderSide.BUY.value.lower(),
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                    asks = self.network.market_data.get_offers(
+                        maker=maker,
+                        from_address=from_address,
+                        buy_gem=self.network.tokens[quote_asset],
+                        pay_gem=self.network.tokens[base_asset],
+                        side=OrderSide.SELL.value.lower(),
+                        open=open,
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+
+                    return pd.concat([bids, asks]).reset_index(drop=True)
+
+        else:
+            df = self.network.market_data.get_offers(
+                maker=maker,
+                from_address=from_address,
+                buy_gem=None,
+                pay_gem=None,
+                side=None,
+                open=open,
+                start_time=start_time,
+                end_time=end_time,
+                first=first,
+                order_by=order_by,
+                order_direction=order_direction,
+            )
+
         return df
 
     def get_trades(
         self,
-        first: int = 10000000,  # TODO: decide on a default value
-        order_by: str = "timestamp",
-        order_direction: str = "desc",
-        formatted: bool = True,
         book_side: OrderSide = OrderSide.NEUTRAL,
         taker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
     ) -> pd.DataFrame:
-        # handle the pair_name parameter
         if pair_name:
-            base, quote = pair_name.split("/")
-            base_asset = ERC20.from_network(name=base, network=self.network).address
-            quote_asset = ERC20.from_network(name=quote, network=self.network).address
-        else:
-            base_asset = None
-            quote_asset = None
+            base_asset, quote_asset = pair_name.split("/")
 
-        df = self.market_data.get_trades(
-            first=first,
-            order_by=order_by,
-            order_direction=order_direction,
-            book_side=book_side,
-            formatted=formatted,
-            taker=taker,
-            from_address=from_address,
-            take_gem=base_asset,
-            give_gem=quote_asset,
-            start_time=start_time,
-            end_time=end_time,
-        )
-        return df
+            match book_side:
+                case OrderSide.BUY:
+                    df = self.network.market_data.trades_query(
+                        taker=taker,
+                        from_address=from_address,
+                        take_gem=self.network.tokens[base_asset],
+                        give_gem=self.network.tokens[quote_asset],
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                case OrderSide.SELL:
+                    df = self.network.market_data.trades_query(
+                        taker=taker,
+                        from_address=from_address,
+                        take_gem=self.network.tokens[quote_asset],
+                        give_gem=self.network.tokens[base_asset],
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                case _:
+                    buys = self.network.market_data.trades_query(
+                        taker=taker,
+                        from_address=from_address,
+                        take_gem=self.network.tokens[base_asset],
+                        give_gem=self.network.tokens[quote_asset],
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+                    sells = self.network.market_data.trades_query(
+                        taker=taker,
+                        from_address=from_address,
+                        take_gem=self.network.tokens[quote_asset],
+                        give_gem=self.network.tokens[base_asset],
+                        start_time=start_time,
+                        end_time=end_time,
+                        first=first,
+                        order_by=order_by,
+                        order_direction=order_direction,
+                    )
+
+                    return pd.concat([buys, sells]).reset_index(drop=True)
+        else:
+            self.network.market_data.get_trades(
+                taker=taker,
+                from_address=from_address,
+                take_gem=None,
+                give_gem=None,
+                side=None,
+                start_time=start_time,
+                end_time=end_time,
+                first=first,
+                order_by=order_by,
+                order_direction=order_direction,
+            )
 
     ######################################################################
     # helper methods
     ######################################################################
 
-    def get_network_tokens(
-        self,
-    ) -> Dict[ChecksumAddress, ERC20]:
-        """Returns a Dict of addresses to ERC20 objects for all tokens on the network."""
-
-        network_tokens = {}
-
-        for address in self.network.token_addresses:
-            try:
-                network_tokens[address] = ERC20.from_network(
-                    name=address, network=self.network
-                )
-
-            except Exception as e:
-                raise Exception(f"Token address: {address} invalid from network: {e}")
-
-        return network_tokens
-
-    # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
-    #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
-    #  See: https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-    @staticmethod
-    def _update_asset_allowance(
-        asset: ERC20, spender: ChecksumAddress, new_allowance: Decimal
-    ) -> None:
-        logger.info(
-            asset.approve(
-                spender=spender, amount=asset.to_integer(number=new_allowance)
-            )
-        )
-
-    # TODO: implement this and use check transactions before they go through to prevent failure
-    @staticmethod
-    def _check_allowance(pair: Pair, order: BaseOrder):
-        pass
-
     def _handle_transaction_receipt_raw_events(
-        self, transaction_receipt: TransactionReceipt
+        self,
+        transaction_receipt: TransactionReceipt,
+        pair_names: Optional[List[str]] = None,
     ) -> TransactionReceipt:
         """
         Transforms the raw transaction receipt events to human-readable events
@@ -851,71 +1052,115 @@ class Client:
         :return: The transaction receipt with human-readable events populated
         :rtype: TransactionReceipt
         """
-        events: List[OrderEvent] = []
+        events: List[Any] = []
         for raw_event in transaction_receipt.raw_events:
             if (
-                isinstance(raw_event, EmitFeeEvent)
-                or isinstance(raw_event, EmitSwap)
-                or isinstance(raw_event, Dict)
+                isinstance(raw_event, EmitOfferEvent)
+                or isinstance(raw_event, EmitTakeEvent)
+                or isinstance(raw_event, EmitCancelEvent)
             ):
-                # TODO: handle these events correctly
-                continue
-            else:
                 raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent]
 
-                event_pair = None
-                for pair in self._pairs.values():
-                    if (
-                        pair.ask_identifier == raw_event.pair
-                        or pair.bid_identifier == raw_event.pair
-                    ):
-                        event_pair = pair
-                        break
-
-                if not event_pair:
-                    # We don't have a pair setup to correctly decode this event
+                base_asset, quote_asset = self._get_base_and_quote_asset(
+                    raw_event=raw_event, pair_names=pair_names
+                )
+                if not base_asset or not quote_asset:
                     continue
 
                 events.append(
                     OrderEvent.from_event(
-                        pair=event_pair, event=raw_event, wallet=self.wallet
+                        base_asset=base_asset,
+                        quote_asset=quote_asset,
+                        event=raw_event,
+                        wallet=self.wallet,
                     )
                 )
+            if isinstance(raw_event, EmitApproval):
+                try:
+                    token = self.network.tokens[raw_event.address]
+                except KeyError:
+                    continue
+                if raw_event.src == self.wallet or raw_event.guy == self.wallet:
+                    events.append(
+                        ApprovalEvent(
+                            token=token.symbol,
+                            amount=token.to_decimal(raw_event.wad),
+                            spender=raw_event.guy,
+                            source=raw_event.src,
+                        )
+                    )
+            if isinstance(raw_event, EmitTransfer):
+                try:
+                    token = self.network.tokens[raw_event.address]
+                except KeyError:
+                    continue
+                if raw_event.src == self.wallet or raw_event.dst == self.wallet:
+                    events.append(
+                        TransferEvent(
+                            token=token.symbol,
+                            amount=token.to_decimal(raw_event.wad),
+                            recipient=raw_event.dst,
+                            source=raw_event.src,
+                        )
+                    )
+        # TODO: handle other events nicely
 
         transaction_receipt.set_events(events=events)
 
         return transaction_receipt
 
-    def _update_active_limit_orders(self, order_events: List[OrderEvent]) -> None:
-        for order_event in order_events:
-            order_event: OrderEvent
-            if order_event.limit_order_owner != self.wallet:
+    def _get_base_and_quote_asset(
+        self,
+        raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent],
+        pair_names: Optional[List[str]] = None,
+    ) -> Tuple[Optional[ERC20], Optional[ERC20]]:
+        if pair_names is None:
+            return None, None
+
+        pay_gem = self.network.tokens[raw_event.pay_gem]
+        buy_gem = self.network.tokens[raw_event.buy_gem]
+
+        for pair_name in pair_names:
+            base_asset, quote_asset = pair_name.split("/")
+
+            if base_asset == pay_gem.symbol and quote_asset == buy_gem.symbol:
+                return pay_gem, buy_gem
+            elif base_asset == buy_gem.symbol and quote_asset == pay_gem.symbol:
+                return buy_gem, pay_gem
+
+        return None, None
+
+    def _update_active_limit_orders(self, events: List[Any]) -> None:
+        for event in events:
+            if not isinstance(event, OrderEvent):
                 continue
 
-            match order_event.order_type:
+            event: OrderEvent
+            if event.limit_order_owner != self.wallet:
+                continue
+
+            match event.order_type:
                 case OrderType.LIMIT:
-                    if self.active_limit_orders.get(order_event.limit_order_id):
+                    if self.active_limit_orders.get(event.limit_order_id):
                         # If we are already tracking the order then don't add it again
                         continue
 
                     self.active_limit_orders[
-                        order_event.limit_order_id
-                    ] = ActiveLimitOrder.from_order_event(order_event=order_event)
+                        event.limit_order_id
+                    ] = ActiveLimitOrder.from_order_event(order_event=event)
                 case OrderType.LIMIT_TAKEN:
-                    taken_order = self.active_limit_orders[order_event.limit_order_id]
+                    taken_order = self.active_limit_orders[event.limit_order_id]
 
-                    if taken_order.remaining_size - order_event.size <= Decimal("0"):
-                        self._delete_active_limit_order(
-                            order_id=order_event.limit_order_id
-                        )
+                    if taken_order.remaining_size - event.size <= Decimal("0"):
+                        self._delete_active_limit_order(order_id=event.limit_order_id)
                     else:
-                        self.active_limit_orders[
-                            order_event.limit_order_id
-                        ].update_with_take(order_event=order_event)
+                        self.active_limit_orders[event.limit_order_id].update_with_take(
+                            order_event=event
+                        )
                 case OrderType.CANCEL:
-                    self._delete_active_limit_order(order_id=order_event.limit_order_id)
+                    self._delete_active_limit_order(order_id=event.limit_order_id)
                 case OrderType.LIMIT_DELETED:
-                    self._delete_active_limit_order(order_id=order_event.limit_order_id)
+                    self._delete_active_limit_order(order_id=event.limit_order_id)
 
     def _delete_active_limit_order(self, order_id: int) -> None:
         try:

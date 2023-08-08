@@ -8,8 +8,9 @@ Subpackages
    :maxdepth: 4
 
    rubi.contracts
+   rubi.data
    rubi.network
-   rubi.types
+   rubi.rubicon_types
 
 Submodules
 ----------

@@ -1,12 +1,11 @@
 import logging as log
 import os
-from _decimal import Decimal
 from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
 from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import OrderSide
 
 # load from env file
 load_dotenv("../../local.env")

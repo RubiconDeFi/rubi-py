@@ -1,12 +1,11 @@
 import logging as log
 import os
-from _decimal import Decimal
 from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
 from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import EmitOfferEvent
 
 # load from env file
 load_dotenv("../../local.env")
@@ -31,9 +30,6 @@ queue = Queue()
 client = Client.from_http_node_url(
     http_node_url=http_node_url, wallet=wallet, key=key, message_queue=queue
 )
-
-# add the WETH/USDC pair to the client
-client.add_pair(pair_name="WETH/USDC")
 
 # start listening to offer events created by your wallet on the WETH/USDC market
 client.start_event_poller(
