@@ -545,14 +545,18 @@ class DetailedOrderBook(OrderBook):
         if order.base_asset.address == market_order.take_gem: 
             base_amt = market_order.take_amt
             quote_amt = market_order.give_amt
+            self.update_order(id, base_amt, quote_amt)
         elif order.base_asset.address == market_order.give_gem:
             base_amt = market_order.give_amt
             quote_amt = market_order.take_amt
+            self.update_order(id, base_amt, quote_amt)
         else:
-            raise ValueError(f"Order with id {id} did not match the market order pair.")
+            pass
+            #raise ValueError(f"Order with id {id} did not match the market order pair.")
+            # TODO: better error handling here
 
         # update the order
-        self.update_order(id, base_amt, quote_amt)
+        #self.update_order(id, base_amt, quote_amt)
 
     # TODO: determine if there is any need to modify the best_bid, best_ask, mid_price, and spread methods
     # def best_bid(self) -> Decimal:
