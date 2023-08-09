@@ -895,8 +895,7 @@ class Client:
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
-        as_dataframe: bool = True,
-    ) -> Dict | pd.DataFrame:
+    ) -> pd.DataFrame:
         if pair_name:
             base_asset, quote_asset = pair_name.split("/")
 
@@ -972,7 +971,6 @@ class Client:
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,
-                as_dataframe=as_dataframe,
             )
 
     def get_trades(

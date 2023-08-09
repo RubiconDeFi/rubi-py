@@ -220,7 +220,6 @@ class MarketData:
         first: int,
         order_by: str,
         order_direction: str,
-        as_dataframe: bool,
     ) -> pd.DataFrame | Dict:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
@@ -264,9 +263,7 @@ class MarketData:
         )
 
         query_fields = Offer.get_fields(offer_query=offer_query)
-        response = self._query_offers(
-            query_fields=query_fields, as_dataframe=as_dataframe
-        )
+        response = self._query_offers(query_fields=query_fields)
         # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
         if response and isinstance(response, pd.DataFrame):
             response["side"] = side if side else "N/A"
@@ -433,33 +430,25 @@ class MarketData:
 
         return trades_query
 
-    def _query_offers(
-        self, query_fields: List, as_dataframe: bool
-    ) -> Optional[Dict | pd.DataFrame]:
+    def _query_offers(self, query_fields: List) -> Optional[Dict | pd.DataFrame]:
         """Helper method to query the offers subgraph entity."""
-        if as_dataframe:
-            df = self.subgrounds.query_df(
-                query_fields,
-                # TODO: maybe we give the user the option to define a custom pagination strategy.
-                pagination_strategy=ShallowStrategy,  # noqa
-            )
+        df = self.subgrounds.query_df(
+            query_fields,
+            # TODO: maybe we give the user the option to define a custom pagination strategy.
+            pagination_strategy=ShallowStrategy,  # noqa
+        )
 
-            if df.empty:
-                return None
+        if df.empty:
+            return None
 
-            df.columns = [col.replace("offers_", "") for col in df.columns]
-            df.columns = [col.replace("_id", "") for col in df.columns]
+        df.columns = [col.replace("offers_", "") for col in df.columns]
+        df.columns = [col.replace("_id", "") for col in df.columns]
 
-            # convert the id to an integer
-            df["id"] = df["id"].apply(lambda x: int(x, 16))
+        # convert the id to an integer
+        df["id"] = df["id"].apply(lambda x: int(x, 16))
 
-            # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
-            return df
-        else:
-            return self.subgrounds.query_json(
-                query_fields,
-                pagination_strategy=ShallowStrategy,  # noqa
-            )
+        # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
+        return df
 
     def _query_trades(
         self,
