@@ -9,6 +9,7 @@ import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce, TxParams
 
+from rubi import EmitDeleteEvent
 from rubi.contracts import (
     ERC20,
     TransactionReceipt,
@@ -32,7 +33,7 @@ from rubi.rubicon_types import (
     OrderEvent,
     NewCancelOrder,
     UpdateLimitOrder,
-    ActiveLimitOrder,
+    LimitOrder,
     OrderType,
     Approval,
     RubiconMarketApproval,
@@ -58,6 +59,8 @@ class Client:
     :type wallet: Optional[ChecksumAddress]
     :param key: Key for the wallet (optional, default is None).
     :type key: Optional[str]
+    :param track_orders: Should the Client automatically track orders placed on Rubicon
+    :type track_orders: bool
     """
 
     def __init__(
@@ -66,6 +69,7 @@ class Client:
         message_queue: Optional[Queue] = None,
         wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
+        track_orders: bool = True,
     ):
         """constructor method."""
         self.network = network
@@ -79,7 +83,12 @@ class Client:
         self._key = key  # type: str |  None
 
         # Order tracking
-        self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
+        self.track_orders = track_orders
+
+        if self.track_orders:
+            self.active_limit_orders: Dict[int, LimitOrder] = {}
+
+            self.registered_event_listeners: List[str] = []
 
     @classmethod
     def from_http_node_url(
@@ -90,6 +99,7 @@ class Client:
         key: Optional[str] = None,
         custom_token_addresses_file: Optional[str] = None,
         with_subgraph: bool = True,
+        track_orders: bool = True,
     ):
         """Initialize a Client using a http_node_url.
 
@@ -107,6 +117,8 @@ class Client:
         :type custom_token_addresses_file: Optional[str]
         :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
         :type with_subgraph: bool
+        :param track_orders: Should the Client automatically track orders placed on Rubicon
+        :type track_orders: bool
         """
         network = Network.from_http_node_url(
             http_node_url=http_node_url,
@@ -114,7 +126,13 @@ class Client:
             with_subgraph=with_subgraph,
         )
 
-        return cls(network=network, message_queue=message_queue, wallet=wallet, key=key)
+        return cls(
+            network=network,
+            message_queue=message_queue,
+            wallet=wallet,
+            key=key,
+            track_orders=track_orders,
+        )
 
     ######################################################################
     # transaction methods
@@ -175,10 +193,11 @@ class Client:
             pair_names=pair_names,
         )
 
-        if pair_names:
+        if pair_names and self.track_orders:
             self._update_active_limit_orders(
                 events=processed_transaction_receipt.events
             )
+            self._register_listeners(pair_names=pair_names)
 
         return processed_transaction_receipt
 
@@ -876,7 +895,8 @@ class Client:
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
-    ) -> pd.DataFrame:
+        as_dataframe: bool = True,
+    ) -> Dict | pd.DataFrame:
         if pair_name:
             base_asset, quote_asset = pair_name.split("/")
 
@@ -952,6 +972,7 @@ class Client:
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,
+                as_dataframe=as_dataframe,
             )
 
     def get_trades(
@@ -1112,6 +1133,7 @@ class Client:
         raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent],
         pair_names: Optional[List[str]] = None,
     ) -> Tuple[Optional[ERC20], Optional[ERC20]]:
+        """Get the base and quote asset of an event"""
         if pair_names is None:
             return None, None
 
@@ -1129,6 +1151,7 @@ class Client:
         return None, None
 
     def _update_active_limit_orders(self, events: List[Any]) -> None:
+        """Update active limit order based on incoming events"""
         for event in events:
             if not isinstance(event, OrderEvent):
                 continue
@@ -1145,7 +1168,7 @@ class Client:
 
                     self.active_limit_orders[
                         event.limit_order_id
-                    ] = ActiveLimitOrder.from_order_event(order_event=event)
+                    ] = LimitOrder.from_order_event(order_event=event)
                 case OrderType.LIMIT_TAKEN:
                     taken_order = self.active_limit_orders[event.limit_order_id]
 
@@ -1161,9 +1184,32 @@ class Client:
                     self._delete_active_limit_order(order_id=event.limit_order_id)
 
     def _delete_active_limit_order(self, order_id: int) -> None:
+        """Delete active limit order"""
         try:
             del self.active_limit_orders[order_id]
         except KeyError:
             logger.debug(
                 f"Limit order {order_id} already removed from active limit orders."
+            )
+
+    def _register_listeners(self, pair_names: List[str]) -> None:
+        """Register event listeners"""
+        new_pair_names = [
+            pair_name
+            for pair_name in pair_names
+            if pair_name not in self.registered_event_listeners
+        ]
+
+        self.registered_event_listeners.extend(new_pair_names)
+
+        for pair_name in new_pair_names:
+            self.start_event_poller(
+                pair_name=pair_name,
+                event_type=EmitTakeEvent,
+                filters={"maker": self.wallet},
+            )
+            self.start_event_poller(
+                pair_name=pair_name,
+                event_type=EmitDeleteEvent,
+                filters={"maker": self.wallet},
             )

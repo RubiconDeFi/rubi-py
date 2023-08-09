@@ -59,8 +59,8 @@ class Trade:
             trade_query.offer.transaction.block_number,
             trade_query.offer.transaction.block_index,
             trade_query.offer.index,
-            trade_query.take_amt_decimal,
-            trade_query.give_amt_decimal,
+            trade_query.take_amt_decimals,
+            trade_query.give_amt_decimals,
             trade_query.take_gem_symbol,
             trade_query.datetime,
         ]

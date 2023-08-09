@@ -40,12 +40,7 @@ client = Client.from_http_node_url(
 client.approve(approval=RubiconMarketApproval(amount=Decimal("1"), token="WETH"))
 client.approve(approval=RubiconMarketApproval(amount=Decimal("2000"), token="USDC"))
 
-
-# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
-client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
-client.start_orderbook_poller("WETH/USDC")
-
-# Place a new limit order
+# Construct a new limit order
 limit_order = NewLimitOrder(
     pair_name="WETH/USDC",
     order_side=OrderSide.BUY,
@@ -53,17 +48,19 @@ limit_order = NewLimitOrder(
     price=Decimal("1914.13"),
 )
 
-result = client.limit_order(order=limit_order)
+transaction = client.limit_order(order=limit_order)
 
-log.info(result)
+log.info(transaction)
+
+# Place the limit order by executing the transaction
+result = client.execute_transaction(transaction=transaction)
 
 # Get the offer id from the transaction result
-offer: OrderEvent = result.events[0]
+offer = None
 
-log.info(offer.limit_order_id)
+for event in result.events:
+    if isinstance(event, OrderEvent):
+        offer = event
+        break
 
-# Print events and order books
-while True:
-    message = queue.get()
-
-    log.info(message)
+log.info(offer)

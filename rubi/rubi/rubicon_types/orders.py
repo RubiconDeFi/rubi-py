@@ -189,7 +189,7 @@ class UpdateLimitOrder(BaseOrder):
         self.price = price
 
 
-class ActiveLimitOrder(BaseOrder):
+class LimitOrder(BaseOrder):
     """Class representing an existing limit order
 
     :param pair_name: The name of the pair being traded e.g. WETH/USDC.
@@ -217,6 +217,7 @@ class ActiveLimitOrder(BaseOrder):
         size: Decimal,
         price: Decimal,
         filled_size: Decimal = Decimal("0"),
+        open: bool = True,
     ):
         """constructor method"""
         super().__init__(
@@ -230,13 +231,14 @@ class ActiveLimitOrder(BaseOrder):
         self.size = size
         self.price = price
         self.filled_size = filled_size
+        self.open = open
 
     @property
     def remaining_size(self) -> Decimal:
         return self.size - self.filled_size
 
     @classmethod
-    def from_order_event(cls, order_event: "OrderEvent") -> "ActiveLimitOrder":
+    def from_order_event(cls, order_event: "OrderEvent") -> "LimitOrder":
         if order_event.order_type != OrderType.LIMIT:
             raise Exception("event must have LIMIT as order_type.")
 

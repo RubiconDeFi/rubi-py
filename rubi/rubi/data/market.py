@@ -6,6 +6,7 @@ from typing import Optional, Dict, List
 import pandas as pd
 from eth_typing import ChecksumAddress
 from subgrounds import Subgrounds, Subgraph, SyntheticField
+from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
 from rubi.contracts import ERC20
@@ -13,6 +14,9 @@ from rubi.data.helpers import Offer, Trade
 from rubi.data.helpers import QueryValidation
 
 logger = log.getLogger(__name__)
+
+# Stop subgrounds from logging kak
+log.getLogger("subgrounds").setLevel(log.WARNING)
 
 
 class MarketData:
@@ -110,19 +114,19 @@ class MarketData:
         """Initialize the Subgraph offer object and add synthetic fields"""
         offer = self.subgraph.Offer  # noqa
 
-        offer.pay_amt_decimal = SyntheticField(
+        offer.pay_amt_decimals = SyntheticField(
             f=lambda pay_amt, pay_gem: self._erc20_to_decimal(gem=pay_gem, amt=pay_amt),
             type_=SyntheticField.FLOAT,
             deps=[offer.pay_amt, offer.pay_gem],
         )
 
-        offer.buy_amt_decimal = SyntheticField(
+        offer.buy_amt_decimals = SyntheticField(
             f=lambda buy_amt, buy_gem: self._erc20_to_decimal(gem=buy_gem, amt=buy_amt),
             type_=SyntheticField.FLOAT,
             deps=[offer.buy_amt, offer.buy_gem],
         )
 
-        offer.paid_amt_decimal = SyntheticField(
+        offer.paid_amt_decimals = SyntheticField(
             f=lambda paid_amt, pay_gem: self._erc20_to_decimal(
                 gem=pay_gem, amt=paid_amt
             ),
@@ -130,7 +134,7 @@ class MarketData:
             deps=[offer.paid_amt, offer.pay_gem],
         )
 
-        offer.bought_amt_decimal = SyntheticField(
+        offer.bought_amt_decimals = SyntheticField(
             f=lambda bought_amt, buy_gem: self._erc20_to_decimal(
                 gem=buy_gem, amt=bought_amt
             ),
@@ -162,7 +166,7 @@ class MarketData:
         """Initialize the Subgraph trade object and add synthetic fields"""
         take = self.subgraph.Take  # noqa
 
-        take.take_amt_decimal = SyntheticField(
+        take.take_amt_decimals = SyntheticField(
             f=lambda take_amt, take_gem: self._erc20_to_decimal(
                 gem=take_gem, amt=take_amt
             ),
@@ -170,7 +174,7 @@ class MarketData:
             deps=[take.take_amt, take.take_gem],
         )
 
-        take.give_amt_decimal = SyntheticField(
+        take.give_amt_decimals = SyntheticField(
             f=lambda give_amt, give_gem: self._erc20_to_decimal(
                 gem=give_gem, amt=give_amt
             ),
@@ -216,7 +220,8 @@ class MarketData:
         first: int,
         order_by: str,
         order_direction: str,
-    ) -> pd.DataFrame:
+        as_dataframe: bool,
+    ) -> pd.DataFrame | Dict:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
         :param maker: the address of the maker of the offer
@@ -259,11 +264,14 @@ class MarketData:
         )
 
         query_fields = Offer.get_fields(offer_query=offer_query)
-        df = self._query_offers(query_fields=query_fields)
+        response = self._query_offers(
+            query_fields=query_fields, as_dataframe=as_dataframe
+        )
         # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
-        df["side"] = side if side else "N/A"
+        if response and isinstance(response, pd.DataFrame):
+            response["side"] = side if side else "N/A"
 
-        return df
+        return response
 
     def get_trades(
         self,
@@ -320,7 +328,8 @@ class MarketData:
         )
         query_fields = Trade.get_fields(trade_query=trade_query)
         df = self._query_trades(query_fields=query_fields)
-        df["side"] = side if side else "N/A"
+        if df:
+            df["side"] = side if side else "N/A"
 
         return df
 
@@ -425,27 +434,32 @@ class MarketData:
         return trades_query
 
     def _query_offers(
-        self,
-        query_fields: List,
-    ) -> Optional[pd.DataFrame]:
+        self, query_fields: List, as_dataframe: bool
+    ) -> Optional[Dict | pd.DataFrame]:
         """Helper method to query the offers subgraph entity."""
-        df = self.subgrounds.query_df(
-            query_fields,
-            # TODO: maybe we give the user the option to define a custom pagination strategy.
-            pagination_strategy=ShallowStrategy,  # noqa
-        )
+        if as_dataframe:
+            df = self.subgrounds.query_df(
+                query_fields,
+                # TODO: maybe we give the user the option to define a custom pagination strategy.
+                pagination_strategy=ShallowStrategy,  # noqa
+            )
 
-        if df.empty:
-            return None
+            if df.empty:
+                return None
 
-        df.columns = [col.replace("offers_", "") for col in df.columns]
-        df.columns = [col.replace("_id", "") for col in df.columns]
+            df.columns = [col.replace("offers_", "") for col in df.columns]
+            df.columns = [col.replace("_id", "") for col in df.columns]
 
-        # convert the id to an integer
-        df["id"] = df["id"].apply(lambda x: int(x, 16))
+            # convert the id to an integer
+            df["id"] = df["id"].apply(lambda x: int(x, 16))
 
-        # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
-        return df
+            # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
+            return df
+        else:
+            return self.subgrounds.query_json(
+                query_fields,
+                pagination_strategy=ShallowStrategy,  # noqa
+            )
 
     def _query_trades(
         self,
