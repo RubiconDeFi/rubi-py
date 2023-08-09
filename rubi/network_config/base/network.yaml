@@ -1,6 +1,6 @@
 name: "Base Mainnet"
-chain_id: 10
-currency: "8453"
+chain_id: 8453
+currency: "ETH"
 rpc_url: "https://mainnet.base.org"
 explorer_url: "https://basescan.org"
 market_data_url: "https://graph.rubicon.finance/subgraphs/name/RubiconV2_Base_Mainnet"
