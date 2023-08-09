@@ -529,16 +529,19 @@ class EmitApproval(BaseEvent):
     def get_event_contract(
         market: _RubiconMarket, router: _RubiconRouter
     ) -> Union[_RubiconMarket, _RubiconRouter]:
+        """implementation of BaseEvent get_event_contract"""
         raise Exception("This method doesn't make sense on this class")
 
     @staticmethod
     def create_event_filter(
         contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
     ) -> LogFilter:
+        """implementation of BaseEvent create_event_filter"""
         raise Exception("This method doesn't make sense on this class")
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
+        """implementation of BaseEvent default_filters"""
         raise Exception("This method doesn't make sense on this class")
 
 
@@ -575,14 +578,17 @@ class EmitTransfer(BaseEvent):
     def get_event_contract(
         market: _RubiconMarket, router: _RubiconRouter
     ) -> Union[_RubiconMarket, _RubiconRouter]:
+        """implementation of BaseEvent get_event_contract"""
         raise Exception("This method doesn't make sense on this class")
 
     @staticmethod
     def create_event_filter(
         contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
     ) -> LogFilter:
+        """implementation of BaseEvent create_event_filter"""
         raise Exception("This method doesn't make sense on this class")
 
     @staticmethod
     def default_filters(bid_identifier: str, ask_identifier: str) -> dict:
+        """implementation of BaseEvent default_filters"""
         raise Exception("This method doesn't make sense on this class")

@@ -2,6 +2,8 @@ from typing import List
 
 
 class QueryValidation:
+    """Helper object for validating subgraph queries."""
+
     @classmethod
     def validate_offer_query(
         cls,
@@ -9,6 +11,7 @@ class QueryValidation:
         order_direction: str,
         first: int,
     ):
+        """Validate the offer query."""
         error_messages = []
 
         error_messages.extend(
@@ -30,6 +33,7 @@ class QueryValidation:
         order_direction: str,
         first: int,
     ):
+        """Validate the trade query."""
         error_messages = []
 
         error_messages.extend(
@@ -44,13 +48,14 @@ class QueryValidation:
         if error_messages:
             raise ValueError("\n".join(error_messages))
 
+    @staticmethod
     def general_validations(
         order_by: str,
         allowed_order_by: List[str],
         order_direction: str,
         first: int,
     ) -> List[str]:
-        # determine that the parameters are valid
+        """General validations helper."""
         error_messages = []
 
         # check the order_by parameter

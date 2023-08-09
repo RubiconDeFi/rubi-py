@@ -1,2 +1,2 @@
 from .events import *
-from .transaction_reciept import TransactionReceipt
+from .transaction_receipt import TransactionReceipt

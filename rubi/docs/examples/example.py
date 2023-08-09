@@ -5,7 +5,7 @@ from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
-from rubi import Client, OrderEvent
+from rubi import Client, OrderEvent, RubiconMarketApproval
 from rubi import EmitOfferEvent, NewLimitOrder, OrderSide
 
 # load from env file
@@ -36,7 +36,10 @@ client = Client.from_http_node_url(
     message_queue=queue,
 )
 
-# TODO: allowance
+# approve WETH and USDC to trade them on Rubicon
+client.approve(approval=RubiconMarketApproval(amount=Decimal("1"), token="WETH"))
+client.approve(approval=RubiconMarketApproval(amount=Decimal("2000"), token="USDC"))
+
 
 # start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
 client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)

@@ -2,6 +2,8 @@ from typing import Any, List
 
 
 class Offer:
+    """Helper object for querying subgraph Offers"""
+
     @staticmethod
     def get_fields(offer_query: Any) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
@@ -35,6 +37,8 @@ class Offer:
 
 
 class Trade:
+    """Helper object for querying subgraph Trades"""
+
     @staticmethod
     def get_fields(trade_query: Any) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""

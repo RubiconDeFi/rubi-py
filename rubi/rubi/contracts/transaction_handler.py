@@ -13,11 +13,25 @@ logger = log.getLogger(__name__)
 
 
 class TransactionHandler:
+    """
+    The transaction handler handles submitting transactions to chain and querying transaction receipts.
+
+    :param w3: Web3 instance
+    :type w3: Web3
+    :param contracts: A list of contracts that will be used for decoding the logs on TxReceipts.
+    :type contracts: List[Contract]
+    """
+
     def __init__(self, w3: Web3, contracts: List[Contract]):
         self.w3 = w3
         self.contracts = contracts
 
     def add_contract(self, contract: Contract):
+        """Add a contract to the list of contracts that are used to decode logs on TxReceipts.
+
+        :param contract: A contracts to add to the contracts that will be used for decoding the logs on TxReceipts.
+        :type contract: Contract
+        """
         self.contracts.append(contract)
 
     def execute_transaction(
@@ -25,6 +39,16 @@ class TransactionHandler:
         transaction: TxParams,
         key: str,
     ) -> TransactionReceipt:
+        """Execute a transaction by signing it with the given key and then submitting it to chain. Then wait for the
+        transaction receipt for the transaction.
+
+        :param transaction: The transaction to execute
+        :type transaction: TxParams
+        :param key: The private key to sign the transaction.
+        :type key: str
+        :return: The transaction receipt of the executed transaction.
+        :rtype: TransactionReceipt
+        """
         if "pair_names" in transaction:
             del transaction["pair_names"]
 
@@ -86,7 +110,7 @@ class TransactionHandler:
         """
         Processes the logs of a given transaction receipt and returns a list of events associated with the transaction.
 
-        :param receipt:
+        :param receipt: The transaction receipt dictionary.
         :type receipt: TxReceipt
         :return: The list of events associated with the given transaction receipt
         :rtype: List[BaseEvent]

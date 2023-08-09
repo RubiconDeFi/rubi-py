@@ -9,8 +9,8 @@ from subgrounds import Subgrounds, Subgraph, SyntheticField
 from web3 import Web3
 
 from rubi.contracts import ERC20
-from rubi.data.helper import Offer, Trade
-from rubi.data.helper import QueryValidation
+from rubi.data.helpers import Offer, Trade
+from rubi.data.helpers import QueryValidation
 
 logger = log.getLogger(__name__)
 
@@ -48,6 +48,17 @@ class MarketData:
     def _initialize_subgraph(
         self, url: str, fallback_url: str, attempts: int = 3
     ) -> Subgraph:
+        """Initialize the subgraph
+
+        :param url: The subgraph url
+        :type url: str
+        :param fallback_url: The fallback subgraph url
+        :type url: str
+        :param attempts: The number of connection attempts to make
+        :type attempts: int
+        :return: A initialized subgraph instance
+        :rtype: Subgraph
+        """
         subgraph = None
 
         for attempt in range(attempts):
@@ -82,18 +93,21 @@ class MarketData:
     def _erc20_to_decimal(
         self, gem: str | ChecksumAddress, amt: int
     ) -> Optional[Decimal]:
+        """Helper to convert an amount to decimals for the given ERC20"""
         try:
             return self.tokens[Web3.to_checksum_address(gem)].to_decimal(amt)
         except KeyError:
             return None
 
     def _erc20_to_symbol(self, gem: str | ChecksumAddress) -> Optional[str]:
+        """Helper to get the symbol of the given ERC20"""
         try:
             return self.tokens[Web3.to_checksum_address(gem)].symbol
         except KeyError:
             return None
 
     def _initialize_subgraph_offer(self):
+        """Initialize the Subgraph offer object and add synthetic fields"""
         offer = self.subgraph.Offer  # noqa
 
         offer.pay_amt_decimal = SyntheticField(
@@ -145,6 +159,7 @@ class MarketData:
         return offer
 
     def _initialize_subgraph_trade(self):
+        """Initialize the Subgraph trade object and add synthetic fields"""
         take = self.subgraph.Take  # noqa
 
         take.take_amt_decimal = SyntheticField(
@@ -326,6 +341,7 @@ class MarketData:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ):
+        """Helper method build an offers query."""
         QueryValidation.validate_offer_query(
             order_by=order_by,
             order_direction=order_direction,
@@ -374,6 +390,7 @@ class MarketData:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ):
+        """Helper method build a trades query."""
         QueryValidation.validate_trade_query(
             order_by=order_by,
             order_direction=order_direction,

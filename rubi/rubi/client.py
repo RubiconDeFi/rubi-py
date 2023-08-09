@@ -882,7 +882,7 @@ class Client:
 
             match book_side:
                 case OrderSide.BUY:
-                    df = self.network.market_data.get_offers(
+                    return self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[base_asset],
@@ -896,7 +896,7 @@ class Client:
                         order_direction=order_direction,
                     )
                 case OrderSide.SELL:
-                    df = self.network.market_data.get_offers(
+                    return self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[quote_asset],
@@ -940,7 +940,7 @@ class Client:
                     return pd.concat([bids, asks]).reset_index(drop=True)
 
         else:
-            df = self.network.market_data.get_offers(
+            return self.network.market_data.get_offers(
                 maker=maker,
                 from_address=from_address,
                 buy_gem=None,
@@ -953,8 +953,6 @@ class Client:
                 order_by=order_by,
                 order_direction=order_direction,
             )
-
-        return df
 
     def get_trades(
         self,
@@ -973,7 +971,7 @@ class Client:
 
             match book_side:
                 case OrderSide.BUY:
-                    df = self.network.market_data.trades_query(
+                    return self.network.market_data.trades_query(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[base_asset],
@@ -985,7 +983,7 @@ class Client:
                         order_direction=order_direction,
                     )
                 case OrderSide.SELL:
-                    df = self.network.market_data.trades_query(
+                    return self.network.market_data.trades_query(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[quote_asset],
@@ -1022,7 +1020,7 @@ class Client:
 
                     return pd.concat([buys, sells]).reset_index(drop=True)
         else:
-            self.network.market_data.get_trades(
+            return self.network.market_data.get_trades(
                 taker=taker,
                 from_address=from_address,
                 take_gem=None,

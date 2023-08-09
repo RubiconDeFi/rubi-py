@@ -38,6 +38,6 @@ open_offers = client.get_offers(
     open=True,
     maker=client.wallet,
     first=100,
-    formatted=True,
 )
-print(open_offers)
+
+log.info(open_offers)

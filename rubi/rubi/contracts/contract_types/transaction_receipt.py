@@ -30,6 +30,8 @@ class TransactionStatus(Enum):
 
 
 class TransactionReceipt:
+    """Transaction receipt object"""
+
     def __init__(
         self,
         block_number: BlockNumber,
@@ -78,6 +80,15 @@ class TransactionReceipt:
     def from_tx_receipt(
         cls, tx_receipt: TxReceipt, raw_events: List[BaseEvent | EventData]
     ) -> "TransactionReceipt":
+        """Initialize a TransactionReceipt
+
+        :param tx_receipt: The transaction receipt Dict received from the node.
+        :type tx_receipt: TxReceipt
+        :param raw_events: The raw events decoded from the logs
+        :type raw_events: List[BaseEvent | EventData]
+        :return: A TransactionReceipt object
+        :rtype: TransactionReceipt
+        """
         return cls(
             block_number=tx_receipt["blockNumber"],
             contract_address=tx_receipt["contractAddress"],
@@ -106,6 +117,7 @@ class TransactionReceipt:
     # TODO: Any is used to avoid circular dependencies, look at a restructure. These are OrderEvents | ApprovalEvents |
     #  TransferEvents.
     def set_events(self, events: List[Any]):
+        """Set the events on the Transaction Receipt. Used on the client to set human-readable events"""
         self.events = events
 
     @staticmethod
@@ -115,7 +127,21 @@ class TransactionReceipt:
         l1_gas_price: Optional[int] = None,
         l1_gas_used: Optional[int] = None,
         l1_fee_scalar: Optional[Decimal] = None,
-    ) -> Decimal:
+    ) -> Optional[Decimal]:
+        """Calculate the cost of the transaction in eth.
+
+        :param gas_used: The amount of gas used by the transaction.
+        :type gas_used: int
+        :param effective_gas_price: The effective L2 gas price of the transaction.
+        :type effective_gas_price: Wei
+        :param l1_gas_price: The L1 gas price.
+        :type l1_gas_price: Optional[int]
+        :param l1_gas_used: The L1 gas used.
+        :type l1_gas_used: Optional[int]
+        :param l1_fee_scalar: The L1 fee scalar.
+        :type l1_fee_scalar: Optional[int]
+        :return:
+        """
         if not (l1_gas_price and l1_gas_used and l1_fee_scalar):
             return None
 

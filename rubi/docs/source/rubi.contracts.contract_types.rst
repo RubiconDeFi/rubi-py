@@ -12,10 +12,10 @@ rubi.contracts.contract\_types.events module
    :undoc-members:
    :show-inheritance:
 
-rubi.contracts.contract\_types.transaction\_reciept module
+rubi.contracts.contract\_types.transaction\_receipt module
 ----------------------------------------------------------
 
-.. automodule:: rubi.contracts.contract_types.transaction_reciept
+.. automodule:: rubi.contracts.contract_types.transaction_receipt
    :members:
    :undoc-members:
    :show-inheritance:

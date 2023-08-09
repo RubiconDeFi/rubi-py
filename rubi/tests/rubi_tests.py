@@ -6,7 +6,7 @@ import yaml
 from pytest import mark
 from web3 import Web3
 
-from contracts.contract_types.transaction_reciept import (
+from contracts.contract_types.transaction_receipt import (
     TransactionStatus,
 )
 from rubi import (

@@ -1,8 +1,7 @@
 # network_config
 
 This is the default location of all network config in the repo. Config here is used to construct a `Network` instance
-found in [network.py](../rubi/network/network.py). This can then be used to instantiate contracts in the
-[contracts_v2](../rubi/contracts_v2) folder using the `from_network` constructor.
+found in [network.py](../rubi/network/network.py).
 
 To understand how this is all mapped into the `Network` instance please see: [network.py](../rubi/network/network.py).
 
@@ -11,12 +10,12 @@ To understand how this is all mapped into the `Network` instance please see: [ne
 ```
 ├── network_config
 │   ├── {network name}
-│   │   ├── abis <- the abis of all the rubicon contracts deployed on chain.
-│   │   │   ├── market.json
-│   │   │   ├── ...
 │   │   ├── network.yaml <- the configuration for the network.
 │   ├── ...
-│   ├── ERC20.json <- standard abi for the openzepplin ERC20 contract.
+│   ├── abis <- the abis of all the rubicon contracts and ERC20s deployed on chain.
+│   │   ├── erc20.json <- standard abi for the openzepplin ERC20 contract.
+│   │   ├── market.json
+│   │   ├── ...
 │   ├── README.md
 └──...
 ```

@@ -1,21 +1,21 @@
-rubi.data.helper package
+rubi.data.helpers package
 ========================
 
 Submodules
 ----------
 
-rubi.data.helper.query\_types module
+rubi.data.helpers.query\_types module
 ------------------------------------
 
-.. automodule:: rubi.data.helper.query_types
+.. automodule:: rubi.data.helpers.query_types
    :members:
    :undoc-members:
    :show-inheritance:
 
-rubi.data.helper.validation module
+rubi.data.helpers.validation module
 ----------------------------------
 
-.. automodule:: rubi.data.helper.validation
+.. automodule:: rubi.data.helpers.validation
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ rubi.data.helper.validation module
 Module contents
 ---------------
 
-.. automodule:: rubi.data.helper
+.. automodule:: rubi.data.helpers
    :members:
    :undoc-members:
    :show-inheritance:
