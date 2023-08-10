@@ -30,6 +30,7 @@ from rubi import (
     Transfer,
     TransferEvent,
     TransactionStatus,
+    OrderTrackingClient,
 )
 
 
@@ -414,21 +415,10 @@ class TestClient:
             4,
         ) == Decimal("-0.75")
 
-        # Check that offer has been placed in the market and that the client is tracking the limit order
-        assert len(test_client_for_account_1.active_limit_orders) == 1
-
+        # Check that offer has been placed in the market
         orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
-        active_limit_order = list(
-            test_client_for_account_1.active_limit_orders.values()
-        )[0]
-
-        assert (
-            orderbook.bids.levels[0].size == active_limit_order.size == Decimal("0.5")
-        )
-        assert (
-            orderbook.bids.levels[0].price == active_limit_order.price == Decimal("1.5")
-        )
-        assert active_limit_order.filled_size == Decimal("0")
+        assert orderbook.bids.levels[0].size == Decimal("0.5")
+        assert orderbook.bids.levels[0].price == Decimal("1.5")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_place_sell_limit_order(self, test_client_for_account_1: Client):
@@ -487,21 +477,11 @@ class TestClient:
         # no ETH has changed hands yet
         assert eth_amount_after_order == eth_amount_before_order
 
-        # Check that offer has been placed in the market and that the client is tracking the limit order
-        assert len(test_client_for_account_1.active_limit_orders) == 1
-
+        # Check that offer has been placed in the market
         orderbook = test_client_for_account_1.get_orderbook(pair_name=pair_name)
-        active_limit_order = list(
-            test_client_for_account_1.active_limit_orders.values()
-        )[0]
 
-        assert (
-            orderbook.asks.levels[0].size == active_limit_order.size == Decimal("0.5")
-        )
-        assert (
-            orderbook.asks.levels[0].price == active_limit_order.price == Decimal("1.5")
-        )
-        assert active_limit_order.filled_size == Decimal("0")
+        assert orderbook.asks.levels[0].size == Decimal("0.5")
+        assert orderbook.asks.levels[0].price == Decimal("1.5")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_place_buy_limit_order_that_crosses_the_spread(
@@ -576,9 +556,6 @@ class TestClient:
         assert len(orderbook.asks.levels) == 1
         assert orderbook.asks.levels[0].price == Decimal("3")
 
-        # Check that the limit order is not being tracked
-        assert len(test_client_for_account_1.active_limit_orders) == 0
-
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_place_sell_limit_order_that_crosses_the_spread(
         self, test_client_for_account_1: Client
@@ -650,9 +627,6 @@ class TestClient:
 
         assert len(orderbook.bids.levels) == 0
 
-        # Check that the limit order is not being tracked
-        assert len(test_client_for_account_1.active_limit_orders) == 0
-
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_cancel_limit_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
@@ -686,20 +660,11 @@ class TestClient:
         orderbook_before_cancel = test_client_for_account_1.get_orderbook(
             pair_name=pair_name
         )
-        active_limit_order = test_client_for_account_1.active_limit_orders[4]
 
         # Check that the order is in the orderbook
         assert len(orderbook_before_cancel.bids.levels) == 2
-        assert (
-            orderbook_before_cancel.bids.levels[0].price
-            == active_limit_order.price
-            == Decimal("1.5")
-        )
-        assert (
-            orderbook_before_cancel.bids.levels[0].size
-            == active_limit_order.size
-            == Decimal("1")
-        )
+        assert orderbook_before_cancel.bids.levels[0].price == Decimal("1.5")
+        assert orderbook_before_cancel.bids.levels[0].size == Decimal("1")
 
         # Cancel the limit order
         cancel_order = NewCancelOrder(pair_name=pair_name, order_id=limit_order_id)
@@ -737,8 +702,6 @@ class TestClient:
         # Check that the order is no longer in the orderbook
         assert len(orderbook_after_cancel.bids.levels) == 1
         assert orderbook_after_cancel.bids.levels[0].price != Decimal("1.5")
-
-        assert len(test_client_for_account_1.active_limit_orders) == 0
 
     ######################################################################
     # batch order tests
@@ -804,66 +767,6 @@ class TestClient:
 
         assert orderbook_after_transaction.bids.levels[0].price == Decimal("1.5")
         assert orderbook_after_transaction.bids.levels[0].size == Decimal("1")
-
-        # Check that the limit orders are being tracked
-        assert len(test_client_for_account_1.active_limit_orders) == 2
-
-        assert test_client_for_account_1.active_limit_orders[4].price == Decimal("1.5")
-        assert test_client_for_account_1.active_limit_orders[5].price == Decimal("0.5")
-
-    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_batch_place_limit_orders_on_different_pairs(
-        self, test_client_for_account_1: Client
-    ):
-        cow_pair_name = "COW/ETH"
-        blz_pair_name = "COW/ETH"
-
-        limit_order_1 = NewLimitOrder(
-            pair_name=cow_pair_name,
-            order_side=OrderSide.BUY,
-            size=Decimal("1"),
-            price=Decimal("1.5"),
-        )
-
-        limit_order_2 = NewLimitOrder(
-            pair_name=blz_pair_name,
-            order_side=OrderSide.BUY,
-            size=Decimal("1"),
-            price=Decimal("0.5"),
-        )
-
-        orders = [limit_order_1, limit_order_2]
-
-        transaction = test_client_for_account_1.batch_limit_orders(orders=orders)
-
-        result = test_client_for_account_1.execute_transaction(transaction=transaction)
-
-        # Check that transaction was a success
-
-        assert result.transaction_status == TransactionStatus.SUCCESS
-
-        # Check that we received the order events we expected
-        order_events = list(
-            filter(lambda event: isinstance(event, OrderEvent), result.events)
-        )
-
-        assert len(order_events) == 2
-
-        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
-            event: OrderEvent = order_events[i]
-
-            assert event.pair_name == limit_order.pair_name
-            assert event.order_type == OrderType.LIMIT
-            assert event.order_side == limit_order.order_side
-            assert event.price == limit_order.price
-            assert event.size == limit_order.size
-            assert event.limit_order_owner == test_client_for_account_1.wallet
-
-        # Check that the limit orders are being tracked
-        assert len(test_client_for_account_1.active_limit_orders) == 2
-
-        assert test_client_for_account_1.active_limit_orders[4].price == Decimal("1.5")
-        assert test_client_for_account_1.active_limit_orders[5].price == Decimal("0.5")
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_batch_update_limit_orders(self, test_client_for_account_2: Client):
@@ -937,11 +840,6 @@ class TestClient:
         assert orderbook_after_update.asks.levels[1].price == Decimal("2.5")
         assert orderbook_after_update.asks.levels[1].size == Decimal("2")
 
-        # Check that the new limit orders are being tracked
-
-        assert test_client_for_account_2.active_limit_orders.get(4)
-        assert test_client_for_account_2.active_limit_orders.get(5)
-
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_batch_cancel_limit_orders(self, test_client_for_account_2: Client):
         pair_name = "COW/ETH"
@@ -987,8 +885,6 @@ class TestClient:
             == len(orderbook_before_transaction.asks.levels) - 2
         )
 
-        assert len(test_client_for_account_2.active_limit_orders) == 0
-
     ######################################################################
     # event poller tests
     ######################################################################
@@ -1026,8 +922,6 @@ class TestClient:
         assert message.size == Decimal("0.5")
         assert message.price == Decimal("1.5")
         assert message.pair_name == pair_name
-
-        assert len(test_client_for_account_1.active_limit_orders) == 1
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
     def test_emit_take_event_poller(self, test_client_for_account_1: Client):
@@ -1206,20 +1100,156 @@ class TestClient:
         # taker pay maker is 1 bip and price is 2 ETH
         assert round(message.fee, 4) == Decimal("2") * Decimal("0.0001")
 
-    ######################################################################
-    # active limit order tests
-    ######################################################################
 
-    def test_limit_order_partially_taken(
-        self, test_client_for_account_1: Client, test_client_for_account_2: Client
+class TestOrderTrackingClient:
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_place_buy_limit_order(
+        self, test_order_tracking_client_for_account_1: OrderTrackingClient
     ):
         pair_name = "COW/ETH"
 
-        test_client_for_account_1.start_event_poller(
+        limit_order = NewLimitOrder(
+            pair_name="COW/ETH",
+            order_side=OrderSide.BUY,
+            size=Decimal("0.5"),
+            price=Decimal("1.5"),
+        )
+
+        transaction = test_order_tracking_client_for_account_1.limit_order(
+            order=limit_order
+        )
+
+        result = test_order_tracking_client_for_account_1.execute_transaction(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that offer has been placed in the market and that the client is tracking the limit order
+        assert len(test_order_tracking_client_for_account_1.open_limit_orders) == 1
+
+        orderbook = test_order_tracking_client_for_account_1.get_orderbook(
+            pair_name=pair_name
+        )
+        open_limit_order = list(
+            test_order_tracking_client_for_account_1.open_limit_orders.values()
+        )[0]
+
+        assert orderbook.bids.levels[0].size == open_limit_order.size == Decimal("0.5")
+        assert (
+            orderbook.bids.levels[0].price == open_limit_order.price == Decimal("1.5")
+        )
+        assert open_limit_order.filled_size == Decimal("0")
+
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_cancel_limit_order(
+        self, test_order_tracking_client_for_account_1: OrderTrackingClient
+    ):
+        pair_name = "COW/ETH"
+
+        test_order_tracking_client_for_account_1.start_event_poller(
+            pair_name=pair_name, event_type=EmitOfferEvent
+        )
+        message_queue = test_order_tracking_client_for_account_1.message_queue
+
+        limit_order = NewLimitOrder(
+            pair_name="COW/ETH",
+            order_side=OrderSide.BUY,
+            size=Decimal("1"),
+            price=Decimal("1.5"),
+        )
+
+        transaction = test_order_tracking_client_for_account_1.limit_order(
+            order=limit_order
+        )
+
+        result = test_order_tracking_client_for_account_1.execute_transaction(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Get limit order ID from message queue
+        limit_order_id = message_queue.get(block=True).limit_order_id
+
+        # ID should be 4 as it's the 4th order in the market
+        assert isinstance(limit_order_id, int)
+        assert limit_order_id == 4
+
+        orderbook_before_cancel = (
+            test_order_tracking_client_for_account_1.get_orderbook(pair_name=pair_name)
+        )
+        open_limit_order = test_order_tracking_client_for_account_1.open_limit_orders[4]
+
+        # Check that the order is in the orderbook
+        assert len(orderbook_before_cancel.bids.levels) == 2
+        assert (
+            orderbook_before_cancel.bids.levels[0].price
+            == open_limit_order.price
+            == Decimal("1.5")
+        )
+        assert (
+            orderbook_before_cancel.bids.levels[0].size
+            == open_limit_order.size
+            == Decimal("1")
+        )
+
+        # Cancel the limit order
+        cancel_order = NewCancelOrder(pair_name=pair_name, order_id=limit_order_id)
+
+        cancel_transaction = (
+            test_order_tracking_client_for_account_1.cancel_limit_order(
+                order=cancel_order
+            )
+        )
+
+        cancel_result = test_order_tracking_client_for_account_1.execute_transaction(
+            transaction=cancel_transaction
+        )
+
+        # Check that cancel txn was a success
+        assert cancel_result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the order event we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), cancel_result.events)
+        )
+
+        assert len(order_events) == 1
+        event: OrderEvent = order_events[0]
+
+        assert event.pair_name == cancel_order.pair_name
+        assert event.order_type == OrderType.CANCEL
+        assert event.order_side == limit_order.order_side
+        assert event.price == limit_order.price
+        assert event.size == limit_order.size
+        assert (
+            event.limit_order_owner == test_order_tracking_client_for_account_1.wallet
+        )
+
+        orderbook_after_cancel = test_order_tracking_client_for_account_1.get_orderbook(
+            pair_name=pair_name
+        )
+
+        # Check that the order is no longer in the orderbook
+        assert len(orderbook_after_cancel.bids.levels) == 1
+        assert orderbook_after_cancel.bids.levels[0].price != Decimal("1.5")
+        assert len(test_order_tracking_client_for_account_1.open_limit_orders) == 0
+
+    def test_limit_order_partially_taken(
+        self,
+        test_order_tracking_client_for_account_1: OrderTrackingClient,
+        test_client_for_account_2: Client,
+    ):
+        pair_name = "COW/ETH"
+
+        test_order_tracking_client_for_account_1.start_event_poller(
             pair_name=pair_name, event_type=EmitTakeEvent
         )
 
-        message_queue = test_client_for_account_1.message_queue
+        message_queue = test_order_tracking_client_for_account_1.message_queue
 
         limit_order = NewLimitOrder(
             pair_name="COW/ETH",
@@ -1228,17 +1258,21 @@ class TestClient:
             price=Decimal("1.5"),
         )
 
-        transaction = test_client_for_account_1.limit_order(order=limit_order)
+        transaction = test_order_tracking_client_for_account_1.limit_order(
+            order=limit_order
+        )
 
-        result = test_client_for_account_1.execute_transaction(transaction=transaction)
+        result = test_order_tracking_client_for_account_1.execute_transaction(
+            transaction=transaction
+        )
 
         # Check that transaction was a success
         assert result.transaction_status == TransactionStatus.SUCCESS
 
-        assert len(test_client_for_account_1.active_limit_orders) == 1
+        assert len(test_order_tracking_client_for_account_1.open_limit_orders) == 1
 
-        active_limit_order = test_client_for_account_1.active_limit_orders[1]
-        assert active_limit_order.filled_size == Decimal("0")
+        open_limit_order = test_order_tracking_client_for_account_1.open_limit_orders[1]
+        assert open_limit_order.filled_size == Decimal("0")
 
         # Place market order with account_2
         market_order = NewMarketOrder(
@@ -1261,8 +1295,80 @@ class TestClient:
         assert isinstance(message, OrderEvent)
 
         # Check that the active limit order has been updated correctly
-        assert len(test_client_for_account_1.active_limit_orders) == 1
+        assert len(test_order_tracking_client_for_account_1.open_limit_orders) == 1
 
-        active_limit_order = test_client_for_account_1.active_limit_orders[1]
-        assert active_limit_order.filled_size == Decimal("1")
-        assert active_limit_order.remaining_size == Decimal("1")
+        open_limit_order = test_order_tracking_client_for_account_1.open_limit_orders[1]
+        assert open_limit_order.filled_size == Decimal("1")
+        assert open_limit_order.remaining_size == Decimal("1")
+
+    @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
+    def test_batch_place_limit_orders_on_different_pairs(
+        self, test_order_tracking_client_for_account_1: OrderTrackingClient
+    ):
+        cow_pair_name = "COW/ETH"
+        blz_pair_name = "BLZ/ETH"
+
+        limit_order_1 = NewLimitOrder(
+            pair_name=cow_pair_name,
+            order_side=OrderSide.BUY,
+            size=Decimal("1"),
+            price=Decimal("1.5"),
+        )
+
+        limit_order_2 = NewLimitOrder(
+            pair_name=blz_pair_name,
+            order_side=OrderSide.BUY,
+            size=Decimal("1"),
+            price=Decimal("0.5"),
+        )
+
+        orders = [limit_order_1, limit_order_2]
+
+        transaction = test_order_tracking_client_for_account_1.batch_limit_orders(
+            orders=orders
+        )
+
+        result = test_order_tracking_client_for_account_1.execute_transaction(
+            transaction=transaction
+        )
+
+        # Check that transaction was a success
+        assert result.transaction_status == TransactionStatus.SUCCESS
+
+        # Check that we received the order events we expected
+        order_events = list(
+            filter(lambda event: isinstance(event, OrderEvent), result.events)
+        )
+
+        assert len(order_events) == 2
+
+        for i, limit_order in enumerate([limit_order_1, limit_order_2]):
+            event: OrderEvent = order_events[i]
+
+            assert event.pair_name == limit_order.pair_name
+            assert event.order_type == OrderType.LIMIT
+            assert event.order_side == limit_order.order_side
+            assert event.price == limit_order.price
+            assert event.size == limit_order.size
+            assert (
+                event.limit_order_owner
+                == test_order_tracking_client_for_account_1.wallet
+            )
+
+        # Check that the limit orders are being tracked
+        assert len(test_order_tracking_client_for_account_1.open_limit_orders) == 2
+
+        assert test_order_tracking_client_for_account_1.open_limit_orders[
+            4
+        ].price == Decimal("1.5")
+        assert (
+            test_order_tracking_client_for_account_1.open_limit_orders[4].pair_name
+            == "COW/ETH"
+        )
+        assert test_order_tracking_client_for_account_1.open_limit_orders[
+            5
+        ].price == Decimal("0.5")
+        assert (
+            test_order_tracking_client_for_account_1.open_limit_orders[5].pair_name
+            == "BLZ/ETH"
+        )

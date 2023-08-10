@@ -55,9 +55,8 @@ log.info(transaction)
 # Place the limit order by executing the transaction
 result = client.execute_transaction(transaction=transaction)
 
-# Get the offer id from the transaction result
+# Get the offer from the transaction result
 offer = None
-
 for event in result.events:
     if isinstance(event, OrderEvent):
         offer = event

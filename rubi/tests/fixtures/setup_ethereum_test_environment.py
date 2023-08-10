@@ -10,7 +10,7 @@ from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
 
 from fixtures.helper import execute_transaction
-from rubi import Network, Client, RubiconMarket
+from rubi import Network, Client, RubiconMarket, OrderTrackingClient
 from tests.fixtures.helper.deploy_contract import deploy_contract
 from tests.fixtures.helper.deploy_contract import deploy_erc20
 
@@ -320,6 +320,23 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
 
     client = Client(
         network=test_network,
+        message_queue=message_queue,
+        wallet=account_1["wallet"],
+        key=account_1["key"],
+    )
+
+    return client
+
+
+@fixture
+def test_order_tracking_client_for_account_1(
+    test_network: Network, account_1: Dict
+) -> Client:
+    message_queue = Queue()
+
+    client = OrderTrackingClient(
+        network=test_network,
+        pair_names=["COW/ETH", "BLZ/ETH"],
         message_queue=message_queue,
         wallet=account_1["wallet"],
         key=account_1["key"],

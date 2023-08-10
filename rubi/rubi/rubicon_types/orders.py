@@ -5,6 +5,7 @@ from typing import Optional, Union
 from eth_typing import ChecksumAddress
 from web3 import Web3
 
+from data.helpers import SubgraphOffer
 from rubi.contracts import (
     ERC20,
     BaseEvent,
@@ -250,6 +251,39 @@ class LimitOrder(BaseOrder):
             size=order_event.size,
             price=order_event.price,
         )
+
+    @classmethod
+    def from_subgraph_offer(
+        cls, base_asset: ERC20, quote_asset: ERC20, offer: SubgraphOffer
+    ) -> "LimitOrder":
+        if base_asset.address == offer.buy_gem:
+            size = base_asset.to_decimal(offer.buy_amt)
+            price = quote_asset.to_decimal(offer.pay_amt) / size
+            filled_size = base_asset.to_decimal(offer.bought_amt)
+
+            return cls(
+                pair_name=f"{base_asset.symbol}/{quote_asset.symbol}",
+                order_side=OrderSide.BUY,
+                order_id=offer.order_id,
+                order_owner=offer.order_owner,
+                size=size,
+                price=price,
+                filled_size=filled_size,
+            )
+        else:
+            size = base_asset.to_decimal(offer.pay_amt)
+            price = quote_asset.to_decimal(offer.buy_amt) / size
+            filled_size = base_asset.to_decimal(offer.paid_amt)
+
+            return cls(
+                pair_name=f"{base_asset.symbol}/{quote_asset.symbol}",
+                order_side=OrderSide.SELL,
+                order_id=offer.order_id,
+                order_owner=offer.order_owner,
+                size=size,
+                price=price,
+                filled_size=filled_size,
+            )
 
     def update_with_take(self, order_event: "OrderEvent"):
         self.filled_size += order_event.size

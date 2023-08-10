@@ -10,3 +10,13 @@ Client
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _order_tracking_client:
+
+Order Tracking Client
+---------------------
+
+.. automodule:: rubi.order_tracking_client
+   :members:
+   :undoc-members:
+   :show-inheritance:

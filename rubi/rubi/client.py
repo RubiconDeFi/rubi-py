@@ -9,7 +9,8 @@ import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce, TxParams
 
-from rubi import EmitDeleteEvent
+from data.helpers import SubgraphOffer
+from rubi import LimitOrder
 from rubi.contracts import (
     ERC20,
     TransactionReceipt,
@@ -33,8 +34,6 @@ from rubi.rubicon_types import (
     OrderEvent,
     NewCancelOrder,
     UpdateLimitOrder,
-    LimitOrder,
-    OrderType,
     Approval,
     RubiconMarketApproval,
     RubiconRouterApproval,
@@ -59,8 +58,6 @@ class Client:
     :type wallet: Optional[ChecksumAddress]
     :param key: Key for the wallet (optional, default is None).
     :type key: Optional[str]
-    :param track_orders: Should the Client automatically track orders placed on Rubicon
-    :type track_orders: bool
     """
 
     def __init__(
@@ -69,7 +66,6 @@ class Client:
         message_queue: Optional[Queue] = None,
         wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
-        track_orders: bool = True,
     ):
         """constructor method."""
         self.network = network
@@ -82,14 +78,6 @@ class Client:
         )  # type: ChecksumAddress |  None
         self._key = key  # type: str |  None
 
-        # Order tracking
-        self.track_orders = track_orders
-
-        if self.track_orders:
-            self.active_limit_orders: Dict[int, LimitOrder] = {}
-
-            self.registered_event_listeners: List[str] = []
-
     @classmethod
     def from_http_node_url(
         cls,
@@ -99,7 +87,7 @@ class Client:
         key: Optional[str] = None,
         custom_token_addresses_file: Optional[str] = None,
         with_subgraph: bool = True,
-        track_orders: bool = True,
+        **kwargs,
     ):
         """Initialize a Client using a http_node_url.
 
@@ -117,8 +105,6 @@ class Client:
         :type custom_token_addresses_file: Optional[str]
         :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
         :type with_subgraph: bool
-        :param track_orders: Should the Client automatically track orders placed on Rubicon
-        :type track_orders: bool
         """
         network = Network.from_http_node_url(
             http_node_url=http_node_url,
@@ -131,7 +117,6 @@ class Client:
             message_queue=message_queue,
             wallet=wallet,
             key=key,
-            track_orders=track_orders,
         )
 
     ######################################################################
@@ -181,7 +166,6 @@ class Client:
         :rtype: TransactionReceipt
         :return:
         """
-
         pair_names = transaction["pair_names"] if "pair_names" in transaction else None
 
         transaction_receipt = self.network.transaction_handler.execute_transaction(
@@ -192,12 +176,6 @@ class Client:
             transaction_receipt=transaction_receipt,
             pair_names=pair_names,
         )
-
-        if pair_names and self.track_orders:
-            self._update_active_limit_orders(
-                events=processed_transaction_receipt.events
-            )
-            self._register_listeners(pair_names=pair_names)
 
         return processed_transaction_receipt
 
@@ -499,8 +477,6 @@ class Client:
                     event=raw_event,
                     wallet=self.wallet,
                 )
-
-                self._update_active_limit_orders(events=[event])
 
             self.message_queue.put(event)
 
@@ -887,7 +863,7 @@ class Client:
         self,
         maker: Optional[ChecksumAddress | str] = None,
         from_address: Optional[ChecksumAddress | str] = None,
-        pair_name: Optional[str] = None,
+        pair_names: Optional[List[str]] = None,
         book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
@@ -895,13 +871,14 @@ class Client:
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
-    ) -> pd.DataFrame:
-        if pair_name:
-            base_asset, quote_asset = pair_name.split("/")
+        as_dataframe: bool = True,
+    ) -> Optional[pd.DataFrame] | List[LimitOrder]:
+        if len(pair_names) == 1:
+            base_asset, quote_asset = pair_names[0].split("/")
 
             match book_side:
                 case OrderSide.BUY:
-                    return self.network.market_data.get_offers(
+                    result = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[base_asset],
@@ -913,9 +890,10 @@ class Client:
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
+                        as_dataframe=as_dataframe,
                     )
                 case OrderSide.SELL:
-                    return self.network.market_data.get_offers(
+                    result = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[quote_asset],
@@ -927,6 +905,7 @@ class Client:
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
+                        as_dataframe=as_dataframe,
                     )
                 case _:
                     bids = self.network.market_data.get_offers(
@@ -941,6 +920,7 @@ class Client:
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
+                        as_dataframe=as_dataframe,
                     )
                     asks = self.network.market_data.get_offers(
                         maker=maker,
@@ -954,12 +934,13 @@ class Client:
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
+                        as_dataframe=as_dataframe,
                     )
 
-                    return pd.concat([bids, asks]).reset_index(drop=True)
+                    result = pd.concat([bids, asks]).reset_index(drop=True)
 
         else:
-            return self.network.market_data.get_offers(
+            result = self.network.market_data.get_offers(
                 maker=maker,
                 from_address=from_address,
                 buy_gem=None,
@@ -971,22 +952,42 @@ class Client:
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,
+                as_dataframe=as_dataframe,
             )
+
+        if isinstance(result, List):
+            limit_orders: List[LimitOrder] = []
+
+            for offer in result:
+                base_asset, quote_asset = self._get_base_and_quote_asset(
+                    raw=offer, pair_names=pair_names
+                )
+                if not base_asset or not quote_asset:
+                    continue
+
+                limit_orders.append(
+                    LimitOrder.from_subgraph_offer(
+                        base_asset=base_asset, quote_asset=quote_asset, offer=offer
+                    )
+                )
+                return limit_orders
+
+        return result
 
     def get_trades(
         self,
-        book_side: OrderSide = OrderSide.NEUTRAL,
-        taker: Optional[Union[ChecksumAddress, str]] = None,
-        from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,
+        taker: Optional[ChecksumAddress | str] = None,
+        from_address: Optional[ChecksumAddress | str] = None,
+        pair_names: Optional[List[str]] = None,
+        book_side: Optional[OrderSide] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
     ) -> pd.DataFrame:
-        if pair_name:
-            base_asset, quote_asset = pair_name.split("/")
+        if len(pair_names) == 1:
+            base_asset, quote_asset = pair_names[0].split("/")
 
             match book_side:
                 case OrderSide.BUY:
@@ -1079,7 +1080,7 @@ class Client:
                 raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent]
 
                 base_asset, quote_asset = self._get_base_and_quote_asset(
-                    raw_event=raw_event, pair_names=pair_names
+                    raw=raw_event, pair_names=pair_names
                 )
                 if not base_asset or not quote_asset:
                     continue
@@ -1128,15 +1129,15 @@ class Client:
 
     def _get_base_and_quote_asset(
         self,
-        raw_event: Union[EmitOfferEvent, EmitTakeEvent, EmitCancelEvent],
+        raw: EmitOfferEvent | EmitTakeEvent | EmitCancelEvent | SubgraphOffer,
         pair_names: Optional[List[str]] = None,
     ) -> Tuple[Optional[ERC20], Optional[ERC20]]:
         """Get the base and quote asset of an event"""
         if pair_names is None:
             return None, None
 
-        pay_gem = self.network.tokens[raw_event.pay_gem]
-        buy_gem = self.network.tokens[raw_event.buy_gem]
+        pay_gem = self.network.tokens[raw.pay_gem]
+        buy_gem = self.network.tokens[raw.buy_gem]
 
         for pair_name in pair_names:
             base_asset, quote_asset = pair_name.split("/")
@@ -1147,67 +1148,3 @@ class Client:
                 return buy_gem, pay_gem
 
         return None, None
-
-    def _update_active_limit_orders(self, events: List[Any]) -> None:
-        """Update active limit order based on incoming events"""
-        for event in events:
-            if not isinstance(event, OrderEvent):
-                continue
-
-            event: OrderEvent
-            if event.limit_order_owner != self.wallet:
-                continue
-
-            match event.order_type:
-                case OrderType.LIMIT:
-                    if self.active_limit_orders.get(event.limit_order_id):
-                        # If we are already tracking the order then don't add it again
-                        continue
-
-                    self.active_limit_orders[
-                        event.limit_order_id
-                    ] = LimitOrder.from_order_event(order_event=event)
-                case OrderType.LIMIT_TAKEN:
-                    taken_order = self.active_limit_orders[event.limit_order_id]
-
-                    if taken_order.remaining_size - event.size <= Decimal("0"):
-                        self._delete_active_limit_order(order_id=event.limit_order_id)
-                    else:
-                        self.active_limit_orders[event.limit_order_id].update_with_take(
-                            order_event=event
-                        )
-                case OrderType.CANCEL:
-                    self._delete_active_limit_order(order_id=event.limit_order_id)
-                case OrderType.LIMIT_DELETED:
-                    self._delete_active_limit_order(order_id=event.limit_order_id)
-
-    def _delete_active_limit_order(self, order_id: int) -> None:
-        """Delete active limit order"""
-        try:
-            del self.active_limit_orders[order_id]
-        except KeyError:
-            logger.debug(
-                f"Limit order {order_id} already removed from active limit orders."
-            )
-
-    def _register_listeners(self, pair_names: List[str]) -> None:
-        """Register event listeners"""
-        new_pair_names = [
-            pair_name
-            for pair_name in pair_names
-            if pair_name not in self.registered_event_listeners
-        ]
-
-        self.registered_event_listeners.extend(new_pair_names)
-
-        for pair_name in new_pair_names:
-            self.start_event_poller(
-                pair_name=pair_name,
-                event_type=EmitTakeEvent,
-                filters={"maker": self.wallet},
-            )
-            self.start_event_poller(
-                pair_name=pair_name,
-                event_type=EmitDeleteEvent,
-                filters={"maker": self.wallet},
-            )

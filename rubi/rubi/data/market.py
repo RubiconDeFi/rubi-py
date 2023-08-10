@@ -1,7 +1,7 @@
 import logging as log
 from _decimal import Decimal
 from datetime import datetime
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -10,7 +10,7 @@ from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
 from rubi.contracts import ERC20
-from rubi.data.helpers import Offer, Trade
+from rubi.data.helpers import SubgraphOffer, SubgraphTrade
 from rubi.data.helpers import QueryValidation
 
 logger = log.getLogger(__name__)
@@ -220,7 +220,8 @@ class MarketData:
         first: int,
         order_by: str,
         order_direction: str,
-    ) -> pd.DataFrame | Dict:
+        as_dataframe: bool = True,
+    ) -> Optional[pd.DataFrame] | List[SubgraphOffer]:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
         :param maker: the address of the maker of the offer
@@ -246,8 +247,10 @@ class MarketData:
         :type order_by: str
         :param order_direction: the direction to order the offers by (default: desc, options: asc, desc)
         :type order_direction: str
-        :return: a dataframe of offers placed on the market contract
-        :rtype: pd.DataFrame
+        :param as_dataframe: If the response should be a dataframe (default: True)
+        :type as_dataframe: bool
+        :return: a dataframe of offers placed on the market contract or a list of subgraph offer objects
+        :rtype: pd.DataFrame | SubgraphOffer
         """
         offer_query = self._build_offers_query(
             order_by=order_by,
@@ -262,13 +265,18 @@ class MarketData:
             end_time=end_time,
         )
 
-        query_fields = Offer.get_fields(offer_query=offer_query)
-        response = self._query_offers(query_fields=query_fields)
-        # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
-        if response and isinstance(response, pd.DataFrame):
-            response["side"] = side if side else "N/A"
+        query_fields = SubgraphOffer.get_fields(offer_query=offer_query)
+        if as_dataframe:
+            response = self._query_offers_as_dataframe(query_fields=query_fields)
+            # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
+            if response and isinstance(response, pd.DataFrame):
+                response["side"] = side if side else "N/A"
 
-        return response
+            return response
+        else:
+            response = self._query_offers(query_fields=query_fields)
+
+            return response
 
     def get_trades(
         self,
@@ -323,8 +331,8 @@ class MarketData:
             start_time=start_time,
             end_time=end_time,
         )
-        query_fields = Trade.get_fields(trade_query=trade_query)
-        df = self._query_trades(query_fields=query_fields)
+        query_fields = SubgraphTrade.get_fields(trade_query=trade_query)
+        df = self._query_trades_as_dataframe(query_fields=query_fields)
         if df:
             df["side"] = side if side else "N/A"
 
@@ -430,8 +438,8 @@ class MarketData:
 
         return trades_query
 
-    def _query_offers(self, query_fields: List) -> Optional[Dict | pd.DataFrame]:
-        """Helper method to query the offers subgraph entity."""
+    def _query_offers_as_dataframe(self, query_fields: List) -> Optional[pd.DataFrame]:
+        """Helper method to query the offers subgraph entity and return a dataframe."""
         df = self.subgrounds.query_df(
             query_fields,
             # TODO: maybe we give the user the option to define a custom pagination strategy.
@@ -450,7 +458,37 @@ class MarketData:
         # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
         return df
 
-    def _query_trades(
+    def _query_offers(self, query_fields: List) -> List[SubgraphOffer]:
+        """Helper method to query the offers subgraph entity."""
+        response = self.subgrounds.query_json(
+            query_fields,
+            # TODO: maybe we give the user the option to define a custom pagination strategy.
+            pagination_strategy=ShallowStrategy,  # noqa
+        )
+
+        if response:
+            raw_offers = list(response[0].values())[0]
+            offers: List[SubgraphOffer] = []
+
+            for raw_offer in raw_offers:
+                offers.append(
+                    SubgraphOffer(
+                        order_id=int(raw_offer["id"], 16),
+                        order_owner=Web3.to_checksum_address(raw_offer["maker"]["id"]),
+                        pay_gem=Web3.to_checksum_address(raw_offer["pay_gem"]),
+                        pay_amt=raw_offer["pay_amt"],
+                        paid_amt=raw_offer["paid_amt"],
+                        buy_gem=Web3.to_checksum_address(raw_offer["buy_gem"]),
+                        buy_amt=raw_offer["buy_amt"],
+                        bought_amt=raw_offer["bought_amt"],
+                        open=raw_offer["open"],
+                    )
+                )
+            return offers
+
+        return []
+
+    def _query_trades_as_dataframe(
         self,
         query_fields: List,
     ) -> Optional[pd.DataFrame]:

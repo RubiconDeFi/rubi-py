@@ -22,3 +22,4 @@ rubi.client module
    :maxdepth: 4
 
    client
+   order_tracking_client

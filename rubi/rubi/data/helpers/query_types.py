@@ -1,8 +1,32 @@
 from typing import Any, List
 
+from eth_typing import ChecksumAddress
 
-class Offer:
+
+class SubgraphOffer:
     """Helper object for querying subgraph Offers"""
+
+    def __init__(
+        self,
+        order_id: int,
+        order_owner: ChecksumAddress,
+        pay_gem: ChecksumAddress,
+        pay_amt: int,
+        paid_amt: int,
+        buy_gem: ChecksumAddress,
+        buy_amt: int,
+        bought_amt: int,
+        open: bool,
+    ):
+        self.order_id = order_id
+        self.order_owner = order_owner
+        self.pay_gem = pay_gem
+        self.pay_amt = pay_amt
+        self.paid_amt = paid_amt
+        self.buy_gem = buy_gem
+        self.buy_amt = buy_amt
+        self.bought_amt = bought_amt
+        self.open = open
 
     @staticmethod
     def get_fields(offer_query: Any) -> List:
@@ -36,7 +60,7 @@ class Offer:
         ]
 
 
-class Trade:
+class SubgraphTrade:
     """Helper object for querying subgraph Trades"""
 
     @staticmethod

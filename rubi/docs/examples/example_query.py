@@ -33,8 +33,7 @@ client = Client.from_http_node_url(
 
 # query the open WETH/USDC offers for your wallet
 open_offers = client.get_offers(
-    pair_name="WETH/USDC",
-    book_side=OrderSide.NEUTRAL,
+    pair_names=["WETH/USDC"],
     open=True,
     maker=client.wallet,
     first=100,

@@ -94,6 +94,27 @@ Finally we are ready to instantiate a client
 
 .. note:: In the above example we are connecting to the optimism goerli testnet. Make sure the node you are using is an optimism goerli node.
 
+Here it is worth noting that you can also instantiate an ``OrderTrackingClient`` which will track your open limit orders automatically. However,
+in order to do this you must provide a list of ``pair_names`` so the client knows which pairs to track.
+
+.. code-block:: python
+
+    # rubi imports
+    import logging
+    from rubi import OrderTrackingClient, NetworkName, Transaction, NewLimitOrder, OrderSide
+
+    # instantiate the order tracking client
+    client = OrderTrackingClient.from_http_node_url(
+        http_node_url=http_node_url,
+        pair_names=["WETH/USDC", "WBTC/USDC"]
+        wallet=wallet,
+        key=key
+    )
+
+    # log open limit orders
+    logging.info(client.open_limit_orders)
+
+
 Having instantiated a client you are now ready to start interacting with the Rubicon protocol. In order to use the
 client to read or trade against a specific pair you will first need to approve the ``RubiconMarket`` contract
 
@@ -196,19 +217,16 @@ Here's the signature of the method:
 
     def get_offers(
         self,
-        first: int = 10000000,
-        order_by: str = "timestamp",
-        order_direction: str = "desc",
-        formatted: bool = True,
-        book_side: OrderSide = OrderSide.NEUTRAL,
-        maker: Optional[Union[ChecksumAddress, str]] = None,
-        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        maker: Optional[ChecksumAddress | str] = None,
+        from_address: Optional[ChecksumAddress | str] = None,
         pair_name: Optional[str] = None,
-        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
-        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
+        book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
     ) -> pd.DataFrame:
 
 The method accepts the following parameters:
@@ -218,32 +236,26 @@ The method accepts the following parameters:
 
    * - Parameter
      - Description
-   * - `first`
-     - Number of offers to return
-   * - `order_by`
-     - Field to order the offers by. Default is "timestamp"
-   * - `order_direction`
-     - Direction to order the offers by. Default is "desc"
-   * - `formatted`
-     - Whether or not to return the dataframe with formatted fields (requires node connection)
-   * - `book_side`
-     - Specifies which side of the order book to consider
    * - `maker`
      - The address of the maker of the offer
    * - `from_address`
      - The address that originated the transaction that created the offer
    * - `pair_name`
      - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
-   * - `pay_gem`
-     - The address of the token that the maker is offering. Optional, overrides the `pair_name` if provided
-   * - `buy_gem`
-     - The address of the token that the maker is requesting. Optional, overrides the `pair_name` if provided
+   * - `book_side`
+     - Specifies which side of the order book to consider
    * - `open`
      - Whether or not the offer is still active
    * - `start_time`
      - The unix timestamp of the earliest offer to return
    * - `end_time`
      - The unix timestamp of the latest offer to return
+   * - `first`
+     - Number of offers to return
+   * - `order_by`
+     - Field to order the offers by. Default is "timestamp"
+   * - `order_direction`
+     - Direction to order the offers by. Default is "desc"
 
 The `get_trades` Method
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -256,16 +268,15 @@ Here's the signature of the method:
 
     def get_trades(
         self,
-        first: int = 10000000,
-        order_by: str = "timestamp",
-        order_direction: str = "desc",
-        formatted: bool = True,
-        book_side: OrderSide = OrderSide.NEUTRAL,
         taker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
+        book_side: Optional[OrderSide] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
     ) -> pd.DataFrame:
 
 The method accepts the following parameters:
@@ -275,26 +286,24 @@ The method accepts the following parameters:
 
    * - Parameter
      - Description
-   * - `first`
-     - Number of trades to return
-   * - `order_by`
-     - Field to order the trades by. Default is "timestamp"
-   * - `order_direction`
-     - Direction to order the trades by. Default is "desc"
-   * - `formatted`
-     - Whether or not to return the dataframe with formatted fields (requires node connection)
-   * - `book_side`
-     - Specifies which side of the order book to consider
    * - `taker`
      - The address of the taker of the trade
    * - `from_address`
      - The address that originated the transaction that created the trade (helpful when transactions go through the router)
    * - `pair_name`
      - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
+   * - `book_side`
+     - Specifies which side of the order book to consider
    * - `start_time`
      - The unix timestamp of the earliest trade to return
    * - `end_time`
      - The unix timestamp of the latest trade to return
+   * - `first`
+     - Number of trades to return
+   * - `order_by`
+     - Field to order the trades by. Default is "timestamp"
+   * - `order_direction`
+     - Direction to order the trades by. Default is "desc"
 
 Retrieving Offer Data
 ^^^^^^^^^^^^^^^^^^^^^
@@ -306,7 +315,6 @@ In the example below, we will retrieve WETH/USDC offer data for a given time ran
     weth_usdc_offers = client.get_offers(
         pair_name="WETH/USDC",
         book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
-        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
         start_time=1688187600,
         end_time=1690606800,
     )
@@ -321,7 +329,6 @@ In the example below, we will access WETH/USDC trade data for a given time range
     weth_usdc_trades = client.get_trades(
         pair_name="WETH/USDC",
         book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
-        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
         start_time=1688187600,
         end_time=1690606800,
     )
