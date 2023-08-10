@@ -1,6 +1,8 @@
 rubi.contracts package
 ======================
 
+.. _contracts:
+
 Subpackages
 -----------
 

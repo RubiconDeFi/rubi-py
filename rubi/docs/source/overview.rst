@@ -61,7 +61,7 @@ called, the contract removes the target ``offer()`` and returns the tokens to th
 
 An overview of the contract can be found `here <https://docs.rubicon.finance/protocol/rubicon-market/contract-overview>`__.
 
-Additionally, details of the python implementation can be seen in the :ref:`contracts module <rubi_contracts>`.
+Additionally, details of the python implementation can be seen in the :ref:`contracts module <contracts>`.
 
 .. _RubiconRouter:
 
@@ -76,4 +76,4 @@ if two tokens do not have an underlying order book.
 
 An overview of the contract can be found `here <https://docs.rubicon.finance/protocol/rubicon-router/rubicon-router>`__.
 
-Additionally, details of the python implementation can be seen in the :ref:`contracts module <rubi_contracts>`.
+Additionally, details of the python implementation can be seen in the :ref:`contracts module <contracts>`.

@@ -119,6 +119,7 @@ Having instantiated a client you are now ready to start interacting with the Rub
 client to read or trade against a specific pair you will first need to approve the ``RubiconMarket`` contract
 
 .. code-block:: python
+
     # Approve WETH
     weth_approval = RubiconMarketApproval(token="WETH", amount=Decimal("1"))
 
@@ -217,8 +218,8 @@ Here's the signature of the method:
 
     def get_offers(
         self,
-        maker: Optional[ChecksumAddress | str] = None,
-        from_address: Optional[ChecksumAddress | str] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_name: Optional[str] = None,
         book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
