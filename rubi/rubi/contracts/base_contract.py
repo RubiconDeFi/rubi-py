@@ -3,7 +3,7 @@ import logging as log
 import os
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, Type, Dict, Any
+from typing import Optional, Callable, Type, Dict, Any, Union
 
 from eth_typing import ChecksumAddress
 from eth_utils import encode_hex, function_abi_to_4byte_selector
@@ -81,14 +81,14 @@ class BaseContract:
     def from_address(
         cls,
         w3: Web3,
-        address: ChecksumAddress | str,
+        address: Union[ChecksumAddress, str],
     ) -> "BaseContract":
         """Create a BaseContract instance from an address.
 
         :param w3: Web3 instance.
         :type w3: Web3
         :param address: The address of the contract.
-        :type address: ChecksumAddress | str
+        :type address: Union[ChecksumAddress, str]
         :return: A BaseContract instance based on the address.
         :rtype: BaseContract
         """

@@ -1,7 +1,7 @@
 import logging as log
 from _decimal import Decimal
 from multiprocessing import Queue
-from typing import Optional, Dict, List, Any, Type
+from typing import Optional, Dict, List, Any, Type, Union
 
 from eth_typing import ChecksumAddress
 from web3.types import TxParams, EventData
@@ -45,7 +45,7 @@ class OrderTrackingClient(Client):
         network: Network,
         pair_names: List[str],
         message_queue: Optional[Queue] = None,
-        wallet: Optional[ChecksumAddress | str] = None,
+        wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
     ):
         super().__init__(
@@ -69,7 +69,7 @@ class OrderTrackingClient(Client):
         http_node_url: str,
         pair_names: List[str] = None,
         message_queue: Optional[Queue] = None,
-        wallet: Optional[ChecksumAddress | str] = None,
+        wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
         custom_token_addresses_file: Optional[str] = None,
         **kwargs,
@@ -164,7 +164,6 @@ class OrderTrackingClient(Client):
         )
 
         if raw_event.client_filter(wallet=self.wallet):
-
             if isinstance(raw_event, EmitFeeEvent):
                 asset = self.network.tokens[raw_event.asset]
 

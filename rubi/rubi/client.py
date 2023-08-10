@@ -9,7 +9,6 @@ import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce, TxParams
 
-from data.helpers import SubgraphOffer
 from rubi import LimitOrder
 from rubi.contracts import (
     ERC20,
@@ -21,6 +20,7 @@ from rubi.contracts import (
     EmitApproval,
     EmitTransfer,
 )
+from rubi.data.helpers import SubgraphOffer
 from rubi.network import (
     Network,
 )
@@ -461,7 +461,6 @@ class Client:
         )
 
         if raw_event.client_filter(wallet=self.wallet):
-
             if isinstance(raw_event, EmitFeeEvent):
                 asset = self.network.tokens[raw_event.asset]
 
@@ -861,8 +860,8 @@ class Client:
 
     def get_offers(
         self,
-        maker: Optional[ChecksumAddress | str] = None,
-        from_address: Optional[ChecksumAddress | str] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_names: Optional[List[str]] = None,
         book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
@@ -976,8 +975,8 @@ class Client:
 
     def get_trades(
         self,
-        taker: Optional[ChecksumAddress | str] = None,
-        from_address: Optional[ChecksumAddress | str] = None,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_names: Optional[List[str]] = None,
         book_side: Optional[OrderSide] = None,
         start_time: Optional[int] = None,

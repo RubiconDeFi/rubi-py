@@ -5,7 +5,7 @@ from typing import Optional, Union
 from eth_typing import ChecksumAddress
 from web3 import Web3
 
-from data.helpers import SubgraphOffer
+from rubi.data.helpers import SubgraphOffer
 from rubi.contracts import (
     ERC20,
     BaseEvent,

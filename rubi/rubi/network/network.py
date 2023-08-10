@@ -103,7 +103,7 @@ class Network:
                 future = executor.submit(ERC20.from_address, self.w3, address)
                 futures[name] = future
 
-        self.tokens: Dict[ChecksumAddress | str, ERC20] = {}
+        self.tokens: Dict[Union[ChecksumAddress, str], ERC20] = {}
         for name, future in futures.items():
             erc20 = future.result()
 

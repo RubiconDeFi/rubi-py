@@ -1,6 +1,6 @@
 from _decimal import Decimal
 from enum import Enum
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Union
 
 from eth_typing import BlockNumber, ChecksumAddress
 from hexbytes import HexBytes
@@ -78,14 +78,14 @@ class TransactionReceipt:
 
     @classmethod
     def from_tx_receipt(
-        cls, tx_receipt: TxReceipt, raw_events: List[BaseEvent | EventData]
+        cls, tx_receipt: TxReceipt, raw_events: List[Union[BaseEvent, EventData]]
     ) -> "TransactionReceipt":
         """Initialize a TransactionReceipt
 
         :param tx_receipt: The transaction receipt Dict received from the node.
         :type tx_receipt: TxReceipt
         :param raw_events: The raw events decoded from the logs
-        :type raw_events: List[BaseEvent | EventData]
+        :type raw_events: List[Union[BaseEvent, EventData]]
         :return: A TransactionReceipt object
         :rtype: TransactionReceipt
         """

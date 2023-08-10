@@ -1,7 +1,7 @@
 import logging as log
 from _decimal import Decimal
 from datetime import datetime
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Union
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -10,8 +10,8 @@ from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
 from rubi.contracts import ERC20
-from rubi.data.helpers import SubgraphOffer, SubgraphTrade
 from rubi.data.helpers import QueryValidation
+from rubi.data.helpers import SubgraphOffer, SubgraphTrade
 
 logger = log.getLogger(__name__)
 
@@ -35,9 +35,10 @@ class MarketData:
         self,
         url: str,
         fallback_url: str,
-        tokens: Dict[ChecksumAddress | str, ERC20],
+        tokens: Dict[Union[ChecksumAddress, str], ERC20],
     ):
         """constructor method"""
+
         self.subgrounds = Subgrounds()
         self.tokens = tokens
 
@@ -63,6 +64,7 @@ class MarketData:
         :return: A initialized subgraph instance
         :rtype: Subgraph
         """
+
         subgraph = None
 
         for attempt in range(attempts):
@@ -95,16 +97,18 @@ class MarketData:
     ######################################################################
 
     def _erc20_to_decimal(
-        self, gem: str | ChecksumAddress, amt: int
+        self, gem: Union[ChecksumAddress, str], amt: int
     ) -> Optional[Decimal]:
         """Helper to convert an amount to decimals for the given ERC20"""
+
         try:
             return self.tokens[Web3.to_checksum_address(gem)].to_decimal(amt)
         except KeyError:
             return None
 
-    def _erc20_to_symbol(self, gem: str | ChecksumAddress) -> Optional[str]:
+    def _erc20_to_symbol(self, gem: Union[ChecksumAddress, str]) -> Optional[str]:
         """Helper to get the symbol of the given ERC20"""
+
         try:
             return self.tokens[Web3.to_checksum_address(gem)].symbol
         except KeyError:
@@ -112,6 +116,7 @@ class MarketData:
 
     def _initialize_subgraph_offer(self):
         """Initialize the Subgraph offer object and add synthetic fields"""
+
         offer = self.subgraph.Offer  # noqa
 
         offer.pay_amt_decimals = SyntheticField(
@@ -164,6 +169,7 @@ class MarketData:
 
     def _initialize_subgraph_trade(self):
         """Initialize the Subgraph trade object and add synthetic fields"""
+
         take = self.subgraph.Take  # noqa
 
         take.take_amt_decimals = SyntheticField(
@@ -218,6 +224,7 @@ class MarketData:
         start_time: Optional[int],
         end_time: Optional[int],
         first: int,
+        # TODO: expand order_by options
         order_by: str,
         order_direction: str,
         as_dataframe: bool = True,
@@ -234,7 +241,7 @@ class MarketData:
         :type buy_gem: Optional[ChecksumAddress]
         :param side: The side we are querying for
         :type side: Optional[str]
-        :param open: whether or not the offer is still active
+        :param open: whether the offer is still active
         :type open:Optional[bool]
         :param start_time: the timestamp of the earliest offer to return
         :type start_time: int
@@ -242,7 +249,6 @@ class MarketData:
         :type end_time: int
         :param first: the number of offers to return
         :type first: int
-        TODO: expand order_by options
         :param order_by: the field to order the offers by (default: timestamp, options: timestamp, price)
         :type order_by: str
         :param order_direction: the direction to order the offers by (default: desc, options: asc, desc)
@@ -250,8 +256,9 @@ class MarketData:
         :param as_dataframe: If the response should be a dataframe (default: True)
         :type as_dataframe: bool
         :return: a dataframe of offers placed on the market contract or a list of subgraph offer objects
-        :rtype: pd.DataFrame | SubgraphOffer
+        :rtype: Optional[pd.DataFrame] | List[SubgraphOffer]
         """
+
         offer_query = self._build_offers_query(
             order_by=order_by,
             order_direction=order_direction,
@@ -281,15 +288,16 @@ class MarketData:
     def get_trades(
         self,
         # TODO: resolve #63 and add in conditional filter for offer maker/from_address
-        # maker: Optional[ChecksumAddress | str],
-        taker: Optional[ChecksumAddress | str],
-        from_address: Optional[ChecksumAddress | str],
-        take_gem: Optional[ChecksumAddress | str],
-        give_gem: Optional[ChecksumAddress | str],
+        # maker: Optional[Union[ChecksumAddress, str]],
+        taker: Optional[Union[ChecksumAddress, str]],
+        from_address: Optional[Union[ChecksumAddress, str]],
+        take_gem: Optional[Union[ChecksumAddress, str]],
+        give_gem: Optional[Union[ChecksumAddress, str]],
         side: Optional[str],
         start_time: Optional[int],
         end_time: Optional[int],
         first: int,
+        # TODO: expand order_by options
         order_by: str,
         order_direction: str,
     ) -> pd.DataFrame:
@@ -311,7 +319,6 @@ class MarketData:
         :type end_time: int
         :param first: the number of trades to return
         :type first: int
-        TODO: expand this list
         :param order_by: the field to order the trades by (default: timestamp, options: timestamp)
         :type order_by: str
         :param order_direction: the direction to order the trades by (default: desc, options: asc, desc)
@@ -347,15 +354,16 @@ class MarketData:
         order_by: str,
         order_direction: str,
         first: int,
-        maker: Optional[ChecksumAddress | str] = None,
-        from_address: Optional[ChecksumAddress | str] = None,
-        pay_gem: Optional[ChecksumAddress | str] = None,
-        buy_gem: Optional[ChecksumAddress | str] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
+        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ):
         """Helper method build an offers query."""
+
         QueryValidation.validate_offer_query(
             order_by=order_by,
             order_direction=order_direction,
@@ -397,14 +405,15 @@ class MarketData:
         order_by: str,
         order_direction: str,
         first: int,
-        taker: Optional[ChecksumAddress | str] = None,
-        from_address: Optional[ChecksumAddress | str] = None,
-        take_gem: Optional[ChecksumAddress | str] = None,
-        give_gem: Optional[ChecksumAddress | str] = None,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        take_gem: Optional[Union[ChecksumAddress, str]] = None,
+        give_gem: Optional[Union[ChecksumAddress, str]] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ):
         """Helper method build a trades query."""
+
         QueryValidation.validate_trade_query(
             order_by=order_by,
             order_direction=order_direction,
@@ -440,6 +449,7 @@ class MarketData:
 
     def _query_offers_as_dataframe(self, query_fields: List) -> Optional[pd.DataFrame]:
         """Helper method to query the offers subgraph entity and return a dataframe."""
+
         df = self.subgrounds.query_df(
             query_fields,
             # TODO: maybe we give the user the option to define a custom pagination strategy.
@@ -460,6 +470,7 @@ class MarketData:
 
     def _query_offers(self, query_fields: List) -> List[SubgraphOffer]:
         """Helper method to query the offers subgraph entity."""
+
         response = self.subgrounds.query_json(
             query_fields,
             # TODO: maybe we give the user the option to define a custom pagination strategy.
@@ -492,7 +503,8 @@ class MarketData:
         self,
         query_fields: List,
     ) -> Optional[pd.DataFrame]:
-        """Helper method to query the offers subgraph entity."""
+        """Helper method to query the trades subgraph entity."""
+
         df = self.subgrounds.query_df(
             query_fields,
             # TODO: maybe we give the user the option to define a custom pagination strategy.

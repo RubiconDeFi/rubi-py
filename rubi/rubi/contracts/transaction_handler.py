@@ -1,5 +1,5 @@
 import logging as log
-from typing import List
+from typing import List, Union
 
 from hexbytes import HexBytes
 from web3 import Web3
@@ -106,14 +106,14 @@ class TransactionHandler:
 
     def _process_receipt_logs_into_raw_events(
         self, receipt: TxReceipt
-    ) -> List[BaseEvent | EventData]:
+    ) -> List[Union[BaseEvent, EventData]]:
         """
         Processes the logs of a given transaction receipt and returns a list of events associated with the transaction.
 
         :param receipt: The transaction receipt dictionary.
         :type receipt: TxReceipt
         :return: The list of events associated with the given transaction receipt
-        :rtype: List[BaseEvent]
+        :rtype: List[Union[BaseEvent, EventData]]
         """
 
         raw_events = []

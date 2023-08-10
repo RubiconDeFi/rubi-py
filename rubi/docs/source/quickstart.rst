@@ -220,7 +220,7 @@ Here's the signature of the method:
         self,
         maker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,
+        pair_names: Optional[List[str]] = None,
         book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
@@ -228,7 +228,8 @@ Here's the signature of the method:
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
-    ) -> pd.DataFrame:
+        as_dataframe: bool = True,
+    ) -> Optional[pd.DataFrame] | List[LimitOrder]:
 
 The method accepts the following parameters:
 
@@ -241,8 +242,8 @@ The method accepts the following parameters:
      - The address of the maker of the offer
    * - `from_address`
      - The address that originated the transaction that created the offer
-   * - `pair_name`
-     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
+   * - `pair_names`
+     - List of token pair names in the format ["WETH/USDC"] following the pattern <ASSET/QUOTE>
    * - `book_side`
      - Specifies which side of the order book to consider
    * - `open`
@@ -257,6 +258,8 @@ The method accepts the following parameters:
      - Field to order the offers by. Default is "timestamp"
    * - `order_direction`
      - Direction to order the offers by. Default is "desc"
+  *  - `as_dataframe`
+     - If the response should be as a dataframe or as a list of LimitOrders
 
 The `get_trades` Method
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -271,7 +274,7 @@ Here's the signature of the method:
         self,
         taker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,
+        pair_names: Optional[List[str]] = None,
         book_side: Optional[OrderSide] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
@@ -291,8 +294,8 @@ The method accepts the following parameters:
      - The address of the taker of the trade
    * - `from_address`
      - The address that originated the transaction that created the trade (helpful when transactions go through the router)
-   * - `pair_name`
-     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
+   * - `pair_names`
+     - List of token pair names in the format ["WETH/USDC"] following the pattern <ASSET/QUOTE>
    * - `book_side`
      - Specifies which side of the order book to consider
    * - `start_time`
