@@ -1,0 +1,19 @@
+name: "Base Mainnet"
+chain_id: 8453
+currency: "ETH"
+rpc_url: "https://mainnet.base.org"
+explorer_url: "https://basescan.org"
+market_data_url: "https://graph.rubicon.finance/subgraphs/name/RubiconV2_Base_Mainnet"
+market_data_fallback_url: "https://graph.rubicon.finance/subgraphs/name/RubiconV2_Base_Mainnet"
+
+rubicon:
+ market:
+  address: "0x9A5215E96E1185d4e6002C95C3Cc0aB6eEaD354F"
+ router:
+  address: "0x929675f6a6aC12D7cC3463BE1df7221ca35b8a00"
+
+token_addresses:
+ WETH: "0x4200000000000000000000000000000000000006"
+ USDbC: "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA"
+ DAI: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
+ cbETH: "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22"

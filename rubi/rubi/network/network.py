@@ -15,6 +15,7 @@ class NetworkId(Enum):
     # MAINNET
     OPTIMISM = 10
     ARBITRUM_ONE = 42161
+    BASE = 8453
 
     # TESTNET
     OPTIMISM_GOERLI = 420
