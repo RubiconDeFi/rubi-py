@@ -22,6 +22,7 @@ subgrounds = { version = "1.6.0", extras = ["dash"] }
 pyyaml = "6.0.1"
 python-semantic-release = "8.0.4"
 black = "23.7.0"
+deprecation = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 python-dotenv = "0.21.1"
