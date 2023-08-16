@@ -228,7 +228,6 @@ def test_network_1(
     eth: Contract,
     blz: Contract,
 ) -> Network:
-
     rubicon = {
         "market": rubicon_market.address,
         "router": rubicon_router.address,
@@ -243,7 +242,8 @@ def test_network_1(
         currency="ISH",
         rpc_url="https://ishan.io/rpc",
         explorer_url="https://ishanexplorer.io",
-        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",  # TODO: update once prod has been synced
+        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
+        # TODO: update once prod has been synced
         market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
         rubicon=rubicon,
         token_addresses=token_addresses,
@@ -260,7 +260,6 @@ def test_network_2(
     eth: Contract,
     blz: Contract,
 ) -> Network:
-
     rubicon = {
         "market": rubicon_market.address,
         "router": rubicon_router.address,
@@ -275,7 +274,8 @@ def test_network_2(
         currency="ISH",
         rpc_url="https://ishan.io/rpc",
         explorer_url="https://ishanexplorer.io",
-        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",  # TODO: update once prod has been synced
+        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
+        # TODO: update once prod has been synced
         market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
         rubicon=rubicon,
         token_addresses=token_addresses,

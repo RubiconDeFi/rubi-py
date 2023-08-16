@@ -83,7 +83,6 @@ class TestClient:
     def test_fail_to_instantiate_different_clients(
         self, test_network_1: Network, account_1: Dict, account_2: Dict
     ):
-
         client_1 = Client(
             network=test_network_1, wallet=account_1["address"], key=account_1["key"]
         )
