@@ -1,4 +1,5 @@
-from typing import Optional, Dict, Union
+import logging as log
+from typing import Optional, Dict, Union, Any
 
 import pandas as pd
 from eth_typing import ChecksumAddress
@@ -7,14 +8,13 @@ from subgrounds import Subgrounds
 from rubi.contracts import (
     ERC20,
 )
-from rubi.network import (
-    Network,
-)
 from rubi.rubicon_types import (
     OrderSide,
     OrderQuery,
     TradeQuery,
 )
+
+logger = log.getLogger(__name__)
 
 
 class MarketData:
@@ -35,14 +35,16 @@ class MarketData:
         subgrounds: Subgrounds,
         subgraph_url: str,
         subgraph_fallback_url: str,
-        network: Optional[Network] = None,
+        # This is a Network object, but we remove it to make sure we avoid circular dependencies
+        network: Optional[Any] = None,
         network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None,
     ):
         """constructor method"""
         self.sg = subgrounds
         self.subgraph_url = subgraph_url
         self.subgraph_fallback_url = subgraph_fallback_url
-        self.network = network  # type: Network | None
+        # This is a Network object, but we remove it to make sure we avoid circular dependencies
+        self.network = network  # type: Any | None
         self.tokens = network_tokens  # type: Dict[ChecksumAddress, ERC20] | None
 
         # initialize the subgraph
@@ -70,9 +72,19 @@ class MarketData:
 
     @classmethod
     def from_network_with_tokens(
-        cls, network: Network, network_tokens: Dict[ChecksumAddress, ERC20]
+        cls,
+        network: Any,  # This is a Network object, but we remove it to make sure we avoid circular dependencies
+        network_tokens: Dict[ChecksumAddress, ERC20],
     ) -> "MarketData":
         """Initialize a MarketData object using a Network object."""
+        try:
+            # Do this to ensure that the market data has been instantiated on the network
+            logger.debug(network.market_data.sg)
+
+            return network.market_data
+        except Exception as e:
+            logger.debug(f"Network instantiated without subgraph, {e}")
+
         return cls(
             subgrounds=network.subgrounds,
             subgraph_url=network.market_data_url,

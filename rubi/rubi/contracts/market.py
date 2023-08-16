@@ -1,12 +1,13 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Any
 
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts.base_contract import BaseContract, ContractType
+from deprecation import deprecated
+
+from rubi.contracts.base_contract import BaseContract
 from rubi.contracts.contract_types import TransactionReceipt
-from rubi.network import Network
 
 
 class RubiconMarket(BaseContract):
@@ -27,7 +28,6 @@ class RubiconMarket(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType = ContractType.RUBICON_MARKET,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> None:
@@ -35,15 +35,18 @@ class RubiconMarket(BaseContract):
         super().__init__(
             w3=w3,
             contract=contract,
-            contract_type=ContractType.RUBICON_MARKET,
             wallet=wallet,
             key=key,
         )
 
     @classmethod
+    @deprecated(
+        deprecated_in="2.4.1",
+        details="Contracts are now instantiated on the network object, making this redundant. Rather use from_address.",
+    )
     def from_network(
         cls,
-        network: Network,
+        network: Any,  # This is a Network object, but we remove it to make sure we avoid circular dependencies
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> "RubiconMarket":
@@ -58,14 +61,12 @@ class RubiconMarket(BaseContract):
         :return: A RubiconMarket instance based on the Network instance.
         :rtype: RubiconMarket
         """
-        return cls.from_address_and_abi(
-            w3=network.w3,
-            address=network.rubicon.market.address,
-            contract_abi=network.rubicon.market.abi,
-            contract_type=ContractType.RUBICON_MARKET,
-            wallet=wallet,
-            key=key,
-        )
+        if wallet:
+            network.rubicon_market.wallet = wallet
+        if key:
+            network.rubicon_market.key = key
+
+        return network.rubicon_market
 
     ######################################################################
     # read calls
@@ -271,13 +272,6 @@ class RubiconMarket(BaseContract):
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-
-        if not self.signing_permissions:
-            raise Exception(
-                f"cannot write transaction without signing rights. "
-                f"re-instantiate {self.__class__} with a wallet and private key"
-            )
-
         owner = owner if owner is not None else self.wallet
         recipient = recipient if recipient is not None else self.wallet
 

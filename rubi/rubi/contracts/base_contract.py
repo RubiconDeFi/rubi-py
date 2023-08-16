@@ -1,9 +1,10 @@
+import json
 import logging as log
+import os
 import time
-from enum import Enum
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, Type, Dict, Any, List
+from typing import Optional, Callable, Type, Dict, Any, List, Union
 
 from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
@@ -22,17 +23,6 @@ from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
 logger = log.getLogger(__name__)
 
 
-class ContractType(Enum):
-    """Enum to distinguish the type of contract instantiated
-
-    Should only be used internally
-    """
-
-    RUBICON_MARKET = "RUBICON_MARKET"
-    RUBICON_ROUTER = "RUBICON_ROUTER"
-    ERC20 = "ERC20"
-
-
 class BaseContract:
     """Base class representation of a contract which defines the structure of a contract and provides several helpful
     methods that can be used by subclass contracts that extend this contract.
@@ -41,8 +31,6 @@ class BaseContract:
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param contract_type: the type of contract
-    :type contract_type: ContractType
     :param wallet: a wallet address of the signer (optional, default is None)
     :type wallet: Optional[ChecksumAddress]
     :param key: the private key of the signer (optional, default is None)
@@ -53,7 +41,6 @@ class BaseContract:
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ):
@@ -65,19 +52,12 @@ class BaseContract:
 
         self.contract = contract
         self.address = contract.address
-        self.contract_type = contract_type
         self.w3 = w3
         self.chain_id = self.w3.eth.chain_id
 
-        # Signing permissions
-        self.signing_permissions = wallet is not None and key is not None
-
-        if self.signing_permissions:
-            logger.info(f"instantiated {self.__class__} with signing rights")
-
-            # Force typing as my editors inspection is throwing a tantrum
-            self.wallet = wallet  # type: ChecksumAddress
-            self.key = key  # type: str
+        # Force typing as my editors inspection is throwing a tantrum
+        self.wallet = wallet  # type: ChecksumAddress
+        self.key = key  # type: str
 
     @classmethod
     def from_address_and_abi(
@@ -85,7 +65,6 @@ class BaseContract:
         w3: Web3,
         address: ChecksumAddress,
         contract_abi: ABI,
-        contract_type: ContractType,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> "BaseContract":
@@ -97,8 +76,6 @@ class BaseContract:
         :type address: ChecksumAddress
         :param contract_abi: The ABI of the contract.
         :type contract_abi: ABI
-        :param contract_type: The type of contract we are instantiating.
-        :type contract_type: ContractType
         :param wallet: The wallet address to use for interacting with the contract (optional, default is None).
         :type wallet: Optional[ChecksumAddress]
         :param key: The private key of the wallet (optional, default is None).
@@ -112,9 +89,55 @@ class BaseContract:
         return cls(
             w3=w3,
             contract=contract,
-            contract_type=contract_type,
             wallet=wallet,
             key=key,
+        )
+
+    @classmethod
+    def from_address(
+        cls,
+        w3: Web3,
+        address: Union[ChecksumAddress, str],
+        wallet: Optional[ChecksumAddress] = None,
+        key: Optional[str] = None,
+    ) -> "BaseContract":
+        """Create a BaseContract instance from an address.
+
+        :param w3: Web3 instance.
+        :type w3: Web3
+        :param address: The address of the contract.
+        :type address: Union[ChecksumAddress, str]
+        :param wallet: The wallet address to use for interacting with the contract (optional, default is None).
+        :type wallet: Optional[ChecksumAddress]
+        :param key: The private key of the wallet (optional, default is None).
+        :type key: Optional[str]
+        :return: A BaseContract instance based on the address.
+        :rtype: BaseContract
+        """
+
+        match str(cls.__name__):
+            case "RubiconMarket":
+                name = "market"
+            case "RubiconRouter":
+                name = "router"
+            case "ERC20":
+                name = "erc20"
+            case _:
+                raise Exception("from_address called on unexpected class")
+
+        try:
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/abis/{name}.json"
+
+            with open(path) as f:
+                abi = json.load(f)
+
+        except FileNotFoundError:
+            raise Exception(
+                f"{name}.json abi not found. This file should be in the network_config/abis/ folder"
+            )
+
+        return cls.from_address_and_abi(
+            w3=w3, address=address, contract_abi=abi, wallet=wallet, key=key
         )
 
     ######################################################################
@@ -266,7 +289,7 @@ class BaseContract:
         :return: An object representing the transaction receipt
         :rtype: TransactionReceipt
         """
-        if not self.signing_permissions:
+        if self.wallet is None or self.key is None:
             raise Exception(
                 f"cannot write transaction without signing rights. "
                 f"re-instantiate {self.__class__} with a wallet and private key"
@@ -368,14 +391,16 @@ class BaseContract:
         :param receipt:
         :type receipt: TxReceipt
         :return: The list of events associated with the given transaction receipt
-        :rtype: List[BaseEvent]
+        :rtype: List[BaseEvent | EventData]
         """
-        match self.contract_type:
-            case ContractType.RUBICON_MARKET:
+        name = str(self.__class__.__name__)
+
+        match name:
+            case "RubiconMarket":
                 event_names = ["emitTake", "emitOffer", "emitCancel"]
-            case ContractType.RUBICON_ROUTER:
+            case "RubiconRouter":
                 event_names = ["emitSwap"]
-            case ContractType.ERC20:
+            case "ERC20":
                 event_names = ["Approval", "Transfer"]
             case _:
                 raise Exception("Unexpected ContractType")
@@ -387,7 +412,7 @@ class BaseContract:
             ]().process_receipt(receipt, DISCARD)
 
             for event_data in transaction_events_data:
-                if self.contract_type == ContractType.ERC20:
+                if name == "ERC20":
                     raw_events.append(event_data)
 
                 raw_events.append(

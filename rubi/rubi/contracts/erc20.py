@@ -1,16 +1,14 @@
-import json
-import os
 from _decimal import Decimal
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, Any
 
+from deprecation import deprecated
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import ABI
 
-from rubi.contracts.base_contract import BaseContract, ContractType
+from rubi.contracts.base_contract import BaseContract
 from rubi.contracts.contract_types import TransactionReceipt
-from rubi.network import Network
 
 
 class ERC20(BaseContract):
@@ -31,7 +29,6 @@ class ERC20(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType = ContractType.ERC20,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ):
@@ -39,20 +36,31 @@ class ERC20(BaseContract):
         super().__init__(
             w3=w3,
             contract=contract,
-            contract_type=ContractType.ERC20,
             wallet=wallet,
             key=key,
         )
 
-        self.name: str = self.name()
-        self.symbol: str = self.symbol()
-        self.decimal: int = self.decimals()
+        with ThreadPoolExecutor() as executor:
+            name_future = executor.submit(self.name)
+            symbol_future = executor.submit(self.symbol)
+            decimals_future = executor.submit(self.decimals)
+
+        self.name = name_future.result()
+        self.symbol = symbol_future.result()
+        self.decimals = decimals_future.result()
+
+        # DEPRECATED, 2.4.1, Use decimals instead.
+        self.decimal = decimals_future.result()
 
     @classmethod
+    @deprecated(
+        deprecated_in="2.4.1",
+        details="Contracts are now instantiated on the network object, making this redundant. Rather use from_address.",
+    )
     def from_network(
         cls,
         name: str,
-        network: Network,
+        network: Any,  # This is a Network object, but we remove it to make sure we avoid circular dependencies
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> "ERC20":
@@ -71,77 +79,12 @@ class ERC20(BaseContract):
         :raises Exception: If the token name does not exist in the network configuration.
         :raises Exception: If the ERC20.json ABI file is not found in the network_config folder.
         """
+        if wallet:
+            network.tokens[name].wallet = wallet
+        if key:
+            network.tokens[name].key = key
 
-        if network.token_addresses[name] is None:
-            raise Exception(
-                f"{name} in not a valid token according to the network config."
-            )
-
-        abi: ABI
-
-        try:
-            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/ERC20.json"
-
-            with open(path) as f:
-                abi = json.load(f)
-
-        except FileNotFoundError:
-            raise Exception(
-                "ERC20.json abi not found. this file should in the network_config folder"
-            )
-
-        return cls.from_address_and_abi(
-            w3=network.w3,
-            address=network.token_addresses[name],
-            contract_abi=abi,
-            contract_type=ContractType.ERC20,
-            wallet=wallet,
-            key=key,
-        )
-
-    @classmethod
-    def from_address(
-        cls,
-        w3: Web3,
-        address: ChecksumAddress,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
-    ) -> "ERC20":
-        """Create an ERC20 instance based on an address and a network connection.
-
-        :param w3: Web3 instance.
-        :type w3: Web3
-        :param address: The address of the contract.
-        :type address: ChecksumAddress
-        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
-        :type wallet: Optional[ChecksumAddress]
-        :param key: Optional private key for the wallet (optional, default is None).
-        :type key: Optional[str]
-        :return: An ERC20 instance based on the address and network connection.
-        :rtype: ERC20
-        """
-
-        abi: ABI
-
-        try:
-            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/ERC20.json"
-
-            with open(path) as f:
-                abi = json.load(f)
-
-        except FileNotFoundError:
-            raise Exception(
-                "ERC20.json abi not found. this file should in the network_config folder"
-            )
-
-        return cls.from_address_and_abi(
-            w3=w3,
-            address=address,
-            contract_abi=abi,
-            contract_type=ContractType.ERC20,
-            wallet=wallet,
-            key=key,
-        )
+        return network.tokens[name]
 
     ######################################################################
     # read calls
@@ -152,9 +95,9 @@ class ERC20(BaseContract):
         """Reads the allowance of the spender from the owner for the erc20 contract
 
         :param owner: address that owns the erc20 tokens
-        :type owner: str
+        :type owner: ChecksumAddress
         :param spender: address that is allowed to spend the erc20 tokens
-        :type spender: str
+        :type spender: ChecksumAddress
         :return: the allowance of the spender from the owner for the contract, in the integer representation of the
             token
         :rtype: int
@@ -253,8 +196,8 @@ class ERC20(BaseContract):
 
         return self._default_transaction_handler(
             instantiated_contract_function=approve,
-            gas=gas,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -292,8 +235,8 @@ class ERC20(BaseContract):
 
         return self._default_transaction_handler(
             instantiated_contract_function=transfer,
-            gas=gas,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -336,92 +279,8 @@ class ERC20(BaseContract):
 
         return self._default_transaction_handler(
             instantiated_contract_function=transfer_from,
-            gas=gas,
             nonce=nonce,
-            max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas,
-        )
-
-    # increaseAllowance(spender (address), addedValue (uint256)) -> bool
-    def increase_allowance(
-        self,
-        spender: ChecksumAddress,
-        added_value: int,
-        nonce: Optional[int] = None,
-        gas: Optional[int] = None,
-        max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Increases the allowance of the spender by the added_value
-
-        :param spender: address of the spender
-        :type spender: ChecksumAddress
-        :param added_value: amount to increase the allowance by, in the integer representation of the erc20 token
-        :type added_value: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
-            (optional, default is None)
-        :type nonce: Optional[int]
-        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
-        :type gas: Optional[int]
-        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
-        :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-            estimate the max_priority_fee_per_gas (optional, default is None)
-        :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
-        """
-        increase_allowance = self.contract.functions.increaseAllowance(
-            spender, added_value
-        )
-
-        return self._default_transaction_handler(
-            instantiated_contract_function=increase_allowance,
             gas=gas,
-            nonce=nonce,
-            max_fee_per_gas=max_fee_per_gas,
-            max_priority_fee_per_gas=max_priority_fee_per_gas,
-        )
-
-    # decreaseAllowance(spender (address), subtractedValue (uint256)) -> bool
-    def decrease_allowance(
-        self,
-        spender: ChecksumAddress,
-        subtracted_value: int,
-        nonce: Optional[int] = None,
-        gas: Optional[int] = None,
-        max_fee_per_gas: Optional[int] = None,
-        max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Decreases the allowance of the spender by the subtracted_value
-
-        :param spender: address of the spender
-        :type spender: ChecksumAddress
-        :param subtracted_value: amount to decrease the allowance by, in the integer representation of the erc20 token
-        :type subtracted_value: int
-        :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
-            (optional, default is None)
-        :type nonce: Optional[int]
-        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
-        :type gas: Optional[int]
-        :param max_fee_per_gas: max fee that can be paid for gas, defaults to
-            max_priority_fee (from chain) + (2 * base fee per gas of latest block) (optional, default is None)
-        :type max_fee_per_gas: Optional[int]
-        :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
-            estimate the max_priority_fee_per_gas (optional, default is None)
-        :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
-        """
-        decrease_allowance = self.contract.functions.decreaseAllowance(
-            spender, subtracted_value
-        )
-
-        return self._default_transaction_handler(
-            instantiated_contract_function=decrease_allowance,
-            gas=gas,
-            nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -443,7 +302,7 @@ class ERC20(BaseContract):
         if number == 0:
             return Decimal("0")
         else:
-            return Decimal(number) / Decimal(10**self.decimal)
+            return Decimal(number) / Decimal(10**self.decimals)
 
     def to_integer(self, number: Decimal) -> int:
         """Converts a Decimal representation of the token to an integer representation of the token by multiplying the
@@ -458,7 +317,7 @@ class ERC20(BaseContract):
         if number == Decimal("0"):
             return 0
         else:
-            return int(number * (10**self.decimal))
+            return int(number * (10**self.decimals))
 
     def max_approval_amount(self) -> Decimal:
         """return the max uint256 token approval amount. Note: this is not very secure and if you give this approval you

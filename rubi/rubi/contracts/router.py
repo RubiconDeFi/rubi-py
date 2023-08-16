@@ -1,12 +1,12 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Any
 
+from deprecation import deprecated
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
 
-from rubi.contracts.base_contract import BaseContract, ContractType
+from rubi.contracts.base_contract import BaseContract
 from rubi.contracts.contract_types import TransactionReceipt
-from rubi.network import Network
 
 
 class RubiconRouter(BaseContract):
@@ -27,7 +27,6 @@ class RubiconRouter(BaseContract):
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType = ContractType.RUBICON_ROUTER,
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> None:
@@ -35,15 +34,18 @@ class RubiconRouter(BaseContract):
         super().__init__(
             w3=w3,
             contract=contract,
-            contract_type=ContractType.RUBICON_ROUTER,
             wallet=wallet,
             key=key,
         )
 
     @classmethod
+    @deprecated(
+        deprecated_in="2.4.1",
+        details="Contracts are now instantiated on the network object, making this redundant. Rather use from_address.",
+    )
     def from_network(
         cls,
-        network: Network,
+        network: Any,  # This is a Network object, but we remove it to make sure we avoid circular dependencies
         wallet: Optional[ChecksumAddress] = None,
         key: Optional[str] = None,
     ) -> "RubiconRouter":
@@ -58,14 +60,12 @@ class RubiconRouter(BaseContract):
         :return: A RubiconRouter instance based on the Network instance.
         :rtype: RubiconRouter
         """
-        return cls.from_address_and_abi(
-            w3=network.w3,
-            address=network.rubicon.router.address,
-            contract_abi=network.rubicon.router.abi,
-            contract_type=ContractType.RUBICON_ROUTER,
-            wallet=wallet,
-            key=key,
-        )
+        if wallet:
+            network.rubicon_router.wallet = wallet
+        if key:
+            network.rubicon_router.key = key
+
+        return network.rubicon_router
 
     ######################################################################
     # read calls

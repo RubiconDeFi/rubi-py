@@ -7,10 +7,8 @@ market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Arbitrum_
 market_data_fallback_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-arbitrum-goerli"
 
 rubicon:
- market:
-  address: "0x506407f25B746C39807c03A96DD595a6BE223211"
- router:
-  address: "0x3AbA34a8C9616eA927225C045EEa5d5b51a7a6FC"
+ market: "0x506407f25B746C39807c03A96DD595a6BE223211"
+ router: "0x3AbA34a8C9616eA927225C045EEa5d5b51a7a6FC"
 
 token_addresses:
  WETH: "0x175A6D830579CAcf1086ECC718fAB2A86b12e0D3"

@@ -4,7 +4,6 @@ from typing import Dict
 
 import yaml
 from pytest import mark
-from subgrounds import Subgrounds
 from web3 import Web3
 from web3.contract import Contract
 
@@ -34,26 +33,38 @@ from rubi import (
 
 
 class TestNetwork:
-    def test_init_from_yaml(
-        self, test_network: Network, web3: Web3, subgrounds: Subgrounds
-    ):
+    def test_init_from_yaml(self, test_network_1: Network, web3: Web3):
         path = f"{os.path.dirname(os.path.abspath(__file__))}/test_network_config"
         with open(f"{path}/test_config.yaml", "r") as file:
             network_config = yaml.safe_load(file)
 
-        network = Network(path=path, w3=web3, subgrounds=subgrounds, **network_config)
+        network = Network(w3=web3, **network_config)
 
-        assert network.name == test_network.name
-        assert network.chain_id == test_network.chain_id
-        assert network.rpc_url == test_network.rpc_url
-        assert network.explorer_url == test_network.explorer_url
-        assert network.currency == test_network.currency
+        assert network.name == test_network_1.name
+        assert network.chain_id == test_network_1.chain_id
+        assert network.rpc_url == test_network_1.rpc_url
+        assert network.explorer_url == test_network_1.explorer_url
+        assert network.currency == test_network_1.currency
+
+        # contracts
+        assert network.rubicon_market.address == network_config["rubicon"]["market"]
+        assert network.rubicon_router.address == network_config["rubicon"]["router"]
+
+        # tokens
+        assert network.tokens["COW"].symbol == "COW"
+        assert network.tokens["COW"].decimals == 18
+
+        assert network.tokens["ETH"].symbol == "ETH"
+        assert network.tokens["ETH"].decimals == 18
+
+        assert network.tokens["BLZ"].symbol == "BLZ"
+        assert network.tokens["BLZ"].decimals == 18
 
 
 class TestClient:
-    def test_init(self, account_1: Dict, test_network: Network):
+    def test_init(self, account_1: Dict, test_network_1: Network):
         client = Client(
-            network=test_network, wallet=account_1["address"], key=account_1["key"]
+            network=test_network_1, wallet=account_1["address"], key=account_1["key"]
         )
         # Test client creation
         assert isinstance(client, Client)
@@ -68,6 +79,26 @@ class TestClient:
         assert len(client._pairs.keys()) == 0
         # Test if the message_queue attribute is set to None when no queue is provided.
         assert client.message_queue is None
+
+    def test_fail_to_instantiate_different_clients(
+        self, test_network_1: Network, account_1: Dict, account_2: Dict
+    ):
+
+        client_1 = Client(
+            network=test_network_1, wallet=account_1["address"], key=account_1["key"]
+        )
+
+        try:
+            client_2 = Client(
+                network=test_network_1,
+                wallet=account_2["address"],
+                key=account_2["key"],
+            )
+        except Exception as e:
+            assert (
+                e.args[0]
+                == "Network has already been configured to use another wallet."
+            )
 
     ######################################################################
     # pair tests
@@ -640,12 +671,7 @@ class TestClient:
         assert len(test_client_for_account_1.active_limit_orders) == 0
 
     @mark.usefixtures("add_account_2_offers_to_cow_eth_market")
-    def test_cancel_limit_order(
-        self,
-        test_client_for_account_1: Client,
-        cow_erc20_for_account_1: ERC20,
-        eth_erc20_for_account_1: ERC20,
-    ):
+    def test_cancel_limit_order(self, test_client_for_account_1: Client):
         pair_name = "COW/ETH"
 
         test_client_for_account_1.start_event_poller(

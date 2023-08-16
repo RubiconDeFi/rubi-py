@@ -1,7 +1,7 @@
 from _decimal import Decimal
 from typing import List, Tuple
 
-from rubi import ERC20
+from rubi.contracts import ERC20
 from rubi.rubicon_types.order import OrderSide
 
 

@@ -10,9 +10,6 @@ from subgrounds.subgraph import SyntheticField
 from rubi.contracts import (
     ERC20,
 )
-from rubi.network import (
-    Network,
-)
 
 
 class TradeQuery:
@@ -20,7 +17,8 @@ class TradeQuery:
         self,
         subgrounds: Subgrounds,
         subgraph,  # TODO: determine the type that should be used here
-        network: Optional[Network] = None,
+        # This is a Network object, but we remove it to make sure we avoid circular dependencies
+        network: Optional[Any] = None,
         network_tokens: Optional[Dict[ChecksumAddress, ERC20]] = None,
     ):
         self.sg = subgrounds

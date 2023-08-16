@@ -8,7 +8,6 @@ from eth_utils import to_wei
 from pytest import fixture
 from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
-from subgrounds import Subgrounds
 
 from rubi import Network, Client, ERC20, RubiconMarket
 from tests.fixtures.helper.deploy_contract import deploy_contract
@@ -34,14 +33,6 @@ def ethereum_tester_provider() -> EthereumTesterProvider:
 @fixture
 def web3(ethereum_tester_provider: EthereumTesterProvider) -> Web3:
     return Web3(ethereum_tester_provider)
-
-
-######################################################################
-# setup Subgrounds instance
-######################################################################
-@fixture
-def subgrounds() -> Subgrounds:
-    return Subgrounds()
 
 
 ######################################################################
@@ -228,29 +219,57 @@ def rubicon_router(
 
 
 @fixture
-def test_network(
+def test_network_1(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    subgrounds: Subgrounds,
     rubicon_market: Contract,
     rubicon_router: Contract,
     cow: Contract,
     eth: Contract,
     blz: Contract,
 ) -> Network:
-    base_path = f"{os.path.dirname(os.path.abspath(__file__))}/../test_network_config"
 
     rubicon = {
-        "market": {"address": rubicon_market.address},
-        "router": {"address": rubicon_router.address},
+        "market": rubicon_market.address,
+        "router": rubicon_router.address,
     }
 
     token_addresses = {"COW": cow.address, "ETH": eth.address, "BLZ": blz.address}
 
     return Network(
-        path=base_path,
         w3=web3,
-        subgrounds=subgrounds,
+        name="IshanChain",
+        chain_id=69420,
+        currency="ISH",
+        rpc_url="https://ishan.io/rpc",
+        explorer_url="https://ishanexplorer.io",
+        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",  # TODO: update once prod has been synced
+        market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
+        rubicon=rubicon,
+        token_addresses=token_addresses,
+    )
+
+
+@fixture
+def test_network_2(
+    ethereum_tester_provider: EthereumTesterProvider,
+    web3: Web3,
+    rubicon_market: Contract,
+    rubicon_router: Contract,
+    cow: Contract,
+    eth: Contract,
+    blz: Contract,
+) -> Network:
+
+    rubicon = {
+        "market": rubicon_market.address,
+        "router": rubicon_router.address,
+    }
+
+    token_addresses = {"COW": cow.address, "ETH": eth.address, "BLZ": blz.address}
+
+    return Network(
+        w3=web3,
         name="IshanChain",
         chain_id=69420,
         currency="ISH",
@@ -314,16 +333,16 @@ def add_account_2_offers_to_cow_eth_market(
 
 
 @fixture
-def test_client(test_network: Network) -> Client:
-    return Client(network=test_network)
+def test_client(test_network_1: Network) -> Client:
+    return Client(network=test_network_1)
 
 
 @fixture
-def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
+def test_client_for_account_1(test_network_1: Network, account_1: Dict) -> Client:
     message_queue = Queue()
 
     client = Client(
-        network=test_network,
+        network=test_network_1,
         message_queue=message_queue,
         wallet=account_1["address"],
         key=account_1["key"],
@@ -337,11 +356,11 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
 
 
 @fixture
-def test_client_for_account_2(test_network: Network, account_2: Dict) -> Client:
+def test_client_for_account_2(test_network_2: Network, account_2: Dict) -> Client:
     message_queue = Queue()
 
     client = Client(
-        network=test_network,
+        network=test_network_2,
         message_queue=message_queue,
         wallet=account_2["address"],
         key=account_2["key"],
@@ -355,20 +374,20 @@ def test_client_for_account_2(test_network: Network, account_2: Dict) -> Client:
 
 
 @fixture
-def cow_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+def cow_erc20_for_account_1(test_network_1: Network, account_1: Dict) -> ERC20:
     return ERC20.from_network(
         name="COW",
-        network=test_network,
+        network=test_network_1,
         wallet=account_1["address"],
         key=account_1["key"],
     )
 
 
 @fixture
-def eth_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
+def eth_erc20_for_account_1(test_network_1: Network, account_1: Dict) -> ERC20:
     return ERC20.from_network(
         name="ETH",
-        network=test_network,
+        network=test_network_1,
         wallet=account_1["address"],
         key=account_1["key"],
     )

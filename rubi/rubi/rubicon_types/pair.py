@@ -1,7 +1,7 @@
 from _decimal import Decimal
 from typing import Optional
 
-from rubi import ERC20
+from rubi.contracts import ERC20
 
 
 class Pair:

@@ -10,8 +10,6 @@ from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce
 
 from rubi.contracts import (
-    RubiconMarket,
-    RubiconRouter,
     ERC20,
     TransactionReceipt,
     EmitFeeEvent,
@@ -20,7 +18,6 @@ from rubi.contracts import (
     EmitTakeEvent,
     EmitCancelEvent,
 )
-from rubi.data import MarketData
 from rubi.network import (
     Network,
 )
@@ -75,22 +72,35 @@ class Client:
         )  # type: ChecksumAddress |  None
         self.key = key  # type: str |  None
 
-        self.market = RubiconMarket.from_network(
-            network=self.network, wallet=self.wallet, key=self.key
-        )
-        self.router = RubiconRouter.from_network(
-            network=self.network, wallet=self.wallet, key=self.key
-        )
+        # TODO: remove this when we remove the wallet and key from the contract
+        market = network.rubicon_market
+        if (market.wallet and market.wallet != self.wallet) or (
+            market.key and market.key != self.key
+        ):
+            raise Exception(
+                "Network has already been configured to use another wallet."
+            )
 
-        # TODO a Dict of { symbol: ERC20 }, investigate
-        self.tokens = self.get_network_tokens()
+        market.wallet = self.wallet
+        market.key = self.key
+        self.market = market
+
+        # TODO: remove this when we remove the wallet and key from the contract
+        router = network.rubicon_router
+        if (router.wallet and router.wallet != self.wallet) or (
+            router.key and router.key != self.key
+        ):
+            raise Exception(
+                "Network has already been configured to use another wallet."
+            )
+
+        router.wallet = self.wallet
+        router.key = self.key
+        self.router = router
+
         self._pairs: Dict[str, Pair] = {}
 
         self.message_queue = message_queue  # type: Queue | None
-
-        self.market_data = MarketData.from_network_with_tokens(
-            network=self.network, network_tokens=self.tokens
-        )
 
         # Order tracking
         self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
@@ -119,8 +129,10 @@ class Client:
         :param key: Key for the wallet (optional, default is None).
         :type key: str
         """
-        network = Network.from_config(
+        network = Network.from_http_node_url(
             http_node_url=http_node_url,
+            wallet=wallet,
+            key=key,
             custom_token_addresses_file=custom_token_addresses_file,
         )
 
@@ -746,7 +758,7 @@ class Client:
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
     ) -> pd.DataFrame:
-        df = self.market_data.get_offers(
+        df = self.network.market_data.get_offers(
             maker=maker,
             from_address=from_address,
             pair_name=pair_name,
@@ -785,7 +797,7 @@ class Client:
             base_asset = None
             quote_asset = None
 
-        df = self.market_data.get_trades(
+        df = self.network.market_data.get_trades(
             first=first,
             order_by=order_by,
             order_direction=order_direction,
@@ -806,21 +818,9 @@ class Client:
 
     def get_network_tokens(
         self,
-    ) -> Dict[ChecksumAddress, ERC20]:
+    ) -> Dict[Union[ChecksumAddress, str], ERC20]:
         """Returns a Dict of addresses to ERC20 objects for all tokens on the network."""
-
-        network_tokens = {}
-
-        for address in self.network.token_addresses:
-            try:
-                network_tokens[address] = ERC20.from_network(
-                    name=address, network=self.network
-                )
-
-            except Exception as e:
-                raise Exception(f"Token address: {address} invalid from network: {e}")
-
-        return network_tokens
+        return self.network.tokens
 
     # TODO: revisit as the safer thing is to set approval to 0 and then set approval to new_allowance
     #  or use increaseAllowance and decreaseAllowance but the current abi does not support these methods
