@@ -8,7 +8,7 @@ from subgrounds import Subgrounds
 from web3 import Web3
 from web3.contract import Contract
 
-from contracts.contract_types.transaction_reciept import TransactionStatus
+from rubi.contracts.contract_types.transaction_reciept import TransactionStatus
 from rubi import (
     Network,
     Client,
