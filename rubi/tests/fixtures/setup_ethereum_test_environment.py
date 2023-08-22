@@ -9,7 +9,7 @@ from pytest import fixture
 from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
 
-from fixtures.helper import execute_transaction
+from tests.fixtures.helper import execute_transaction
 from rubi import Network, Client, RubiconMarket, OrderTrackingClient
 from tests.fixtures.helper.deploy_contract import deploy_contract
 from tests.fixtures.helper.deploy_contract import deploy_erc20
