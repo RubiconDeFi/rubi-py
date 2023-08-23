@@ -38,6 +38,7 @@ class ERC20(BaseContract):
         self.name = name_future.result()
         self.symbol = symbol_future.result()
         self.decimals = decimals_future.result()
+        self.address = self.contract.address
 
     ######################################################################
     # read calls

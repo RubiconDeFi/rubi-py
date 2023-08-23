@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 import yaml
 from eth_typing import ChecksumAddress

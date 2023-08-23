@@ -215,18 +215,20 @@ class MarketData:
     # TODO: refactor using a decorator to handle the parameter validation
     def get_offers(
         self,
-        maker: Optional[ChecksumAddress],
-        from_address: Optional[ChecksumAddress],
-        pay_gem: Optional[ChecksumAddress],
-        buy_gem: Optional[ChecksumAddress],
-        side: Optional[str],
-        open: Optional[bool],
-        start_time: Optional[int],
-        end_time: Optional[int],
-        first: int,
+        maker: Optional[ChecksumAddress] = None,
+        from_address: Optional[ChecksumAddress] = None,
+        pay_gem: Optional[ChecksumAddress] = None,
+        buy_gem: Optional[ChecksumAddress] = None,
+        side: Optional[str] = None,
+        open: Optional[bool] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        start_block: Optional[int] = None, # TODO: add in start_block and end_block
+        end_block: Optional[int] = None, # TODO: add in start_block and end_block
+        first: int = 1000,
         # TODO: expand order_by options
-        order_by: str,
-        order_direction: str,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
         as_dataframe: bool = True,
     ) -> Optional[pd.DataFrame] | List[SubgraphOffer]:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
@@ -276,7 +278,7 @@ class MarketData:
         if as_dataframe:
             response = self._query_offers_as_dataframe(query_fields=query_fields)
             # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
-            if response and isinstance(response, pd.DataFrame):
+            if response is not None and not response.empty:
                 response["side"] = side if side else "N/A"
 
             return response
@@ -361,6 +363,8 @@ class MarketData:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        start_block: Optional[int] = None, # TODO: add in start_block and end_block
+        end_block: Optional[int] = None, # TODO: add in start_block and end_block
     ):
         """Helper method build an offers query."""
 
@@ -395,7 +399,7 @@ class MarketData:
             orderBy=order_by,
             orderDirection=order_direction,
             first=first,
-            where=where if where else [],
+            where=where if where else {},
         )
 
         return offers_query

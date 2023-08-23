@@ -863,29 +863,38 @@ class Client:
         maker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_names: Optional[List[str]] = None,
-        book_side: Optional[OrderSide] = None,
+        book_side: Optional[OrderSide] = None, # TODO: decide if we should default to neutral
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        start_block: Optional[int] = None,
+        end_block: Optional[int] = None,
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
         as_dataframe: bool = True,
     ) -> Optional[pd.DataFrame] | List[LimitOrder]:
+        
+        # TODO: add support for multiple pair_names
         if len(pair_names) == 1:
             base_asset, quote_asset = pair_names[0].split("/")
+
+            print(base_asset, quote_asset)
+            print(self.network.tokens[base_asset].address, self.network.tokens[quote_asset].address)
 
             match book_side:
                 case OrderSide.BUY:
                     result = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
-                        buy_gem=self.network.tokens[base_asset],
-                        pay_gem=self.network.tokens[quote_asset],
+                        buy_gem=self.network.tokens[base_asset].address,
+                        pay_gem=self.network.tokens[quote_asset].address,
                         side=book_side.value.lower(),
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
@@ -895,12 +904,14 @@ class Client:
                     result = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
-                        buy_gem=self.network.tokens[quote_asset],
-                        pay_gem=self.network.tokens[base_asset],
+                        buy_gem=self.network.tokens[quote_asset].address,
+                        pay_gem=self.network.tokens[base_asset].address,
                         side=book_side.value.lower(),
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
@@ -910,12 +921,14 @@ class Client:
                     bids = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
-                        buy_gem=self.network.tokens[base_asset],
-                        pay_gem=self.network.tokens[quote_asset],
+                        buy_gem=self.network.tokens[base_asset].address,
+                        pay_gem=self.network.tokens[quote_asset].address,
                         side=OrderSide.BUY.value.lower(),
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
@@ -924,19 +937,30 @@ class Client:
                     asks = self.network.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
-                        buy_gem=self.network.tokens[quote_asset],
-                        pay_gem=self.network.tokens[base_asset],
+                        buy_gem=self.network.tokens[quote_asset].address,
+                        pay_gem=self.network.tokens[base_asset].address,
                         side=OrderSide.SELL.value.lower(),
                         open=open,
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                         as_dataframe=as_dataframe,
                     )
 
-                    result = pd.concat([bids, asks]).reset_index(drop=True)
+                    # TODO: we can handle this better by generating an empty dataframe with the correct columns in the case where there is no data
+                    if bids is None and asks is None:
+                        result = None
+                    elif bids is None:
+                        result = asks
+                    elif asks is None:
+                        result = bids
+                    elif bids is not None and asks is not None:
+                        result = pd.concat([bids, asks]).reset_index(drop=True)
+
 
         else:
             result = self.network.market_data.get_offers(
@@ -948,6 +972,8 @@ class Client:
                 open=open,
                 start_time=start_time,
                 end_time=end_time,
+                start_block=start_block,
+                end_block=end_block,
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,
