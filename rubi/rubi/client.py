@@ -20,7 +20,10 @@ from rubi.contracts import (
     EmitApproval,
     EmitTransfer,
 )
-from rubi.data.helpers import SubgraphOffer
+from rubi.data import (
+    MarketData, 
+    SubgraphOffer
+)
 from rubi.network import (
     Network,
 )
@@ -78,6 +81,8 @@ class Client:
         )  # type: ChecksumAddress |  None
         self._key = key  # type: str |  None
 
+        self.market_data = MarketData.from_network(network=network)
+
     @classmethod
     def from_http_node_url(
         cls,
@@ -86,7 +91,6 @@ class Client:
         wallet: Optional[Union[ChecksumAddress, str]] = None,
         key: Optional[str] = None,
         custom_token_addresses_file: Optional[str] = None,
-        with_subgraph: bool = True,
         **kwargs,
     ):
         """Initialize a Client using a http_node_url.
@@ -103,13 +107,10 @@ class Client:
             custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
             (optional, default is None).
         :type custom_token_addresses_file: Optional[str]
-        :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
-        :type with_subgraph: bool
         """
         network = Network.from_http_node_url(
             http_node_url=http_node_url,
             custom_token_addresses_file=custom_token_addresses_file,
-            with_subgraph=with_subgraph,
         )
 
         return cls(
@@ -884,7 +885,7 @@ class Client:
 
             match book_side:
                 case OrderSide.BUY:
-                    result = self.network.market_data.get_offers(
+                    result = self.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[base_asset].address,
@@ -901,7 +902,7 @@ class Client:
                         as_dataframe=as_dataframe,
                     )
                 case OrderSide.SELL:
-                    result = self.network.market_data.get_offers(
+                    result = self.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[quote_asset].address,
@@ -918,7 +919,7 @@ class Client:
                         as_dataframe=as_dataframe,
                     )
                 case _:
-                    bids = self.network.market_data.get_offers(
+                    bids = self.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[base_asset].address,
@@ -934,7 +935,7 @@ class Client:
                         order_direction=order_direction,
                         as_dataframe=as_dataframe,
                     )
-                    asks = self.network.market_data.get_offers(
+                    asks = self.market_data.get_offers(
                         maker=maker,
                         from_address=from_address,
                         buy_gem=self.network.tokens[quote_asset].address,
@@ -963,7 +964,7 @@ class Client:
 
 
         else:
-            result = self.network.market_data.get_offers(
+            result = self.market_data.get_offers(
                 maker=maker,
                 from_address=from_address,
                 buy_gem=None,
@@ -1020,7 +1021,7 @@ class Client:
 
             match book_side:
                 case OrderSide.BUY:
-                    return self.network.market_data.get_trades(
+                    return self.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[base_asset].address,
@@ -1037,7 +1038,7 @@ class Client:
                         order_direction=order_direction,
                     )
                 case OrderSide.SELL:
-                    return self.network.market_data.get_trades(
+                    return self.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[quote_asset].address,
@@ -1054,7 +1055,7 @@ class Client:
                         order_direction=order_direction,
                     )
                 case _:
-                    buys = self.network.market_data.get_trades(
+                    buys = self.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[base_asset].address,
@@ -1070,7 +1071,7 @@ class Client:
                         order_by=order_by,
                         order_direction=order_direction,
                     )
-                    sells = self.network.market_data.get_trades(
+                    sells = self.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
                         take_gem=self.network.tokens[quote_asset].address,
@@ -1097,7 +1098,7 @@ class Client:
                         return pd.concat([buys, sells]).reset_index(drop=True)
                     
         else:
-            return self.network.market_data.get_trades(
+            return self.market_data.get_trades(
                 taker=taker,
                 from_address=from_address,
                 take_gem=None,

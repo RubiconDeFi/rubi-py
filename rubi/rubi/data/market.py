@@ -9,6 +9,7 @@ from subgrounds import Subgrounds, Subgraph, SyntheticField
 from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
+from rubi.network import Network
 from rubi.contracts import ERC20
 from rubi.data.helpers import QueryValidation
 from rubi.data.helpers import SubgraphOffer, SubgraphTrade
@@ -35,12 +36,16 @@ class MarketData:
         self,
         url: str,
         fallback_url: str,
-        tokens: Dict[Union[ChecksumAddress, str], ERC20],
+        network: Optional[Network] = None,
     ):
         """constructor method"""
 
         self.subgrounds = Subgrounds()
-        self.tokens = tokens
+
+        if network is not None:
+            self.tokens = network.tokens
+        else:
+            self.tokens = None
 
         self.subgraph: Subgraph = self._initialize_subgraph(
             url=url, fallback_url=fallback_url
@@ -49,6 +54,23 @@ class MarketData:
         # Subgraph objects
         self.offer = self._initialize_subgraph_offer()
         self.trade = self._initialize_subgraph_trade()
+
+    @classmethod
+    def from_network(
+        cls,
+        network: Network,
+    ): 
+        """Initialize the MarketData object from a network object
+        
+        :param network: The network object
+        :type network: Network
+        """
+
+        return cls(
+            url=network.market_data_url,
+            fallback_url=network.market_data_fallback_url,
+            network=network,
+        )
 
     def _initialize_subgraph(
         self, url: str, fallback_url: str, attempts: int = 3
@@ -119,51 +141,52 @@ class MarketData:
 
         offer = self.subgraph.Offer  # noqa
 
-        offer.pay_amt_decimals = SyntheticField(
-            f=lambda pay_amt, pay_gem: self._erc20_to_decimal(gem=pay_gem, amt=pay_amt),
-            type_=SyntheticField.FLOAT,
-            deps=[offer.pay_amt, offer.pay_gem],
-        )
-
-        offer.buy_amt_decimals = SyntheticField(
-            f=lambda buy_amt, buy_gem: self._erc20_to_decimal(gem=buy_gem, amt=buy_amt),
-            type_=SyntheticField.FLOAT,
-            deps=[offer.buy_amt, offer.buy_gem],
-        )
-
-        offer.paid_amt_decimals = SyntheticField(
-            f=lambda paid_amt, pay_gem: self._erc20_to_decimal(
-                gem=pay_gem, amt=paid_amt
-            ),
-            type_=SyntheticField.FLOAT,
-            deps=[offer.paid_amt, offer.pay_gem],
-        )
-
-        offer.bought_amt_decimals = SyntheticField(
-            f=lambda bought_amt, buy_gem: self._erc20_to_decimal(
-                gem=buy_gem, amt=bought_amt
-            ),
-            type_=SyntheticField.FLOAT,
-            deps=[offer.bought_amt, offer.buy_gem],
-        )
-
-        offer.pay_gem_symbol = SyntheticField(
-            f=lambda pay_gem: self._erc20_to_symbol(gem=pay_gem),
-            type_=SyntheticField.STRING,
-            deps=[offer.pay_gem],
-        )
-
-        offer.buy_gem_symbol = SyntheticField(
-            f=lambda buy_gem: self._erc20_to_symbol(gem=buy_gem),
-            type_=SyntheticField.STRING,
-            deps=[offer.buy_gem],
-        )
-
         offer.datetime = SyntheticField(
             f=lambda timestamp: str(datetime.fromtimestamp(timestamp)),
             type_=SyntheticField.STRING,
             deps=[offer.timestamp],
         )
+
+        if self.tokens is not None: 
+            offer.pay_amt_decimals = SyntheticField(
+                f=lambda pay_amt, pay_gem: self._erc20_to_decimal(gem=pay_gem, amt=pay_amt),
+                type_=SyntheticField.FLOAT,
+                deps=[offer.pay_amt, offer.pay_gem],
+            )
+
+            offer.buy_amt_decimals = SyntheticField(
+                f=lambda buy_amt, buy_gem: self._erc20_to_decimal(gem=buy_gem, amt=buy_amt),
+                type_=SyntheticField.FLOAT,
+                deps=[offer.buy_amt, offer.buy_gem],
+            )
+
+            offer.paid_amt_decimals = SyntheticField(
+                f=lambda paid_amt, pay_gem: self._erc20_to_decimal(
+                    gem=pay_gem, amt=paid_amt
+                ),
+                type_=SyntheticField.FLOAT,
+                deps=[offer.paid_amt, offer.pay_gem],
+            )
+
+            offer.bought_amt_decimals = SyntheticField(
+                f=lambda bought_amt, buy_gem: self._erc20_to_decimal(
+                    gem=buy_gem, amt=bought_amt
+                ),
+                type_=SyntheticField.FLOAT,
+                deps=[offer.bought_amt, offer.buy_gem],
+            )
+
+            offer.pay_gem_symbol = SyntheticField(
+                f=lambda pay_gem: self._erc20_to_symbol(gem=pay_gem),
+                type_=SyntheticField.STRING,
+                deps=[offer.pay_gem],
+            )
+
+            offer.buy_gem_symbol = SyntheticField(
+                f=lambda buy_gem: self._erc20_to_symbol(gem=buy_gem),
+                type_=SyntheticField.STRING,
+                deps=[offer.buy_gem],
+            )
 
         return offer
 
@@ -172,39 +195,40 @@ class MarketData:
 
         take = self.subgraph.Take  # noqa
 
-        take.take_amt_decimals = SyntheticField(
-            f=lambda take_amt, take_gem: self._erc20_to_decimal(
-                gem=take_gem, amt=take_amt
-            ),
-            type_=SyntheticField.FLOAT,
-            deps=[take.take_amt, take.take_gem],
-        )
-
-        take.give_amt_decimals = SyntheticField(
-            f=lambda give_amt, give_gem: self._erc20_to_decimal(
-                gem=give_gem, amt=give_amt
-            ),
-            type_=SyntheticField.FLOAT,
-            deps=[take.give_amt, take.give_gem],
-        )
-
-        take.take_gem_symbol = SyntheticField(
-            f=lambda take_gem: self._erc20_to_symbol(gem=take_gem),
-            type_=SyntheticField.STRING,
-            deps=[take.take_gem],
-        )
-
-        take.give_gem_symbol = SyntheticField(
-            f=lambda give_gem: self._erc20_to_symbol(gem=give_gem),
-            type_=SyntheticField.STRING,
-            deps=[take.give_gem],
-        )
-
         take.datetime = SyntheticField(
             f=lambda timestamp: str(datetime.fromtimestamp(timestamp)),
             type_=SyntheticField.STRING,
             deps=[take.timestamp],
         )
+
+        if self.tokens is not None: 
+            take.take_amt_decimals = SyntheticField(
+                f=lambda take_amt, take_gem: self._erc20_to_decimal(
+                    gem=take_gem, amt=take_amt
+                ),
+                type_=SyntheticField.FLOAT,
+                deps=[take.take_amt, take.take_gem],
+            )
+
+            take.give_amt_decimals = SyntheticField(
+                f=lambda give_amt, give_gem: self._erc20_to_decimal(
+                    gem=give_gem, amt=give_amt
+                ),
+                type_=SyntheticField.FLOAT,
+                deps=[take.give_amt, take.give_gem],
+            )
+
+            take.take_gem_symbol = SyntheticField(
+                f=lambda take_gem: self._erc20_to_symbol(gem=take_gem),
+                type_=SyntheticField.STRING,
+                deps=[take.take_gem],
+            )
+
+            take.give_gem_symbol = SyntheticField(
+                f=lambda give_gem: self._erc20_to_symbol(gem=give_gem),
+                type_=SyntheticField.STRING,
+                deps=[take.give_gem],
+            )
 
         return take
 
@@ -272,6 +296,8 @@ class MarketData:
             open=open,
             start_time=start_time,
             end_time=end_time,
+            start_block=start_block,
+            end_block=end_block,
         )
 
         query_fields = SubgraphOffer.get_fields(offer_query=offer_query)

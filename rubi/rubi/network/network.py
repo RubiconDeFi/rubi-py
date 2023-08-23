@@ -8,7 +8,7 @@ from eth_typing import ChecksumAddress
 from web3 import Web3
 
 from rubi.contracts import ERC20, RubiconMarket, RubiconRouter, TransactionHandler
-from rubi.data import MarketData
+# from rubi.data import MarketData
 
 
 class NetworkId(Enum):
@@ -43,8 +43,6 @@ class Network:
         token_addresses: Dict,
         # optional custom token config file from the user
         custom_token_addresses_file: Optional[str] = None,
-        # optionally disable market data
-        with_subgraph: bool = True,
     ):
         """Initializes a Network instance.
 
@@ -69,8 +67,6 @@ class Network:
             custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
             (optional, default is None).
         :type custom_token_addresses_file: Optional[str]
-        :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
-        :type with_subgraph: bool
         """
         # General config
         self.name = name
@@ -128,19 +124,11 @@ class Network:
         self.market_data_url = market_data_url
         self.market_data_fallback_url = market_data_fallback_url
 
-        if with_subgraph:
-            self.market_data = MarketData(
-                url=self.market_data_url,
-                fallback_url=self.market_data_fallback_url,
-                tokens=self.tokens,
-            )
-
     @classmethod
     def from_http_node_url(
         cls,
         http_node_url: str,
         custom_token_addresses_file: Optional[str] = None,
-        with_subgraph: bool = True,
     ) -> "Network":
         """Create a Network instance based on the node url provided. A call is then made to this node to get the
         chain_id which links to network_config/{network_name}/ using the NetworkId Enum.
@@ -151,8 +139,6 @@ class Network:
             custom token addresses. Overwrites the token config found in network_config/{chain}/network.yaml.
             (optional, default is None).
         :type custom_token_addresses_file: Optional[str]
-        :param with_subgraph: Should the Network be instantiated with market data from the subgraph.
-        :type with_subgraph: bool
         :return: A Network instance based on the network configuration.
         :rtype: Network
         :raises Exception: If no network configuration file is found for the specified network name.
@@ -169,7 +155,6 @@ class Network:
                 return cls(
                     w3=w3,
                     custom_token_addresses_file=custom_token_addresses_file,
-                    with_subgraph=with_subgraph,
                     **network_data,
                 )
         except FileNotFoundError:
