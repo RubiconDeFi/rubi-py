@@ -1007,6 +1007,10 @@ class Client:
         book_side: Optional[OrderSide] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        start_block: Optional[int] = None,
+        end_block: Optional[int] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
@@ -1016,54 +1020,82 @@ class Client:
 
             match book_side:
                 case OrderSide.BUY:
-                    return self.network.market_data.trades_query(
+                    return self.network.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
-                        take_gem=self.network.tokens[base_asset],
-                        give_gem=self.network.tokens[quote_asset],
+                        take_gem=self.network.tokens[base_asset].address,
+                        give_gem=self.network.tokens[quote_asset].address,
+                        side=book_side.value.lower(),
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
+                        maker=maker,
+                        maker_from_address=maker_from_address,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                     )
                 case OrderSide.SELL:
-                    return self.network.market_data.trades_query(
+                    return self.network.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
-                        take_gem=self.network.tokens[quote_asset],
-                        give_gem=self.network.tokens[base_asset],
+                        take_gem=self.network.tokens[quote_asset].address,
+                        give_gem=self.network.tokens[base_asset].address,
+                        side=book_side.value.lower(),
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
+                        maker=maker,
+                        maker_from_address=maker_from_address,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                     )
                 case _:
-                    buys = self.network.market_data.trades_query(
+                    buys = self.network.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
-                        take_gem=self.network.tokens[base_asset],
-                        give_gem=self.network.tokens[quote_asset],
+                        take_gem=self.network.tokens[base_asset].address,
+                        give_gem=self.network.tokens[quote_asset].address,
+                        side=OrderSide.BUY.value.lower(),
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
+                        maker=maker,
+                        maker_from_address=maker_from_address,                        
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                     )
-                    sells = self.network.market_data.trades_query(
+                    sells = self.network.market_data.get_trades(
                         taker=taker,
                         from_address=from_address,
-                        take_gem=self.network.tokens[quote_asset],
-                        give_gem=self.network.tokens[base_asset],
+                        take_gem=self.network.tokens[quote_asset].address,
+                        give_gem=self.network.tokens[base_asset].address,
+                        side=OrderSide.SELL.value.lower(),
                         start_time=start_time,
                         end_time=end_time,
+                        start_block=start_block,
+                        end_block=end_block,
+                        maker=maker,
+                        maker_from_address=maker_from_address,                        
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                     )
 
-                    return pd.concat([buys, sells]).reset_index(drop=True)
+                    if buys is None and sells is None:
+                        return None
+                    elif buys is None:
+                        return sells
+                    elif sells is None:
+                        return buys
+                    elif buys is not None and sells is not None:
+                        return pd.concat([buys, sells]).reset_index(drop=True)
+                    
         else:
             return self.network.market_data.get_trades(
                 taker=taker,
@@ -1073,6 +1105,10 @@ class Client:
                 side=None,
                 start_time=start_time,
                 end_time=end_time,
+                start_block=start_block,
+                end_block=end_block,
+                maker=maker,
+                maker_from_address=maker_from_address,                
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,

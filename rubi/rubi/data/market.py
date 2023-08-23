@@ -291,17 +291,21 @@ class MarketData:
         self,
         # TODO: resolve #63 and add in conditional filter for offer maker/from_address
         # maker: Optional[Union[ChecksumAddress, str]],
-        taker: Optional[Union[ChecksumAddress, str]],
-        from_address: Optional[Union[ChecksumAddress, str]],
-        take_gem: Optional[Union[ChecksumAddress, str]],
-        give_gem: Optional[Union[ChecksumAddress, str]],
-        side: Optional[str],
-        start_time: Optional[int],
-        end_time: Optional[int],
-        first: int,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        take_gem: Optional[Union[ChecksumAddress, str]] = None,
+        give_gem: Optional[Union[ChecksumAddress, str]] = None,
+        side: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        start_block: Optional[int] = None,
+        end_block: Optional[int] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        first: int = 1000,
         # TODO: expand order_by options
-        order_by: str,
-        order_direction: str,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
     ) -> pd.DataFrame:
         """Returns a dataframe of trades that have occurred on the market contract, with the option to pass in filters.
 
@@ -339,10 +343,14 @@ class MarketData:
             give_gem=give_gem,
             start_time=start_time,
             end_time=end_time,
+            start_block=start_block,
+            end_block=end_block,
+            maker=maker,
+            maker_from_address=maker_from_address,
         )
         query_fields = SubgraphTrade.get_fields(trade_query=trade_query)
         df = self._query_trades_as_dataframe(query_fields=query_fields)
-        if df:
+        if df is not None and not df.empty:
             df["side"] = side if side else "N/A"
 
         return df
@@ -415,6 +423,10 @@ class MarketData:
         give_gem: Optional[Union[ChecksumAddress, str]] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
+        start_block: Optional[int] = None,
+        end_block: Optional[int] = None,
+        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
     ):
         """Helper method build a trades query."""
 
