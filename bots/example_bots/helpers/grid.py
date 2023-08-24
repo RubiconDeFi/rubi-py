@@ -1,8 +1,8 @@
 import math
 from _decimal import Decimal
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
-from rubi import OrderSide, NewLimitOrder
+from rubi import OrderSide, NewLimitOrder, LimitOrder
 
 
 class DesiredOrder:
@@ -85,6 +85,22 @@ class Grid:
     ######################################################################
     # inventory functions
     ######################################################################
+
+    def update_inventory(
+        self,
+        open_orders: Dict[int, LimitOrder],
+        base_asset_wallet_balance: Decimal,
+        quote_asset_wallet_balance: Decimal
+    ):
+        self._inventory[self.base_asset] = (
+            self._amount_in_market(side=OrderSide.BUY, open_limit_orders=list(open_orders.values()))
+            + base_asset_wallet_balance
+        )
+        self._inventory[self.quote_asset] = (
+            self._amount_in_market(side=OrderSide.SELL, open_limit_orders=list(open_orders.values()))
+            + quote_asset_wallet_balance
+        )
+
 
     def add_trade(self, order_side: OrderSide, price: Decimal, size: Decimal) -> None:
         self._inventory[self.base_asset] += size * order_side.sign()
@@ -285,6 +301,14 @@ class Grid:
     ######################################################################
     # helper functions
     ######################################################################
+
+    @staticmethod
+    def _amount_in_market(side: OrderSide, open_limit_orders: List[LimitOrder]) -> Decimal:
+        open_orders = list(filter(lambda order: order.order_side == side, open_limit_orders))
+
+        amount = Decimal(sum(map(lambda order: order.remaining_size, open_orders)))
+
+        return amount
 
     def round_to_grid_tick(self, number: Decimal) -> Decimal:
         if self.price_tick < Decimal("1"):

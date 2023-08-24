@@ -64,6 +64,15 @@ class GridBot(BaseEventTradingFramework):
         # Orderbook poller
         self.client.start_orderbook_poller(pair_name=self.pair_name)
 
+        base_asset_wallet_balance = self.client.get_balance(self.grid.base_asset)
+        quote_asset_wallet_balance = self.client.get_balance(self.grid.quote_asset)
+
+        self.grid.update_inventory(
+            open_orders=self.client.open_limit_orders,
+            base_asset_wallet_balance=base_asset_wallet_balance,
+            quote_asset_wallet_balance=quote_asset_wallet_balance
+        )
+
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
 
@@ -169,13 +178,6 @@ class GridBot(BaseEventTradingFramework):
     # helper methods
     ######################################################################
 
-    def _amount_in_market(self, side: OrderSide) -> Decimal:
-        open_orders = list(filter(lambda order: order.order_side == side, self.client.open_limit_orders.values()))
-
-        amount = Decimal(sum(map(lambda order: order.remaining_size, open_orders)))
-
-        return amount
-
     def _check_sufficient_inventory_to_place(self, new_orders: List[NewLimitOrder]) -> List[NewLimitOrder]:
         base_amount_available = self.client.get_balance(self.grid.base_asset)
         quote_amount_available = self.client.get_balance(self.grid.quote_asset)
@@ -188,10 +190,10 @@ class GridBot(BaseEventTradingFramework):
                     if quote_amount_available == Decimal("0"):
                         continue
 
-                    if order.size <= quote_amount_available:
-                        quote_amount_available -= order.size
+                    if order.size * order.price <= quote_amount_available:
+                        quote_amount_available -= order.size * order.price
                     else:
-                        order.size = quote_amount_available
+                        order.size = quote_amount_available / order.price
                         quote_amount_available = Decimal("0")
                     if order.size >= self.grid.min_order_size_in_base:
                         orders_to_place.append(order)
