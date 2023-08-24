@@ -1,4 +1,4 @@
-import logging as log
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Type, TypeVar, Union
 
@@ -12,7 +12,7 @@ from web3.types import EventData
 _RubiconMarket = TypeVar("_RubiconMarket")
 _RubiconRouter = TypeVar("_RubiconRouter")
 
-logger = log.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BaseEvent(ABC):

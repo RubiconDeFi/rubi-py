@@ -1,4 +1,4 @@
-import logging as log
+import logging
 from typing import List, Union
 
 from hexbytes import HexBytes
@@ -9,7 +9,7 @@ from web3.types import EventData, TxReceipt, TxParams
 
 from rubi.contracts.contract_types import TransactionReceipt, BaseEvent
 
-logger = log.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TransactionHandler:

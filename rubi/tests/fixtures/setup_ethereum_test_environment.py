@@ -1,4 +1,3 @@
-import logging as log
 import os
 from multiprocessing import Queue
 from typing import Dict

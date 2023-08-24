@@ -1,4 +1,4 @@
-import logging as log
+import logging
 import os
 import signal
 from multiprocessing import Queue
@@ -9,9 +9,14 @@ from rubi import OrderTrackingClient
 
 from example_bots import Grid, GridBot
 
+
 if __name__ == "__main__":
     # setup logging
-    log.basicConfig(level=log.INFO)
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     # load the bot config
     with open("bot_config.yaml") as file:
@@ -36,7 +41,7 @@ if __name__ == "__main__":
         pair_names=[grid_config["pair_name"]],
         message_queue=message_queue,
         wallet=wallet,
-        key=key
+        key=key,
     )
 
     # Initialize grid bot strategy

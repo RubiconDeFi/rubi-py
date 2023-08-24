@@ -1,4 +1,4 @@
-import logging as log
+import logging
 from _decimal import Decimal
 from datetime import datetime
 from typing import Optional, Dict, List, Union
@@ -14,10 +14,10 @@ from rubi.data.helpers import QueryValidation
 from rubi.data.helpers import SubgraphOffer, SubgraphTrade
 from rubi.network import Network
 
-logger = log.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Stop subgrounds from logging kak
-log.getLogger("subgrounds").setLevel(log.WARNING)
+logging.getLogger("subgrounds").setLevel(logging.WARNING)
 
 
 class MarketData:

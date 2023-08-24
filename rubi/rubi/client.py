@@ -1,4 +1,4 @@
-import logging as log
+import logging
 from _decimal import Decimal
 from multiprocessing import Queue
 from threading import Thread
@@ -42,7 +42,7 @@ from rubi.rubicon_types import (
     TransferEvent,
 )
 
-logger = log.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Client:

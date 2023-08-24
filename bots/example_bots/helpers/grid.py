@@ -24,7 +24,6 @@ class GridLevel:
 
 
 class Grid:
-
     def __init__(
         self,
         # Assets
@@ -67,7 +66,10 @@ class Grid:
         self.spread = Decimal(spread)
         self.min_level_size_in_base = Decimal(min_level_size_in_base)
 
-        self.grid_size = self._inventory[self.base_asset] + self._inventory[self.quote_asset] / self.fair_price
+        self.grid_size = (
+            self._inventory[self.base_asset]
+            + self._inventory[self.quote_asset] / self.fair_price
+        )
 
         # Grid
         self.desired_grid: List[GridLevel] = self._construct_grid()
@@ -90,18 +92,21 @@ class Grid:
         self,
         open_orders: Dict[int, LimitOrder],
         base_asset_wallet_balance: Decimal,
-        quote_asset_wallet_balance: Decimal
+        quote_asset_wallet_balance: Decimal,
     ):
         self._inventory[self.base_asset] = (
-            self._amount_in_market(side=OrderSide.SELL, open_limit_orders=list(open_orders.values()))
+            self._amount_in_market(
+                side=OrderSide.SELL, open_limit_orders=list(open_orders.values())
+            )
             + base_asset_wallet_balance
         )
         self._inventory[self.quote_asset] = (
-            self._amount_in_market(side=OrderSide.BUY, open_limit_orders=list(open_orders.values()))
+            self._amount_in_market(
+                side=OrderSide.BUY, open_limit_orders=list(open_orders.values())
+            )
             + quote_asset_wallet_balance
         )
         self.current_grid_index = self._calculate_grid_index()
-
 
     def add_trade(self, order_side: OrderSide, price: Decimal, size: Decimal) -> None:
         self._inventory[self.base_asset] += size * order_side.sign()
@@ -113,7 +118,10 @@ class Grid:
             case OrderSide.SELL:
                 self._last_sold_price = price
 
-        self.grid_size = self._inventory[self.base_asset] + self._inventory[self.quote_asset] / self.fair_price
+        self.grid_size = (
+            self._inventory[self.base_asset]
+            + self._inventory[self.quote_asset] / self.fair_price
+        )
         self.current_grid_index = self._calculate_grid_index()
 
     def get_base_asset_amount(self):
@@ -127,13 +135,10 @@ class Grid:
     ######################################################################
 
     def get_orders(
-        self,
-        best_bid_price: Decimal,
-        best_ask_price: Decimal
+        self, best_bid_price: Decimal, best_ask_price: Decimal
     ) -> List[NewLimitOrder]:
         desired_bids, desired_asks = self._get_desired_orders(
-            best_bid_price=best_bid_price,
-            best_ask_price=best_ask_price
+            best_bid_price=best_bid_price, best_ask_price=best_ask_price
         )
 
         bid_amount_available = self._inventory[self.quote_asset]
@@ -143,32 +148,34 @@ class Grid:
         for bid in desired_bids:
             size = min(bid_amount_available / bid.price, bid.size)
             if size >= self.min_order_size_in_base:
-                bids_to_place.append(NewLimitOrder(
-                    pair_name=self.pair_name,
-                    order_side=OrderSide.BUY,
-                    size=size,
-                    price=bid.price
-                ))
+                bids_to_place.append(
+                    NewLimitOrder(
+                        pair_name=self.pair_name,
+                        order_side=OrderSide.BUY,
+                        size=size,
+                        price=bid.price,
+                    )
+                )
             bid_amount_available -= size * bid.price
 
         asks_to_place = []
         for ask in desired_asks:
             size = min(ask_amount_available, ask.size)
             if size >= self.min_order_size_in_base:
-                asks_to_place.append(NewLimitOrder(
-                    pair_name=self.pair_name,
-                    order_side=OrderSide.SELL,
-                    size=size,
-                    price=ask.price
-                ))
+                asks_to_place.append(
+                    NewLimitOrder(
+                        pair_name=self.pair_name,
+                        order_side=OrderSide.SELL,
+                        size=size,
+                        price=ask.price,
+                    )
+                )
             ask_amount_available -= size
 
         return bids_to_place + asks_to_place
 
     def _get_desired_orders(
-        self,
-        best_bid_price: Decimal,
-        best_ask_price: Decimal
+        self, best_bid_price: Decimal, best_ask_price: Decimal
     ) -> Tuple[List[DesiredOrder], List[DesiredOrder]]:
 
         bid_below = best_ask_price
@@ -181,15 +188,24 @@ class Grid:
             if self._last_bought_price > ask_above:
                 ask_above = self._last_bought_price
 
-        desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
+        desired_bids = list(
+            map(
+                lambda level: level.bid,
+                self.desired_grid[self.current_grid_index :: -1],
+            )
+        )
         desired_bids = list(filter(lambda bid: bid.price < bid_below, desired_bids))
-        desired_asks = list(map(lambda level: level.ask, self.desired_grid[self.current_grid_index:]))
+        desired_asks = list(
+            map(lambda level: level.ask, self.desired_grid[self.current_grid_index :])
+        )
         desired_asks = list(filter(lambda ask: ask.price > ask_above, desired_asks))
 
         return desired_bids, desired_asks
 
     def _calculate_grid_index(self) -> int:
-        quote_as_percent_of_size = self._inventory[self.quote_asset] / (self.grid_size * self.fair_price)
+        quote_as_percent_of_size = self._inventory[self.quote_asset] / (
+            self.grid_size * self.fair_price
+        )
 
         index = self.num_grid_levels * quote_as_percent_of_size
 
@@ -206,20 +222,20 @@ class Grid:
 
         ask_side = self._construct_grid_side(OrderSide.SELL)
 
-        bid_price = self.round_to_grid_tick(self.fair_price - self.spread / Decimal("2"))
-        ask_price = self.round_to_grid_tick(self.fair_price + self.spread / Decimal("2"))
+        bid_price = self.round_to_grid_tick(
+            self.fair_price - self.spread / Decimal("2")
+        )
+        ask_price = self.round_to_grid_tick(
+            self.fair_price + self.spread / Decimal("2")
+        )
 
         middle_level = GridLevel(
             bid=DesiredOrder(
-                price=bid_price,
-                size=bid_side[-1].bid.size,
-                side=OrderSide.BUY
+                price=bid_price, size=bid_side[-1].bid.size, side=OrderSide.BUY
             ),
             ask=DesiredOrder(
-                price=ask_price,
-                size=ask_side[0].ask.size,
-                side=OrderSide.SELL
-            )
+                price=ask_price, size=ask_side[0].ask.size, side=OrderSide.SELL
+            ),
         )
 
         desired_grid = bid_side + [middle_level] + ask_side
@@ -229,19 +245,24 @@ class Grid:
     def _construct_grid_side(self, side: OrderSide) -> List[GridLevel]:
         half_size_in_base = self.grid_size / Decimal("2")
 
-        capital_restricted_number_of_levels = half_size_in_base / self.min_level_size_in_base
+        capital_restricted_number_of_levels = (
+            half_size_in_base / self.min_level_size_in_base
+        )
 
         edge = self.fair_price - side.sign() * self.grid_range / 2
 
-        price = self.round_to_grid_tick(
-            self.fair_price - (side.sign() * self.spread) / 2
-        ) - side.sign() * self.price_tick
+        price = (
+            self.round_to_grid_tick(self.fair_price - (side.sign() * self.spread) / 2)
+            - side.sign() * self.price_tick
+        )
 
         max_number_levels = (price * side.sign() - edge * side.sign()) / self.price_tick
 
         skip_capital = round(max_number_levels / capital_restricted_number_of_levels)
 
-        level_size = half_size_in_base / min(max_number_levels / skip_capital, capital_restricted_number_of_levels)
+        level_size = half_size_in_base / min(
+            max_number_levels / skip_capital, capital_restricted_number_of_levels
+        )
 
         grid_side_levels = []
         remaining_capital = half_size_in_base
@@ -249,22 +270,25 @@ class Grid:
         match side:
             case OrderSide.BUY:
                 while price >= edge:
-                    size = level_size if (
-                        i % skip_capital == 0 and remaining_capital >= self.min_level_size_in_base
-                    ) else Decimal("0")
+                    size = (
+                        level_size
+                        if (
+                            i % skip_capital == 0
+                            and remaining_capital >= self.min_level_size_in_base
+                        )
+                        else Decimal("0")
+                    )
 
                     grid_side_levels.append(
                         GridLevel(
                             bid=DesiredOrder(
-                                price=price,
-                                size=size,
-                                side=OrderSide.BUY
+                                price=price, size=size, side=OrderSide.BUY
                             ),
                             ask=DesiredOrder(
                                 price=price + self.spread,
                                 size=size,
-                                side=OrderSide.SELL
-                            )
+                                side=OrderSide.SELL,
+                            ),
                         )
                     )
                     price = price - self.price_tick
@@ -273,22 +297,23 @@ class Grid:
 
             case OrderSide.SELL:
                 while price <= edge:
-                    size = level_size if (
-                        i % skip_capital == 0 and remaining_capital > self.min_level_size_in_base
-                    ) else Decimal("0")
+                    size = (
+                        level_size
+                        if (
+                            i % skip_capital == 0
+                            and remaining_capital > self.min_level_size_in_base
+                        )
+                        else Decimal("0")
+                    )
 
                     grid_side_levels.append(
                         GridLevel(
                             bid=DesiredOrder(
-                                price=price - self.spread,
-                                size=size,
-                                side=OrderSide.BUY
+                                price=price - self.spread, size=size, side=OrderSide.BUY
                             ),
                             ask=DesiredOrder(
-                                price=price,
-                                size=size,
-                                side=OrderSide.SELL
-                            )
+                                price=price, size=size, side=OrderSide.SELL
+                            ),
                         )
                     )
                     price = price + self.price_tick
@@ -296,7 +321,11 @@ class Grid:
                     remaining_capital -= size
 
         return list(
-            filter(lambda level: level.bid.size != Decimal("0") or level.ask.size != Decimal("0"), grid_side_levels)
+            filter(
+                lambda level: level.bid.size != Decimal("0")
+                or level.ask.size != Decimal("0"),
+                grid_side_levels,
+            )
         )
 
     ######################################################################
@@ -304,11 +333,17 @@ class Grid:
     ######################################################################
 
     @staticmethod
-    def _amount_in_market(side: OrderSide, open_limit_orders: List[LimitOrder]) -> Decimal:
-        open_orders = list(filter(lambda order: order.order_side == side, open_limit_orders))
+    def _amount_in_market(
+        side: OrderSide, open_limit_orders: List[LimitOrder]
+    ) -> Decimal:
+        open_orders = list(
+            filter(lambda order: order.order_side == side, open_limit_orders)
+        )
 
         if side == OrderSide.BUY:
-            amount = Decimal(sum(map(lambda order: order.remaining_size * order.price, open_orders)))
+            amount = Decimal(
+                sum(map(lambda order: order.remaining_size * order.price, open_orders))
+            )
         else:
             amount = Decimal(sum(map(lambda order: order.remaining_size, open_orders)))
 

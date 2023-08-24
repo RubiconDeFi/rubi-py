@@ -1,4 +1,4 @@
-import logging as log
+import logging
 from _decimal import Decimal
 from multiprocessing import Queue
 from typing import Optional, Dict, List, Any, Type, Union
@@ -22,7 +22,7 @@ from rubi import (
     EmitOfferEvent,
 )
 
-logger = log.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class OrderTrackingClient(Client):

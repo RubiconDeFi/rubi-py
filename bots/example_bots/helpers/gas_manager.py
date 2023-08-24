@@ -17,18 +17,25 @@ class GasManager:
         self.transaction_cost_ema = None
 
     def add_transaction(self, transaction: TransactionReceipt):
-        self.transaction_cost_ema = (transaction.transaction_cost_in_eth * self.alpha) + (
-            self.transaction_cost_ema * (Decimal("1") - self.alpha)
-        )
+        self.transaction_cost_ema = (
+            transaction.transaction_cost_in_eth * self.alpha
+        ) + (self.transaction_cost_ema * (Decimal("1") - self.alpha))
 
     def is_acceptable_cost(self, transaction_receipt: TransactionReceipt) -> bool:
-        return self.calculate_difference_from_ema(transaction_receipt=transaction_receipt) < self.allowed_fluctuation
+        return (
+            self.calculate_difference_from_ema(transaction_receipt=transaction_receipt)
+            < self.allowed_fluctuation
+        )
 
-    def calculate_difference_from_ema(self, transaction_receipt: TransactionReceipt) -> Decimal:
+    def calculate_difference_from_ema(
+        self, transaction_receipt: TransactionReceipt
+    ) -> Decimal:
         transaction_cost = transaction_receipt.transaction_cost_in_eth
 
         if self.transaction_cost_ema:
-            return (transaction_cost - self.transaction_cost_ema) / self.transaction_cost_ema
+            return (
+                transaction_cost - self.transaction_cost_ema
+            ) / self.transaction_cost_ema
         else:
             return Decimal("0")
 
