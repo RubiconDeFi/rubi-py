@@ -93,13 +93,14 @@ class Grid:
         quote_asset_wallet_balance: Decimal
     ):
         self._inventory[self.base_asset] = (
-            self._amount_in_market(side=OrderSide.BUY, open_limit_orders=list(open_orders.values()))
+            self._amount_in_market(side=OrderSide.SELL, open_limit_orders=list(open_orders.values()))
             + base_asset_wallet_balance
         )
         self._inventory[self.quote_asset] = (
-            self._amount_in_market(side=OrderSide.SELL, open_limit_orders=list(open_orders.values()))
+            self._amount_in_market(side=OrderSide.BUY, open_limit_orders=list(open_orders.values()))
             + quote_asset_wallet_balance
         )
+        self.current_grid_index = self._calculate_grid_index()
 
 
     def add_trade(self, order_side: OrderSide, price: Decimal, size: Decimal) -> None:
@@ -306,7 +307,10 @@ class Grid:
     def _amount_in_market(side: OrderSide, open_limit_orders: List[LimitOrder]) -> Decimal:
         open_orders = list(filter(lambda order: order.order_side == side, open_limit_orders))
 
-        amount = Decimal(sum(map(lambda order: order.remaining_size, open_orders)))
+        if side == OrderSide.BUY:
+            amount = Decimal(sum(map(lambda order: order.remaining_size * order.price, open_orders)))
+        else:
+            amount = Decimal(sum(map(lambda order: order.remaining_size, open_orders)))
 
         return amount
 
