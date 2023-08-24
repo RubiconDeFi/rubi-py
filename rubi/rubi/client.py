@@ -20,10 +20,7 @@ from rubi.contracts import (
     EmitApproval,
     EmitTransfer,
 )
-from rubi.data import (
-    MarketData, 
-    SubgraphOffer
-)
+from rubi.data import MarketData, SubgraphOffer
 from rubi.network import (
     Network,
 )
@@ -183,6 +180,25 @@ class Client:
     ######################################################################
     # token methods
     ######################################################################
+
+    def get_balance(
+        self, token: str, wallet: Optional[ChecksumAddress] = None
+    ) -> Decimal:
+        """Get balance of a token.
+
+        :param token: The token to get the balance of
+        :type token: str
+        :param wallet: The wallet balance to check (Optional, defaults to client wallet)
+        :type wallet: ChecksumAddress
+        :return: The token balance of the wallet
+        :rtype: Decimal
+        """
+        if not wallet:
+            wallet = self.wallet
+
+        balance = self.network.tokens[token].balance_of(account=wallet)
+
+        return self.network.tokens[token].to_decimal(balance)
 
     def get_allowance(self, token: str, spender: ChecksumAddress) -> Decimal:
         """Get a spenders allowance for a certain token.
@@ -723,8 +739,8 @@ class Client:
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
-
-        transaction["pair_names"] = pair_names
+        if transaction:
+            transaction["pair_names"] = pair_names
 
         return transaction
 
@@ -864,7 +880,9 @@ class Client:
         maker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
         pair_names: Optional[List[str]] = None,
-        book_side: Optional[OrderSide] = None, # TODO: decide if we should default to neutral
+        book_side: Optional[
+            OrderSide
+        ] = None,  # TODO: decide if we should default to neutral
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
@@ -875,13 +893,10 @@ class Client:
         order_direction: str = "desc",
         as_dataframe: bool = True,
     ) -> Optional[pd.DataFrame] | List[LimitOrder]:
-        
+
         # TODO: add support for multiple pair_names
         if len(pair_names) == 1:
             base_asset, quote_asset = pair_names[0].split("/")
-
-            print(base_asset, quote_asset)
-            print(self.network.tokens[base_asset].address, self.network.tokens[quote_asset].address)
 
             match book_side:
                 case OrderSide.BUY:
@@ -952,16 +967,10 @@ class Client:
                         as_dataframe=as_dataframe,
                     )
 
-                    # TODO: we can handle this better by generating an empty dataframe with the correct columns in the case where there is no data
-                    if bids is None and asks is None:
-                        result = None
-                    elif bids is None:
-                        result = asks
-                    elif asks is None:
-                        result = bids
-                    elif bids is not None and asks is not None:
+                    if as_dataframe:
                         result = pd.concat([bids, asks]).reset_index(drop=True)
-
+                    else:
+                        result = bids + asks
 
         else:
             result = self.market_data.get_offers(
@@ -996,7 +1005,7 @@ class Client:
                         base_asset=base_asset, quote_asset=quote_asset, offer=offer
                     )
                 )
-                return limit_orders
+            return limit_orders
 
         return result
 
@@ -1010,8 +1019,12 @@ class Client:
         end_time: Optional[int] = None,
         start_block: Optional[int] = None,
         end_block: Optional[int] = None,
-        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
-        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
+        maker_from_address: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
@@ -1066,7 +1079,7 @@ class Client:
                         start_block=start_block,
                         end_block=end_block,
                         maker=maker,
-                        maker_from_address=maker_from_address,                        
+                        maker_from_address=maker_from_address,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
@@ -1082,21 +1095,14 @@ class Client:
                         start_block=start_block,
                         end_block=end_block,
                         maker=maker,
-                        maker_from_address=maker_from_address,                        
+                        maker_from_address=maker_from_address,
                         first=first,
                         order_by=order_by,
                         order_direction=order_direction,
                     )
 
-                    if buys is None and sells is None:
-                        return None
-                    elif buys is None:
-                        return sells
-                    elif sells is None:
-                        return buys
-                    elif buys is not None and sells is not None:
-                        return pd.concat([buys, sells]).reset_index(drop=True)
-                    
+                    return pd.concat([buys, sells]).reset_index(drop=True)
+
         else:
             return self.market_data.get_trades(
                 taker=taker,
@@ -1109,7 +1115,7 @@ class Client:
                 start_block=start_block,
                 end_block=end_block,
                 maker=maker,
-                maker_from_address=maker_from_address,                
+                maker_from_address=maker_from_address,
                 first=first,
                 order_by=order_by,
                 order_direction=order_direction,

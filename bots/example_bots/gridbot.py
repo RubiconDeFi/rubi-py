@@ -27,14 +27,23 @@ class GridBot(BaseEventTradingFramework):
         self.pair_name = pair_name
         base_asset, quote_asset = pair_name.split("/")
 
-        client.approve(RubiconMarketApproval(
-            token=base_asset,
-            amount=self.client.network.tokens[base_asset].max_approval_amount())
-        )
-        client.approve(RubiconMarketApproval(
-            token=quote_asset,
-            amount=self.client.network.tokens[quote_asset].max_approval_amount())
-        )
+        current_base_allowance = client.get_allowance(base_asset, self.client.network.rubicon_market.address)
+        if current_base_allowance != client.network.tokens[base_asset].max_approval_amount():
+            transaction = client.approve(RubiconMarketApproval(
+                token=base_asset,
+                amount=self.client.network.tokens[base_asset].max_approval_amount())
+            )
+            if transaction:
+                client.execute_transaction(transaction=transaction)
+
+        current_quote_allowance = client.get_allowance(quote_asset, self.client.network.rubicon_market.address)
+        if current_quote_allowance != client.network.tokens[quote_asset].max_approval_amount():
+            transaction = client.approve(RubiconMarketApproval(
+                token=quote_asset,
+                amount=self.client.network.tokens[quote_asset].max_approval_amount())
+            )
+            if transaction:
+                client.execute_transaction(transaction=transaction)
 
         # Instantiate framework
         super().__init__(event_queue=client.message_queue)
@@ -76,8 +85,8 @@ class GridBot(BaseEventTradingFramework):
             )
 
             transaction = self.build_new_limit_orders(orders=orders)
-
-            self.place_transaction(transaction=transaction)
+            if transaction:
+                self.place_transaction(transaction=transaction)
         else:
             log.info("Not currently allowed to place new orders")
 
@@ -141,10 +150,10 @@ class GridBot(BaseEventTradingFramework):
             match result.transaction_status:
                 case TransactionStatus.SUCCESS:
                     self.consecutive_failure_count = 0
-                    log.info(f"Successful transaction: {result.transaction_hash.hex()}")
+                    log.info(f"Successful transaction: {result.transaction_hash}")
                 case TransactionStatus.FAILURE:
                     self.consecutive_failure_count += 1
-                    log.warning(f"Failed transaction: {result.transaction_hash.hex()}")
+                    log.warning(f"Failed transaction: {result.transaction_hash}")
 
         except Exception as e:
             self.consecutive_failure_count += 1
@@ -168,11 +177,8 @@ class GridBot(BaseEventTradingFramework):
         return amount
 
     def _check_sufficient_inventory_to_place(self, new_orders: List[NewLimitOrder]) -> List[NewLimitOrder]:
-        quote_in_market = self._amount_in_market(side=OrderSide.BUY)
-        base_in_market = self._amount_in_market(side=OrderSide.SELL)
-
-        quote_amount_available = self.grid.get_quote_asset_amount() - quote_in_market
-        base_amount_available = self.grid.get_base_asset_amount() - base_in_market
+        base_amount_available = self.client.get_balance(self.grid.base_asset)
+        quote_amount_available = self.client.get_balance(self.grid.quote_asset)
 
         orders_to_place = []
 

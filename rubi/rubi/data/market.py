@@ -9,10 +9,10 @@ from subgrounds import Subgrounds, Subgraph, SyntheticField
 from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
-from rubi.network import Network
 from rubi.contracts import ERC20
 from rubi.data.helpers import QueryValidation
 from rubi.data.helpers import SubgraphOffer, SubgraphTrade
+from rubi.network import Network
 
 logger = log.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class MarketData:
         if network is not None:
             self.tokens = network.tokens
         else:
-            self.tokens = None
+            self.tokens = None  # noqa
 
         self.subgraph: Subgraph = self._initialize_subgraph(
             url=url, fallback_url=fallback_url
@@ -59,9 +59,9 @@ class MarketData:
     def from_network(
         cls,
         network: Network,
-    ): 
+    ):
         """Initialize the MarketData object from a network object
-        
+
         :param network: The network object
         :type network: Network
         """
@@ -147,15 +147,19 @@ class MarketData:
             deps=[offer.timestamp],
         )
 
-        if self.tokens is not None: 
+        if self.tokens is not None:
             offer.pay_amt_decimals = SyntheticField(
-                f=lambda pay_amt, pay_gem: self._erc20_to_decimal(gem=pay_gem, amt=pay_amt),
+                f=lambda pay_amt, pay_gem: self._erc20_to_decimal(
+                    gem=pay_gem, amt=pay_amt
+                ),
                 type_=SyntheticField.FLOAT,
                 deps=[offer.pay_amt, offer.pay_gem],
             )
 
             offer.buy_amt_decimals = SyntheticField(
-                f=lambda buy_amt, buy_gem: self._erc20_to_decimal(gem=buy_gem, amt=buy_amt),
+                f=lambda buy_amt, buy_gem: self._erc20_to_decimal(
+                    gem=buy_gem, amt=buy_amt
+                ),
                 type_=SyntheticField.FLOAT,
                 deps=[offer.buy_amt, offer.buy_gem],
             )
@@ -201,7 +205,7 @@ class MarketData:
             deps=[take.timestamp],
         )
 
-        if self.tokens is not None: 
+        if self.tokens is not None:
             take.take_amt_decimals = SyntheticField(
                 f=lambda take_amt, take_gem: self._erc20_to_decimal(
                     gem=take_gem, amt=take_amt
@@ -247,8 +251,8 @@ class MarketData:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        start_block: Optional[int] = None, # TODO: add in start_block and end_block
-        end_block: Optional[int] = None, # TODO: add in start_block and end_block
+        start_block: Optional[int] = None,  # TODO: add in start_block and end_block
+        end_block: Optional[int] = None,  # TODO: add in start_block and end_block
         first: int = 1000,
         # TODO: expand order_by options
         order_by: str = "timestamp",
@@ -326,8 +330,12 @@ class MarketData:
         end_time: Optional[int] = None,
         start_block: Optional[int] = None,
         end_block: Optional[int] = None,
-        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
-        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
+        maker_from_address: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
         first: int = 1000,
         # TODO: expand order_by options
         order_by: str = "timestamp",
@@ -397,8 +405,8 @@ class MarketData:
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        start_block: Optional[int] = None, # TODO: add in start_block and end_block
-        end_block: Optional[int] = None, # TODO: add in start_block and end_block
+        start_block: Optional[int] = None,  # TODO: add in start_block and end_block
+        end_block: Optional[int] = None,  # TODO: add in start_block and end_block
     ):
         """Helper method build an offers query."""
 
@@ -451,8 +459,12 @@ class MarketData:
         end_time: Optional[int] = None,
         start_block: Optional[int] = None,
         end_block: Optional[int] = None,
-        maker: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
-        maker_from_address: Optional[Union[ChecksumAddress, str]] = None, # TODO: implement this with nested filtering
+        maker: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
+        maker_from_address: Optional[
+            Union[ChecksumAddress, str]
+        ] = None,  # TODO: implement this with nested filtering
     ):
         """Helper method build a trades query."""
 
@@ -499,7 +511,7 @@ class MarketData:
         )
 
         if df.empty:
-            return None
+            return df
 
         df.columns = [col.replace("offers_", "") for col in df.columns]
         df.columns = [col.replace("_id", "") for col in df.columns]
@@ -554,7 +566,7 @@ class MarketData:
         )
 
         if df.empty:
-            return None
+            return df
 
         df.columns = [col.replace("takes_", "") for col in df.columns]
         df.columns = [col.replace("_id", "") for col in df.columns]

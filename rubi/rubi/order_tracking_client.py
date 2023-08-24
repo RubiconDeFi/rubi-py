@@ -57,8 +57,9 @@ class OrderTrackingClient(Client):
         )
 
         self.open_limit_orders: Dict[int, LimitOrder] = {}
-        for limit_order in limit_orders_from_subgraph:
-            self.open_limit_orders[limit_order.order_id] = limit_order
+        if limit_orders_from_subgraph:
+            for limit_order in limit_orders_from_subgraph:
+                self.open_limit_orders[limit_order.order_id] = limit_order
 
         self.pairs_with_registered_event_listeners: List[str] = []
         self._register_listeners(pair_names=pair_names)
@@ -99,7 +100,6 @@ class OrderTrackingClient(Client):
         network = Network.from_http_node_url(
             http_node_url=http_node_url,
             custom_token_addresses_file=custom_token_addresses_file,
-            with_subgraph=True,
         )
 
         return cls(

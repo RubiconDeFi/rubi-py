@@ -162,7 +162,7 @@ class Grid:
         ask_above = best_bid_price
         if self._last_bought_price:
             if self._last_bought_price > ask_above:
-                ask_above = self._last_sold_price
+                ask_above = self._last_bought_price
 
         desired_bids = list(map(lambda level: level.bid, self.desired_grid[self.current_grid_index:: -1]))
         desired_bids = list(filter(lambda bid: bid.price < bid_below, desired_bids))
