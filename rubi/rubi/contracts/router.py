@@ -3,68 +3,29 @@ from typing import Optional, Tuple, List
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
+from web3.types import TxParams
 
-from rubi.contracts.base_contract import BaseContract, ContractType
-from rubi.contracts.contract_types import TransactionReceipt
-from rubi.network import Network
+from rubi.contracts.base_contract import BaseContract
 
 
 class RubiconRouter(BaseContract):
-    """This class represents the RubiconRouter.sol contract and by default has read functionality.
-    If a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
+    """This class represents the RubiconRouter.sol contract.
 
     :param w3: Web3 instance
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param wallet: a wallet address of the signer (optional, default is None)
-    :type wallet: Optional[ChecksumAddress]
-    :param key: the private key of the signer (optional, default is None)
-    :type key: Optional[str]
     """
 
     def __init__(
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType = ContractType.RUBICON_ROUTER,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
     ) -> None:
         """constructor method"""
         super().__init__(
             w3=w3,
             contract=contract,
-            contract_type=ContractType.RUBICON_ROUTER,
-            wallet=wallet,
-            key=key,
-        )
-
-    @classmethod
-    def from_network(
-        cls,
-        network: Network,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
-    ) -> "RubiconRouter":
-        """Create a RubiconRouter instance based on a Network instance.
-
-        :param network: A Network instance.
-        :type network: Network
-        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
-        :type wallet: Optional[ChecksumAddress]
-        :param key: Optional private key for the wallet (optional, default is None).
-        :type key: Optional[str]
-        :return: A RubiconRouter instance based on the Network instance.
-        :rtype: RubiconRouter
-        """
-        return cls.from_address_and_abi(
-            w3=network.w3,
-            address=network.rubicon.router.address,
-            contract_abi=network.rubicon.router.abi,
-            contract_type=ContractType.RUBICON_ROUTER,
-            wallet=wallet,
-            key=key,
         )
 
     ######################################################################
@@ -250,13 +211,14 @@ class RubiconRouter(BaseContract):
         pay_amts: List[int],
         buy_amts_min: List[int],
         to: ChecksumAddress,
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Perform a multiple swaps for the specified payment amounts using the specified routes. Reverts with an
-        exception if any of the swaps cannot achieve the buy_amt_min along the specified route.
+    ) -> Optional[TxParams]:
+        """Construct a transaction to  a multiple swaps for the specified payment amounts using the specified routes.
+        Reverts with an exception if any of the swaps cannot achieve the buy_amt_min along the specified route.
 
         :param routes: The list of routes, where each route is a list of addresses representing the swap path.
         :type routes: List[List[ChecksumAddress]]
@@ -266,6 +228,8 @@ class RubiconRouter(BaseContract):
         :type buy_amts_min: List[int]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
             (optional, default is None).
         :type nonce: Optional[int]
@@ -277,18 +241,19 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
 
         multiswap = self.contract.functions.multiswap(
             routes, pay_amts, buy_amts_min, to
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=multiswap,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -300,13 +265,14 @@ class RubiconRouter(BaseContract):
         buy_amt_min: int,
         route: List[ChecksumAddress],
         to: ChecksumAddress,
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Perform a swap operation with the specified payment amount using the specified route and paying out to the
-        recipient. Reverts if the swap does not result in the buy_min_amount.
+    ) -> Optional[TxParams]:
+        """Construct a transaction to perform a swap operation with the specified payment amount using the specified
+        route paying out to the recipient. Reverts if the swap does not result in the buy_min_amount.
 
         :param pay_amt: The payment amount.
         :type pay_amt: int
@@ -316,6 +282,8 @@ class RubiconRouter(BaseContract):
         :type route: List[ChecksumAddress]
         :param to: The address of the recipient.
         :type to: ChecksumAddress
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: Nonce of the transaction. Defaults to calling the chain state to get the nonce.
             (optional, default is None).
         :type nonce: Optional[int]
@@ -327,16 +295,17 @@ class RubiconRouter(BaseContract):
         :param max_priority_fee_per_gas: Max priority fee that can be paid for gas. Defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
 
         swap = self.contract.functions.swap(pay_amt, buy_amt_min, route, to)
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=swap,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )

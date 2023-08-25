@@ -1,17 +1,22 @@
-import logging as log
+import logging
 import os
 import signal
 from multiprocessing import Queue
 
 import yaml
 from dotenv import load_dotenv
-from rubi import Client
+from rubi import OrderTrackingClient
 
 from example_bots import Grid, GridBot
 
+
 if __name__ == "__main__":
     # setup logging
-    log.basicConfig(level=log.INFO)
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     # load the bot config
     with open("bot_config.yaml") as file:
@@ -31,11 +36,12 @@ if __name__ == "__main__":
     message_queue = Queue()
 
     # Initialize rubicon client
-    rubicon_client = Client.from_http_node_url(
+    rubicon_client = OrderTrackingClient.from_http_node_url(
         http_node_url=http_node_url,
+        pair_names=[grid_config["pair_name"]],
         message_queue=message_queue,
         wallet=wallet,
-        key=key
+        key=key,
     )
 
     # Initialize grid bot strategy

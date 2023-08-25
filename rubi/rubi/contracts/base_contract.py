@@ -1,36 +1,24 @@
-import logging as log
-import time
-from enum import Enum
+import json
+import logging
+import os
 from threading import Thread
 from time import sleep
-from typing import Optional, Callable, Type, Dict, Any, List
+from typing import Optional, Callable, Type, Dict, Any, Union
 
-from eth_account.datastructures import SignedTransaction
 from eth_typing import ChecksumAddress
-from hexbytes import HexBytes
+from eth_utils import encode_hex, function_abi_to_4byte_selector
 from web3 import Web3
 from web3._utils.filters import LogFilter  # noqa
 from web3.contract import Contract
 from web3.contract.contract import (
     ContractFunction,
 )  # TODO: figure out why jupyter notebook is complaining about this
-from web3.logs import DISCARD
-from web3.types import ABI, Nonce, TxReceipt, EventData
+from web3.exceptions import ContractCustomError
+from web3.types import ABI, Nonce, TxParams
 
-from rubi.contracts.contract_types import BaseEvent, TransactionReceipt
+from rubi.contracts.contract_types import BaseEvent
 
-logger = log.getLogger(__name__)
-
-
-class ContractType(Enum):
-    """Enum to distinguish the type of contract instantiated
-
-    Should only be used internally
-    """
-
-    RUBICON_MARKET = "RUBICON_MARKET"
-    RUBICON_ROUTER = "RUBICON_ROUTER"
-    ERC20 = "ERC20"
+logger = logging.getLogger(__name__)
 
 
 class BaseContract:
@@ -41,43 +29,25 @@ class BaseContract:
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param contract_type: the type of contract
-    :type contract_type: ContractType
-    :param wallet: a wallet address of the signer (optional, default is None)
-    :type wallet: Optional[ChecksumAddress]
-    :param key: the private key of the signer (optional, default is None)
-    :type key: Optional[str]
     """
 
     def __init__(
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
     ):
         """constructor method"""
-        if (wallet is None) != (key is None):
-            raise Exception(
-                "both a wallet and a key are required to sign transactions. provide both or omit both"
-            )
-
         self.contract = contract
         self.address = contract.address
-        self.contract_type = contract_type
         self.w3 = w3
         self.chain_id = self.w3.eth.chain_id
 
-        # Signing permissions
-        self.signing_permissions = wallet is not None and key is not None
+        self.error_decoder: Dict[str, str] = {}
+        for item in self.contract.abi:
+            if item["type"] == "error":
+                error_hex_code = str(encode_hex(function_abi_to_4byte_selector(item)))
 
-        if self.signing_permissions:
-            logger.info(f"instantiated {self.__class__} with signing rights")
-
-            # Force typing as my editors inspection is throwing a tantrum
-            self.wallet = wallet  # type: ChecksumAddress
-            self.key = key  # type: str
+                self.error_decoder[error_hex_code] = item["name"]
 
     @classmethod
     def from_address_and_abi(
@@ -85,9 +55,6 @@ class BaseContract:
         w3: Web3,
         address: ChecksumAddress,
         contract_abi: ABI,
-        contract_type: ContractType,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
     ) -> "BaseContract":
         """Create a BaseContract instance from the contract address and ABI.
 
@@ -97,39 +64,61 @@ class BaseContract:
         :type address: ChecksumAddress
         :param contract_abi: The ABI of the contract.
         :type contract_abi: ABI
-        :param contract_type: The type of contract we are instantiating.
-        :type contract_type: ContractType
-        :param wallet: The wallet address to use for interacting with the contract (optional, default is None).
-        :type wallet: Optional[ChecksumAddress]
-        :param key: The private key of the wallet (optional, default is None).
-        :type key: Optional[str]
         :return: An instance of BaseContract.
         :rtype: BaseContract
         """
 
-        contract = w3.eth.contract(address=address, abi=contract_abi)
+        contract = w3.eth.contract(
+            address=w3.to_checksum_address(address), abi=contract_abi
+        )
 
         return cls(
             w3=w3,
             contract=contract,
-            contract_type=contract_type,
-            wallet=wallet,
-            key=key,
         )
 
-    ######################################################################
-    # useful methods
-    ######################################################################
+    @classmethod
+    def from_address(
+        cls,
+        w3: Web3,
+        address: Union[ChecksumAddress, str],
+    ) -> "BaseContract":
+        """Create a BaseContract instance from an address.
 
-    def get_transaction_receipt(self, transaction_hash: str) -> TransactionReceipt:
-        """Get a transaction receipt for the give transaction_hash.
-
-        :param transaction_hash: The transaction hash.
-        :type transaction_hash: str
-        :return: A TransactionReceipt for the transaction hash.
-        :rtype: TransactionReceipt
+        :param w3: Web3 instance.
+        :type w3: Web3
+        :param address: The address of the contract.
+        :type address: Union[ChecksumAddress, str]
+        :return: A BaseContract instance based on the address.
+        :rtype: BaseContract
         """
-        return self._wait_for_transaction_receipt(transaction_hash=transaction_hash)
+
+        match str(cls.__name__):
+            case "RubiconMarket":
+                name = "market"
+            case "RubiconRouter":
+                name = "router"
+            case "ERC20":
+                name = "ERC20"
+            case _:
+                raise Exception("from_address called on unexpected class")
+
+        try:
+            path = f"{os.path.dirname(os.path.abspath(__file__))}/../../network_config/abis/{name}.json"
+
+            with open(path) as f:
+                abi = json.load(f)
+
+        except FileNotFoundError:
+            raise Exception(
+                f"{name}.json abi not found. This file should be in the network_config/abis/ folder"
+            )
+
+        return cls.from_address_and_abi(
+            w3=w3,
+            address=address,
+            contract_abi=abi,
+        )
 
     ######################################################################
     # event listeners
@@ -238,62 +227,62 @@ class BaseContract:
     # helper methods
     ######################################################################
 
-    def _default_transaction_handler(
+    def _construct_transaction(
         self,
         instantiated_contract_function: ContractFunction,
-        gas: Optional[int],
+        wallet: ChecksumAddress,
         nonce: Optional[int],
+        gas: Optional[int],
         max_fee_per_gas: Optional[int],
         max_priority_fee_per_gas: Optional[int],
-    ) -> TransactionReceipt:
-        """Default transaction handler for executing transactions against this contract. This function will build, sign
-        and execute a transaction with reasonable defaults (mostly from the web3py library).
+    ) -> Optional[TxParams]:
+        """Default transaction constructor for building transactions for this contract. This function will build
+         a transaction with reasonable defaults (mostly from the web3py library).
 
-        Note: if a nonce is not passed then this function will query to the wallet to get the nonce and also wait for
-        the transaction receipt before returning.
+        Note: if a nonce is not passed then this function will query to the wallet to get the nonce.
 
         :param instantiated_contract_function: The instantiated contract function to call.
         :type instantiated_contract_function: ContractFunction
-        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
-        :type gas: Optional[int]
         :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[int]
+        :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
+        :type gas: Optional[int]
         :param max_fee_per_gas: Optional maximum fee per gas for the transaction (optional, default is None).
         :type max_fee_per_gas: Optional[int]
         :param max_priority_fee_per_gas: Optional maximum priority fee per gas for the transaction.
             (optional, default is None).
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
-        if not self.signing_permissions:
-            raise Exception(
-                f"cannot write transaction without signing rights. "
-                f"re-instantiate {self.__class__} with a wallet and private key"
-            )
-
-        base_txn = self._transaction_params(
+        base_transaction = self._transaction_params(
             gas=gas,
             nonce=nonce,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
+            wallet=wallet,
         )
 
-        txn = instantiated_contract_function.build_transaction(transaction=base_txn)
+        try:
+            built_transaction = instantiated_contract_function.build_transaction(
+                transaction=base_transaction
+            )
+        except ContractCustomError as e:
+            decoded_message = self.error_decoder[e.message]
 
-        signed_txn = self.w3.eth.account.sign_transaction(
-            transaction_dict=txn, private_key=self.key
-        )
+            logger.error(f"Error constructing arbitrage transaction: {decoded_message}")
+            return None
+        except Exception as e:
+            logger.error(f"Error constructing arbitrage transaction: {e}")
+            return None
 
-        logger.debug(
-            f"SENDING TRANSACTION, nonce: {nonce}, timestamp: {time.time_ns()}"
-        )
-        self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
-
-        return self._wait_for_transaction_receipt(transaction=signed_txn)
+        return built_transaction
 
     def _transaction_params(
         self,
+        wallet: ChecksumAddress,
         nonce: Optional[Nonce],
         gas: Optional[int],
         max_fee_per_gas: Optional[int],
@@ -302,6 +291,8 @@ class BaseContract:
         """Build transaction parameters Dict for a transaction. If a key is associated with a None value after building
         the Dict then this key will be removed before returning the dict.
 
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: Optional nonce value for the transaction (optional, default is None).
         :type nonce: Optional[Nonce]
         :param gas: gas limit for the transaction. If None is passed then w3.eth.estimate_gas is used.
@@ -316,7 +307,7 @@ class BaseContract:
         """
 
         if nonce is None:
-            nonce = self.w3.eth.get_transaction_count(self.wallet)
+            nonce = self.w3.eth.get_transaction_count(wallet)
 
         transaction = {
             "chainId": self.chain_id,
@@ -324,78 +315,7 @@ class BaseContract:
             "maxFeePerGas": max_fee_per_gas,
             "maxPriorityFeePerGas": max_priority_fee_per_gas,
             "nonce": nonce,
-            "from": self.wallet,
+            "from": wallet,
         }
 
         return {key: value for key, value in transaction.items() if value is not None}
-
-    def _wait_for_transaction_receipt(
-        self,
-        transaction: Optional[SignedTransaction] = None,
-        transaction_hash: Optional[str] = None,
-    ) -> TransactionReceipt:
-        """Wait for the transaction receipt and check if the transaction was successful.
-
-        :param transaction: The signed transaction object.
-        :type transaction: SignedTransaction
-        """
-
-        if transaction:
-            tx_receipt = self.w3.eth.wait_for_transaction_receipt(transaction.hash)
-        elif transaction_hash:
-            tx_receipt = self.w3.eth.wait_for_transaction_receipt(
-                HexBytes(transaction_hash)
-            )
-        else:
-            raise Exception("Provide either a transaction or a transaction_hash")
-
-        raw_events = self._process_receipt_logs_into_raw_events(receipt=tx_receipt)
-
-        result = TransactionReceipt.from_tx_receipt(
-            tx_receipt=tx_receipt, raw_events=raw_events
-        )
-
-        logger.debug(f"RECEIVED RESULT, timestamp: {time.time_ns()}")
-
-        return result
-
-    def _process_receipt_logs_into_raw_events(
-        self, receipt: TxReceipt
-    ) -> List[BaseEvent | EventData]:
-        """
-        Processes the logs of a given transaction receipt and returns a list of events associated with the transaction.
-
-        :param receipt:
-        :type receipt: TxReceipt
-        :return: The list of events associated with the given transaction receipt
-        :rtype: List[BaseEvent]
-        """
-        match self.contract_type:
-            case ContractType.RUBICON_MARKET:
-                event_names = ["emitTake", "emitOffer", "emitCancel"]
-            case ContractType.RUBICON_ROUTER:
-                event_names = ["emitSwap"]
-            case ContractType.ERC20:
-                event_names = ["Approval", "Transfer"]
-            case _:
-                raise Exception("Unexpected ContractType")
-
-        raw_events = []
-        for event_name in event_names:
-            transaction_events_data = self.contract.events[
-                event_name
-            ]().process_receipt(receipt, DISCARD)
-
-            for event_data in transaction_events_data:
-                if self.contract_type == ContractType.ERC20:
-                    raw_events.append(event_data)
-
-                raw_events.append(
-                    BaseEvent.builder(
-                        name=event_name,
-                        block_number=event_data["blockNumber"],
-                        **event_data["args"],
-                    )
-                )
-
-        return raw_events

@@ -1,13 +1,15 @@
 rubi.contracts package
 ======================
 
+.. _contracts:
+
 Subpackages
 -----------
 
 .. toctree::
    :maxdepth: 4
 
-   rubi.contracts.types
+   rubi.contracts.contract_types
 
 Submodules
 ----------
@@ -28,8 +30,6 @@ rubi.contracts.erc20 module
    :undoc-members:
    :show-inheritance:
 
-.. _rubi_contracts:
-
 rubi.contracts.market module
 ----------------------------
 
@@ -42,6 +42,14 @@ rubi.contracts.router module
 ----------------------------
 
 .. automodule:: rubi.contracts.router
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: rubi.contracts
    :members:
    :undoc-members:
    :show-inheritance:

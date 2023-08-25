@@ -5,8 +5,8 @@ from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
-from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import Client, OrderEvent, RubiconMarketApproval
+from rubi import EmitOfferEvent, NewLimitOrder, OrderSide
 
 # load from env file
 load_dotenv("../../local.env")
@@ -36,18 +36,11 @@ client = Client.from_http_node_url(
     message_queue=queue,
 )
 
-# add the WETH/USDC pair to the client
-client.add_pair(
-    pair_name="WETH/USDC",
-    base_asset_allowance=Decimal("1"),
-    quote_asset_allowance=Decimal("2000"),
-)
+# approve WETH and USDC to trade them on Rubicon
+client.approve(approval=RubiconMarketApproval(amount=Decimal("1"), token="WETH"))
+client.approve(approval=RubiconMarketApproval(amount=Decimal("2000"), token="USDC"))
 
-# start listening to offer events created by your wallet on the WETH/USDC market and the WETH/USDC orderbook
-client.start_event_poller("WETH/USDC", event_type=EmitOfferEvent)
-client.start_orderbook_poller("WETH/USDC")
-
-# Place a new limit order
+# Construct a new limit order
 limit_order = NewLimitOrder(
     pair_name="WETH/USDC",
     order_side=OrderSide.BUY,
@@ -55,22 +48,18 @@ limit_order = NewLimitOrder(
     price=Decimal("1914.13"),
 )
 
-transaction_result = client.place_limit_order(
-    transaction=Transaction(orders=[limit_order])
-)
+transaction = client.limit_order(order=limit_order)
 
-log.info(transaction_result)
+log.info(transaction)
 
-# Get the offer id from the transaction result
-events = transaction_result.raw_events
-for event in events:
-    if isinstance(event, EmitOfferEvent):
-        offer_id = event.id
+# Place the limit order by executing the transaction
+result = client.execute_transaction(transaction=transaction)
 
-log.info(offer_id)
+# Get the offer from the transaction result
+offer = None
+for event in result.events:
+    if isinstance(event, OrderEvent):
+        offer = event
+        break
 
-# Print events and order books
-while True:
-    message = queue.get()
-
-    log.info(message)
+log.info(offer)

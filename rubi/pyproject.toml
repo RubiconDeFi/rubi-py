@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rubi"
-version = "2.4.0"
+version = "2.2.1"
 description = "A python SDK for the Rubicon Protocol"
 authors = ["denver <denver@rubicon.finance>", "adam <adam@rubicon.finance>"]
 readme = "README.md"
@@ -9,8 +9,8 @@ include = ["network_config/**/*"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-sphinx = "7.1.1"
-web3 = "6.7.0"
+sphinx = "7.1.2"
+web3 = "6.8.0"
 hexbytes = "0.3.1"
 attributedict = "0.3.0"
 eth-abi = "4.1.0"
@@ -18,9 +18,9 @@ pytest = "7.4.0"
 eth-tester = "0.9.1b1"
 py-evm = "0.7.0a4"
 eth-utils = "2.2.0"
-subgrounds = { version = "1.6.0", extras = ["dash"] }
+subgrounds = { version = "1.6.1", extras = ["dash"] }
 pyyaml = "6.0.1"
-python-semantic-release = "7.34.3"                             # Warning: upgrading to 8.0.0 breaks existing ci/cd gh actions
+python-semantic-release = "7.34.3"                        # Warning: upgrading to 8.0.0 breaks existing ci/cd gh actions
 black = "23.7.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -41,13 +41,13 @@ test_with_coverage = "scripts:test_with_coverage"
 generate_coverage_report = "scripts:test_coverage_html"
 
 [tool.semantic_release]
-version_toml = "pyproject.toml:tool.poetry.version"            # version location
-branch = "master"                                              # branch to make releases of
-changelog_file = "./CHANGELOG.md"                              # changelog file
-build_command = "poetry build"                                 # build dists
-dist_path = "../dist/"                                         # where to put dists
-upload_to_release = true                                       # auto-create GitHub release
-upload_to_pypi = false                                         # don't auto-upload to PyPI
-remove_dist = false                                            # don't remove dists
-patch_without_tag = false                                      # patch release by default -> TODO    
+version_toml = "pyproject.toml:tool.poetry.version"       # version location
+branch = "master"                                         # branch to make releases of
+changelog_file = "./CHANGELOG.md"                         # changelog file
+build_command = "poetry build"                            # build dists
+dist_path = "../dist/"                                    # where to put dists
+upload_to_release = true                                  # auto-create GitHub release
+upload_to_pypi = false                                    # don't auto-upload to PyPI
+remove_dist = false                                       # don't remove dists
+patch_without_tag = false                                 # patch release by default -> TODO    
 version_source = "tag"                           

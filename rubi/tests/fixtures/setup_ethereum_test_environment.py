@@ -1,4 +1,3 @@
-import logging as log
 import os
 from multiprocessing import Queue
 from typing import Dict
@@ -8,9 +7,9 @@ from eth_utils import to_wei
 from pytest import fixture
 from web3 import EthereumTesterProvider, Web3
 from web3.contract import Contract
-from subgrounds import Subgrounds
 
-from rubi import Network, Client, ERC20, RubiconMarket
+from tests.fixtures.helper import execute_transaction
+from rubi import Network, Client, RubiconMarket, OrderTrackingClient
 from tests.fixtures.helper.deploy_contract import deploy_contract
 from tests.fixtures.helper.deploy_contract import deploy_erc20
 
@@ -37,14 +36,6 @@ def web3(ethereum_tester_provider: EthereumTesterProvider) -> Web3:
 
 
 ######################################################################
-# setup Subgrounds instance
-######################################################################
-@fixture
-def subgrounds() -> Subgrounds:
-    return Subgrounds()
-
-
-######################################################################
 # setup EthereumTesterProvider with accounts, coins and contracts
 ######################################################################
 
@@ -62,7 +53,7 @@ def account_1(ethereum_tester_provider: EthereumTesterProvider, web3: Web3) -> D
     )
 
     return {
-        "address": account_1,
+        "wallet": account_1,
         "key": "0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d241d",
     }
 
@@ -80,13 +71,13 @@ def account_2(ethereum_tester_provider: EthereumTesterProvider, web3: Web3) -> D
     )
 
     return {
-        "address": account_2,
+        "wallet": account_2,
         "key": "0x58d23b55bc9cdce1f18c2500f40ff4ab7245df9a89505e9b1fa4851f623d2420",
     }
 
 
 @fixture
-def rubicon_market(
+def rubicon_market_contract(
     ethereum_tester_provider: EthereumTesterProvider, web3: Web3
 ) -> Contract:
     deploy_address = ethereum_tester_provider.ethereum_tester.get_accounts()[0]
@@ -124,7 +115,7 @@ def rubicon_market(
 def cow(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    rubicon_market: Contract,
+    rubicon_market_contract,
     account_1: Dict,
     account_2: Dict,
 ) -> Contract:
@@ -133,7 +124,7 @@ def cow(
     return deploy_erc20(
         ethereum_tester_provider,
         web3,
-        rubicon_market,
+        rubicon_market_contract,
         account_1,
         account_2,
         # constructor arguments
@@ -148,7 +139,7 @@ def cow(
 def eth(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    rubicon_market: Contract,
+    rubicon_market_contract,
     account_1: Dict,
     account_2: Dict,
 ) -> Contract:
@@ -157,7 +148,7 @@ def eth(
     return deploy_erc20(
         ethereum_tester_provider,
         web3,
-        rubicon_market,
+        rubicon_market_contract,
         account_1,
         account_2,
         # constructor arguments
@@ -172,7 +163,7 @@ def eth(
 def blz(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    rubicon_market: Contract,
+    rubicon_market_contract,
     account_1: Dict,
     account_2: Dict,
 ) -> Contract:
@@ -181,7 +172,7 @@ def blz(
     return deploy_erc20(
         ethereum_tester_provider,
         web3,
-        rubicon_market,
+        rubicon_market_contract,
         account_1,
         account_2,
         # constructor arguments
@@ -196,11 +187,10 @@ def blz(
 def rubicon_router(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    rubicon_market: Contract,
+    rubicon_market_contract,
     cow: Contract,
 ) -> Contract:
     deploy_address = ethereum_tester_provider.ethereum_tester.get_accounts()[0]
-    fee_address = ethereum_tester_provider.ethereum_tester.get_accounts()[1]
 
     # deploy rubicon router
     path = f"{os.path.dirname(os.path.abspath(__file__))}/../test_network_config/contract_interfaces/RubiconRouter.json"
@@ -211,7 +201,7 @@ def rubicon_router(
     # initialize rubicon router
     rubicon_router = web3.eth.contract(address=router_contract_address, abi=abi)
     initialization_transaction = rubicon_router.functions.startErUp(
-        rubicon_market.address, cow.address
+        rubicon_market_contract.address, cow.address
     ).transact()
 
     try:
@@ -231,32 +221,28 @@ def rubicon_router(
 def test_network(
     ethereum_tester_provider: EthereumTesterProvider,
     web3: Web3,
-    subgrounds: Subgrounds,
-    rubicon_market: Contract,
+    rubicon_market_contract,
     rubicon_router: Contract,
     cow: Contract,
     eth: Contract,
     blz: Contract,
 ) -> Network:
-    base_path = f"{os.path.dirname(os.path.abspath(__file__))}/../test_network_config"
-
     rubicon = {
-        "market": {"address": rubicon_market.address},
-        "router": {"address": rubicon_router.address},
+        "market": rubicon_market_contract.address,
+        "router": rubicon_router.address,
     }
 
     token_addresses = {"COW": cow.address, "ETH": eth.address, "BLZ": blz.address}
 
     return Network(
-        path=base_path,
         w3=web3,
-        subgrounds=subgrounds,
         name="IshanChain",
         chain_id=69420,
         currency="ISH",
         rpc_url="https://ishan.io/rpc",
         explorer_url="https://ishanexplorer.io",
-        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",  # TODO: update once prod has been synced
+        # TODO: update once prod has been synced
+        market_data_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
         market_data_fallback_url="https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_Mainnet_Dev",
         rubicon=rubicon,
         token_addresses=token_addresses,
@@ -269,43 +255,52 @@ def test_network(
 
 
 @fixture
-def rubicon_market_for_account_2(
-    web3: Web3, rubicon_market: Contract, account_2: Dict
-) -> RubiconMarket:
+def rubicon_market(web3: Web3, rubicon_market_contract) -> RubiconMarket:
     return RubiconMarket(
         w3=web3,
-        contract=rubicon_market,
-        wallet=account_2["address"],
-        key=account_2["key"],
+        contract=rubicon_market_contract,
     )
 
 
 @fixture
 def add_account_2_offers_to_cow_eth_market(
-    rubicon_market_for_account_2: RubiconMarket, cow: Contract, eth: Contract
+    test_network: Network,
+    rubicon_market: RubiconMarket,
+    cow: Contract,
+    eth: Contract,
+    account_2: Dict,
 ):
     # COW/ETH bids
-    rubicon_market_for_account_2.offer(
+    offer_1 = rubicon_market.offer(
         pay_amt=1 * 10**18,
         pay_gem=eth.address,
         buy_amt=1 * 10**18,
         buy_gem=cow.address,
+        wallet=account_2["wallet"],
     )
 
+    execute_transaction(network=test_network, transaction=offer_1, key=account_2["key"])
+
     # COW/ETH asks
-    rubicon_market_for_account_2.offer(
+    offer_2 = rubicon_market.offer(
         pay_amt=1 * 10**18,
         pay_gem=cow.address,
         buy_amt=2 * 10**18,
         buy_gem=eth.address,
+        wallet=account_2["wallet"],
     )
 
-    rubicon_market_for_account_2.offer(
+    execute_transaction(network=test_network, transaction=offer_2, key=account_2["key"])
+
+    offer_3 = rubicon_market.offer(
         pay_amt=1 * 10**18,
         pay_gem=cow.address,
         buy_amt=3 * 10**18,
         buy_gem=eth.address,
+        wallet=account_2["wallet"],
     )
+
+    execute_transaction(network=test_network, transaction=offer_3, key=account_2["key"])
 
 
 ######################################################################
@@ -325,13 +320,26 @@ def test_client_for_account_1(test_network: Network, account_1: Dict) -> Client:
     client = Client(
         network=test_network,
         message_queue=message_queue,
-        wallet=account_1["address"],
+        wallet=account_1["wallet"],
         key=account_1["key"],
     )
 
-    pair_name = "COW/ETH"
+    return client
 
-    client.add_pair(pair_name=pair_name)
+
+@fixture
+def test_order_tracking_client_for_account_1(
+    test_network: Network, account_1: Dict
+) -> Client:
+    message_queue = Queue()
+
+    client = OrderTrackingClient(
+        network=test_network,
+        pair_names=["COW/ETH", "BLZ/ETH"],
+        message_queue=message_queue,
+        wallet=account_1["wallet"],
+        key=account_1["key"],
+    )
 
     return client
 
@@ -343,32 +351,8 @@ def test_client_for_account_2(test_network: Network, account_2: Dict) -> Client:
     client = Client(
         network=test_network,
         message_queue=message_queue,
-        wallet=account_2["address"],
+        wallet=account_2["wallet"],
         key=account_2["key"],
     )
 
-    pair_name = "COW/ETH"
-
-    client.add_pair(pair_name=pair_name)
-
     return client
-
-
-@fixture
-def cow_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
-    return ERC20.from_network(
-        name="COW",
-        network=test_network,
-        wallet=account_1["address"],
-        key=account_1["key"],
-    )
-
-
-@fixture
-def eth_erc20_for_account_1(test_network: Network, account_1: Dict) -> ERC20:
-    return ERC20.from_network(
-        name="ETH",
-        network=test_network,
-        wallet=account_1["address"],
-        key=account_1["key"],
-    )

@@ -1,1 +1,1 @@
-TODO this directory still needs significant love... but its coming along 🦖
+TODO: this directory still needs significant love... but it's coming along 🦖

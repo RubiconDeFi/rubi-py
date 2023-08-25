@@ -1,48 +1,41 @@
 from _decimal import Decimal
 
-from event_trading_framework import TransactionResult
+from rubi import TransactionReceipt
+
 
 # TODO: this needs to be reworked as it currently isn't very useful
 class GasManager:
 
     # TODO: add eth price to track gas price in dollar terms not in eth terms
-    def __init__(self, allowed_fluctuation: Decimal, ema_multiplier: Decimal):
+    def __init__(self, allowed_fluctuation: Decimal, alpha: Decimal):
         self.allowed_fluctuation = allowed_fluctuation
-        self.ema_multiplier = ema_multiplier
+        self.alpha = alpha
 
         self.eth_price: Decimal = Decimal("2000")
 
         self.gas_used_ema = None
         self.transaction_cost_ema = None
 
-    def add_transaction(self, transaction: TransactionResult):
-        transaction_cost = (
-            (transaction.transaction_receipt.effective_gas_price / 10 ** 18) *
-            transaction.transaction_receipt.gas_used
+    def add_transaction(self, transaction: TransactionReceipt):
+        self.transaction_cost_ema = (
+            transaction.transaction_cost_in_eth * self.alpha
+        ) + (self.transaction_cost_ema * (Decimal("1") - self.alpha))
+
+    def is_acceptable_cost(self, transaction_receipt: TransactionReceipt) -> bool:
+        return (
+            self.calculate_difference_from_ema(transaction_receipt=transaction_receipt)
+            < self.allowed_fluctuation
         )
 
-        if self.gas_used_ema is None:
-            self.gas_used_ema = transaction.transaction_receipt.gas_used
-            self.transaction_cost_ema = transaction_cost
-        else:
-            self.gas_used_ema = self.ema_multiplier * transaction.transaction_receipt.gas_used + (
-                (1 - self.ema_multiplier) * self.gas_used_ema
-            )
-            self.transaction_cost_ema = self.ema_multiplier * transaction_cost + (
-                (1 - self.ema_multiplier) * self.transaction_cost_ema
-            )
-
-    def is_acceptable_cost(self, transaction: TransactionResult) -> bool:
-        return self.calculate_difference_from_ema(transaction=transaction) < self.allowed_fluctuation
-
-    def calculate_difference_from_ema(self, transaction: TransactionResult) -> Decimal:
-        transaction_cost = (
-            transaction.transaction_receipt.effective_gas_price *
-            transaction.transaction_receipt.gas_used
-        )
+    def calculate_difference_from_ema(
+        self, transaction_receipt: TransactionReceipt
+    ) -> Decimal:
+        transaction_cost = transaction_receipt.transaction_cost_in_eth
 
         if self.transaction_cost_ema:
-            return (transaction_cost - self.transaction_cost_ema) / self.transaction_cost_ema
+            return (
+                transaction_cost - self.transaction_cost_ema
+            ) / self.transaction_cost_ema
         else:
             return Decimal("0")
 

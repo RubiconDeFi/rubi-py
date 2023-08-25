@@ -1,17 +1,25 @@
-import logging as log
+import logging
 import time
 from _decimal import Decimal
-from typing import Dict, Optional, List
+from typing import Optional, List
 
 from rubi import (
-    OrderEvent, OrderBook, Client, EmitOfferEvent, EmitTakeEvent, EmitCancelEvent, OrderType,
-    NewLimitOrder, OrderSide, Transaction, NewCancelOrder
+    OrderEvent,
+    OrderBook,
+    OrderType,
+    NewLimitOrder,
+    OrderSide,
+    NewCancelOrder,
+    OrderTrackingClient,
+    RubiconMarketApproval,
+    TransactionStatus,
 )
+from web3.types import TxParams
 
-from event_trading_framework import BaseEventTradingFramework, TransactionResult, TransactionStatus, \
-    ThreadedTransactionManager
-from example_bots.helpers.active_limit_order import ActiveLimitOrder
+from event_trading_framework import BaseEventTradingFramework
 from example_bots.helpers.grid import Grid
+
+logger = logging.getLogger(__name__)
 
 
 class GridBot(BaseEventTradingFramework):
@@ -19,28 +27,51 @@ class GridBot(BaseEventTradingFramework):
         self,
         pair_name: str,
         grid: Grid,
-        client: Client,
+        client: OrderTrackingClient,
     ):
         # Setup client
         self.client = client
-        client.add_pair(pair_name=pair_name)
 
         # set max approval for pair
-        pair = client.get_pair(pair_name=pair_name)
-        client.update_pair_allowance(
-            pair_name=pair_name,
-            new_base_asset_allowance=pair.base_asset.max_approval_amount(),
-            new_quote_asset_allowance=pair.quote_asset.max_approval_amount()
-        )
+        self.pair_name = pair_name
+        base_asset, quote_asset = pair_name.split("/")
 
-        # Initialise transaction manager
-        transaction_manager = ThreadedTransactionManager(client=client)
+        current_base_allowance = client.get_allowance(
+            base_asset, self.client.network.rubicon_market.address
+        )
+        if (
+            current_base_allowance
+            != client.network.tokens[base_asset].max_approval_amount()
+        ):
+            transaction = client.approve(
+                RubiconMarketApproval(
+                    token=base_asset,
+                    amount=self.client.network.tokens[base_asset].max_approval_amount(),
+                )
+            )
+            if transaction:
+                client.execute_transaction(transaction=transaction)
+
+        current_quote_allowance = client.get_allowance(
+            quote_asset, self.client.network.rubicon_market.address
+        )
+        if (
+            current_quote_allowance
+            != client.network.tokens[quote_asset].max_approval_amount()
+        ):
+            transaction = client.approve(
+                RubiconMarketApproval(
+                    token=quote_asset,
+                    amount=self.client.network.tokens[
+                        quote_asset
+                    ].max_approval_amount(),
+                )
+            )
+            if transaction:
+                client.execute_transaction(transaction=transaction)
 
         # Instantiate framework
-        super().__init__(event_queue=client.message_queue, transaction_manager=transaction_manager)
-
-        # Strategy objects
-        self.pair = client.get_pair(pair_name=pair_name)
+        super().__init__(event_queue=client.message_queue)
 
         # Strategy variables
         self.grid: Grid = grid
@@ -52,41 +83,30 @@ class GridBot(BaseEventTradingFramework):
         self.orderbook: Optional[OrderBook] = None
 
         # Transaction variables
-        self.pending_transactions: Dict[int, Transaction] = {}
-        self.active_limit_orders: Dict[int, ActiveLimitOrder] = {}
-
         self.consecutive_failure_count = 0
-
-        self.allowed_order_price_differential = Decimal(1 / 10 ** 18)
-        self.allowed_order_size_differential = Decimal(1 / 10 ** 18)
 
     def on_startup(self):
         # Orderbook poller
-        self.client.start_orderbook_poller(pair_name=self.pair.name)
+        self.client.start_orderbook_poller(pair_name=self.pair_name)
 
-        # Order event pollers
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitOfferEvent, filters={"maker": self.client.wallet}
-        )
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitTakeEvent, filters={"maker": self.client.wallet}
-        )
-        self.client.start_event_poller(
-            pair_name=self.pair.name, event_type=EmitCancelEvent, filters={"maker": self.client.wallet}
+        base_asset_wallet_balance = self.client.get_balance(self.grid.base_asset)
+        quote_asset_wallet_balance = self.client.get_balance(self.grid.quote_asset)
+
+        self.grid.update_inventory(
+            open_orders=self.client.open_limit_orders,
+            base_asset_wallet_balance=base_asset_wallet_balance,
+            quote_asset_wallet_balance=quote_asset_wallet_balance,
         )
 
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
 
     def on_shutdown(self):
-        self.cancel_all_active_orders()
-
-        # Wait for all orders to be cancelled
-        time.sleep(10)
+        logger.info("Shutting down")
 
     def on_orderbook(self, orderbook: OrderBook):
-        log.debug(f"NEW ORDERBOOK, timestamp: {time.time_ns()}")
-        log.debug(orderbook)
+        logger.debug(f"NEW ORDERBOOK, timestamp: {time.time_ns()}")
+        logger.debug(orderbook)
 
         # set strategy orderbook
         self.orderbook = orderbook
@@ -98,137 +118,108 @@ class GridBot(BaseEventTradingFramework):
                 best_ask_price=orderbook.best_ask(),
             )
 
-            self.place_new_limit_orders(orders=orders)
+            transaction = self.build_new_limit_orders(orders=orders)
+            if transaction:
+                self.place_transaction(transaction=transaction)
         else:
-            log.info("Not currently allowed to place new orders")
+            logger.info("Not currently allowed to place new orders")
 
     def on_order(self, order: OrderEvent):
-        log.debug(f"NEW ORDER EVENT, timestamp: {time.time_ns()}")
-        log.debug(order)
+        logger.debug(f"NEW ORDER EVENT, timestamp: {time.time_ns()}")
+        logger.debug(order)
 
-        match order.order_type:
-            case OrderType.LIMIT:
-                self.active_limit_orders[order.limit_order_id] = ActiveLimitOrder.from_order_event(order=order)
-            case OrderType.LIMIT_TAKEN:
-                taken_order = self.active_limit_orders[order.limit_order_id]
-
-                self.grid.add_trade(order_side=order.order_side, price=order.price, size=order.size)
-
-                if taken_order.is_full_take(take_event=order):
-                    log.info(f"Limit order {order.limit_order_id} fully taken")
-                    del self.active_limit_orders[order.limit_order_id]
-                else:
-                    self.active_limit_orders[order.limit_order_id].update_with_take(take_event=order)
-            case OrderType.CANCEL:
-                log.info(f"Limit order {order.limit_order_id} cancelled")
-                del self.active_limit_orders[order.limit_order_id]
-
-    def on_transaction_result(self, result: TransactionResult):
-        log.debug(f"NEW TRANSACTION RESULT, timestamp: {time.time_ns()}")
-        log.debug(result)
-
-        if result.transaction_receipt is None:
-            log.warning(f"Failed to place transaction, with nonce: {result.nonce}")
-            del self.pending_transactions[result.nonce]
-            return
-
-        # TODO: gas tracking should be done here
-
-        match result.status:
-            case TransactionStatus.SUCCESS:
-                self.consecutive_failure_count = 0
-                log.info(f"Successful transaction: {result.transaction_receipt.transaction_hash.hex()}, "
-                         f"with nonce: {result.nonce}")
-            case TransactionStatus.FAILURE:
-                self.consecutive_failure_count += 1
-                log.warning(f"Failed transaction: {result.transaction_receipt.transaction_hash.hex()}, "
-                            f"with nonce: {result.nonce}")
-
-        del self.pending_transactions[result.nonce]
-
-        if self.consecutive_failure_count >= 5:
-            self.allowed_to_place_new_orders = False
-            self.running = False
-            raise Exception(f"Failed to place transactions {self.consecutive_failure_count} times in a row. Not placing"
-                            f"any more orders")
+        if order.order_type == OrderType.LIMIT_TAKEN:
+            self.grid.add_trade(
+                order_side=order.order_side, price=order.price, size=order.size
+            )
 
     ######################################################################
     # place transaction methods
     ######################################################################
 
-    def place_new_limit_orders(self, orders: Optional[List[NewLimitOrder]]) -> None:
-        new_orders: List[NewLimitOrder] = list(filter(
-            lambda order: not self._is_active_or_pending_order(order), orders
-        ))
+    def build_new_limit_orders(self, orders: Optional[List[NewLimitOrder]]) -> TxParams:
+        new_orders: List[NewLimitOrder] = list(
+            filter(lambda order: not self._is_open_order(order), orders)
+        )
 
-        orders_to_place: List[NewLimitOrder] = self._check_sufficient_inventory_to_place(new_orders=new_orders)
+        orders_to_place: List[
+            NewLimitOrder
+        ] = self._check_sufficient_inventory_to_place(new_orders=new_orders)
 
         if orders_to_place is None or len(orders_to_place) == 0:
-            log.debug("no new orders provided to place_new_limit_orders")
+            logger.debug("no new orders provided to place_new_limit_orders")
             return
 
-        transaction = Transaction(orders=orders_to_place)
-
-        transaction_amount = sum(map(lambda order: order.size, transaction.orders))
+        transaction_amount = sum(map(lambda order: order.size, orders_to_place))
         if self.grid.min_transaction_size_in_base > transaction_amount:
             # Do not send a transaction which does not meet the min transaction size
             return
 
-        if len(transaction.orders) == 1:
-            log.debug(f"placing limit order: {transaction.orders}, timestamp: {time.time_ns()}")
-            nonce = self.transaction_manager.place_transaction(self.client.place_limit_order, transaction)
+        if len(orders_to_place) == 1:
+            logger.info(
+                f"placing limit order: {orders_to_place}, timestamp: {time.time_ns()}"
+            )
+
+            return self.client.limit_order(order=orders_to_place[0])
         else:
-            log.debug(f"batch placing limit orders: {transaction.orders}, timestamp: {time.time_ns()}")
-            nonce = self.transaction_manager.place_transaction(self.client.batch_place_limit_orders, transaction)
+            logger.info(
+                f"batch placing limit orders: {orders_to_place}, timestamp: {time.time_ns()}"
+            )
 
-        self.pending_transactions[nonce] = transaction
+            return self.client.batch_limit_orders(orders=orders_to_place)
 
-    def cancel_all_active_orders(self) -> None:
+    def build_cancel_all_open_orders(self) -> None:
         orders_to_cancel: List[NewCancelOrder] = list(
             map(
-                lambda order_id: NewCancelOrder(pair_name=self.pair.name, order_id=order_id),
-                self.active_limit_orders.keys()
+                lambda order_id: NewCancelOrder(
+                    pair_name=self.pair_name, order_id=order_id
+                ),
+                self.client.open_limit_orders.keys(),
             )
         )
 
         if orders_to_cancel is None or len(orders_to_cancel) == 0:
-            log.debug("no orders to cancel")
+            logger.debug("no orders to cancel")
             return
 
-        transaction = Transaction(orders=orders_to_cancel)
-
-        if len(transaction.orders) == 1:
-            log.debug(f"cancelling limit order: {transaction.orders}, timestamp: {time.time_ns()}")
-            nonce = self.transaction_manager.place_transaction(self.client.cancel_limit_order, transaction)
+        if len(orders_to_cancel) == 1:
+            return self.client.cancel_limit_order(order=orders_to_cancel[0])
         else:
-            log.debug(f"batch cancelling limit orders: {transaction.orders}, timestamp: {time.time_ns()}")
-            nonce = self.transaction_manager.place_transaction(self.client.batch_cancel_limit_orders, transaction)
+            return self.client.batch_cancel_limit_orders(orders=orders_to_cancel)
 
-        self.pending_transactions[nonce] = transaction
+    def place_transaction(self, transaction: TxParams):
+        try:
+            result = self.client.execute_transaction(transaction=transaction)
+
+            match result.transaction_status:
+                case TransactionStatus.SUCCESS:
+                    self.consecutive_failure_count = 0
+                    logger.info(f"Successful transaction: {result.transaction_hash}")
+                case TransactionStatus.FAILURE:
+                    self.consecutive_failure_count += 1
+                    logger.warning(f"Failed transaction: {result.transaction_hash}")
+
+        except Exception as e:
+            self.consecutive_failure_count += 1
+            logger.error(f"Failed to place transaction {transaction}: {e}")
+
+        if self.consecutive_failure_count >= 5:
+            self.allowed_to_place_new_orders = False
+            self.running = False
+            raise Exception(
+                f"Failed to place transactions {self.consecutive_failure_count} times in a row. Not placing"
+                f"any more orders"
+            )
 
     ######################################################################
     # helper methods
     ######################################################################
 
-    def _amount_in_market(self, side: OrderSide) -> Decimal:
-        active_orders = list(filter(lambda order: order.order_side == side, self.active_limit_orders.values()))
-        pending_orders = []
-        for pending_transaction in self.pending_transactions.values():
-            pending_orders.extend(list(filter(lambda order: order.order_side == side, pending_transaction.orders)))
-
-        amount = (
-            sum(map(lambda order: order.remaining_size(), active_orders)) +
-            sum(map(lambda order: order.size, pending_orders))
-        )
-
-        return amount
-
-    def _check_sufficient_inventory_to_place(self, new_orders: List[NewLimitOrder]) -> List[NewLimitOrder]:
-        quote_in_market = self._amount_in_market(side=OrderSide.BUY)
-        base_in_market = self._amount_in_market(side=OrderSide.SELL)
-
-        quote_amount_available = self.grid.get_quote_asset_amount() - quote_in_market
-        base_amount_available = self.grid.get_base_asset_amount() - base_in_market
+    def _check_sufficient_inventory_to_place(
+        self, new_orders: List[NewLimitOrder]
+    ) -> List[NewLimitOrder]:
+        base_amount_available = self.client.get_balance(self.grid.base_asset)
+        quote_amount_available = self.client.get_balance(self.grid.quote_asset)
 
         orders_to_place = []
 
@@ -238,10 +229,10 @@ class GridBot(BaseEventTradingFramework):
                     if quote_amount_available == Decimal("0"):
                         continue
 
-                    if order.size <= quote_amount_available:
-                        quote_amount_available -= order.size
+                    if order.size * order.price <= quote_amount_available:
+                        quote_amount_available -= order.size * order.price
                     else:
-                        order.size = quote_amount_available
+                        order.size = quote_amount_available / order.price
                         quote_amount_available = Decimal("0")
                     if order.size >= self.grid.min_order_size_in_base:
                         orders_to_place.append(order)
@@ -260,43 +251,17 @@ class GridBot(BaseEventTradingFramework):
 
         return orders_to_place
 
-    def _is_active_or_pending_order(self, order: NewLimitOrder) -> bool:
-        for active_order in self.active_limit_orders.values():
-            if (
-                order.order_side == active_order.order_side
-                and abs(
-                    order.price - self.grid.round_to_grid_tick(active_order.price)
-                ) < self.allowed_order_price_differential
-            ):
-                if order.size >= active_order.remaining_size():
-                    order.size = order.size - active_order.remaining_size()
+    def _is_open_order(self, order: NewLimitOrder) -> bool:
+        for open_order in self.client.open_limit_orders.values():
+            if order.order_side == open_order.order_side and abs(
+                order.price - self.grid.round_to_grid_tick(open_order.price)
+            ) < (self.grid.price_tick / Decimal("2")):
+                if order.size >= open_order.remaining_size:
+                    order.size = order.size - open_order.remaining_size
 
                     if order.size < self.grid.min_order_size_in_base:
                         return True
                 else:
                     return True
 
-        for pending_transactions in self.pending_transactions.values():
-            for pending_order in pending_transactions.orders:
-                if (
-                    isinstance(pending_order, NewLimitOrder) and
-                    order.order_side == pending_order.order_side and
-                    abs(order.price - pending_order.price) < self.allowed_order_price_differential
-                ):
-                    if order.size >= pending_order.size:
-                        order.size = order.size - pending_order.size
-
-                    if order.size < self.grid.min_order_size_in_base:
-                        return True
-                    else:
-                        return True
-
         return False
-
-    def _remove_own_orders_from_book(self):
-        for active_order in self.active_limit_orders.values():
-            match active_order.order_side:
-                case OrderSide.BUY:
-                    self.orderbook.bids.remove_liquidity_from_book(price=active_order.price, size=active_order.size)
-                case OrderSide.SELL:
-                    self.orderbook.asks.remove_liquidity_from_book(price=active_order.price, size=active_order.size)

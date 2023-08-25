@@ -7,10 +7,8 @@ market_data_url: "https://api.rubicon.finance/subgraphs/name/RubiconV2_Optimism_
 market_data_fallback_url: "https://api.thegraph.com/subgraphs/name/denverbaumgartner/rubiconv2-optimism-goerli"
 
 rubicon:
- market:
-  address: "0x9d0D6c259566d8161a1b2c513af0463992db38bc"
- router:
-  address: "0x0a0795d7015aB52BcDd987975474bD73062B5494"
+ market: "0x9d0D6c259566d8161a1b2c513af0463992db38bc"
+ router: "0x0a0795d7015aB52BcDd987975474bD73062B5494"
 
 token_addresses:
  ETH: "0xDeadDeAddeAddEAddeadDEaDDEAdDeaDDeAD0000"

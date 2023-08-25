@@ -94,22 +94,45 @@ Finally we are ready to instantiate a client
 
 .. note:: In the above example we are connecting to the optimism goerli testnet. Make sure the node you are using is an optimism goerli node.
 
-Having instantiated a client you are now ready to start interacting with the Rubicon protocol. In order to use the
-client to read or trade against a specific pair you will need to first add the pair to the client.
+Here it is worth noting that you can also instantiate an ``OrderTrackingClient`` which will track your open limit orders automatically. However,
+in order to do this you must provide a list of ``pair_names`` so the client knows which pairs to track.
 
 .. code-block:: python
 
-    # add the WETH/USDC pair to the client
-    # the base asset is WETH and the quote asset is USDC
-    client.add_pair(
-        pair_name="WETH/USDC",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
+    # rubi imports
+    import logging
+    from rubi import OrderTrackingClient, NetworkName, Transaction, NewLimitOrder, OrderSide
+
+    # instantiate the order tracking client
+    client = OrderTrackingClient.from_http_node_url(
+        http_node_url=http_node_url,
+        pair_names=["WETH/USDC", "WBTC/USDC"]
+        wallet=wallet,
+        key=key
     )
+
+    # log open limit orders
+    logging.info(client.open_limit_orders)
+
+
+Having instantiated a client you are now ready to start interacting with the Rubicon protocol. In order to use the
+client to read or trade against a specific pair you will first need to approve the ``RubiconMarket`` contract
+
+.. code-block:: python
+
+    # Approve WETH
+    weth_approval = RubiconMarketApproval(token="WETH", amount=Decimal("1"))
+
+    client.approve(approval=weth_approval)
+
+    # Approve USDC
+    usdc_approval = RubiconMarketApproval(token="USDC", amount=Decimal("2000"))
+
+    client.approve(approval=usdc_approval)
 
 .. note:: The allowances in the code above approve the ``RubiconMarket`` contract to transact up to that amount on your wallets behalf. This is necessary in order to create offers on the protocol.
 
-Now with a pair created you can place your first limit order on Rubicon the decentralized world orderbook!
+Now having approved the `RubiconMarket`` you can place your first limit order on Rubicon the decentralized world orderbook!
 
 .. code-block:: python
 
@@ -120,61 +143,25 @@ Now with a pair created you can place your first limit order on Rubicon the dece
         price=Decimal("1914.13")
     )
 
-    client.place_limit_order(
-        transaction=Transaction(
-            orders=[limit_order]
-        )
-    )
-
-That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.
+    client.place_limit_order(limit_order=limit_order)
 
 READ ONLY rubi client
 ^^^^^^^^^^^^^^^^^^^^^^
 
 To create a read only :ref:`rubi client <client>` follow the steps above except when creating your ``.env`` file DO NOT
-add a ``WALLET`` or ``KEY``. Instead your ``.env`` file should only contain the following
+add a ``KEY``. Instead your ``.env`` file should only contain the following
 
 .. code-block:: text
 
     HTTP_NODE_URL = <an optimism http node url>
+    WALLET = <the wallet that is being used to sign transactions and pay gas for said transactions>
+
 
 The :ref:`rubi client <client>` will then be instantiated without signing rights. You will still have read access to all
-the Rubicon contracts.
+the Rubicon contracts. And additionally will be able to simulate transactions against the chain you have connected to.
 
-That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.
-
-rubi client pairs and tokens
+rubi client custom tokens
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The :ref:`rubi client <client>` uses the notion of a ``pair`` to effectively translate from offers on the Rubicon
-protocol to the more understandable notions of bids and asks.
-
-
-Whenever you want to trade a specific set of tokens you will first need to add this pair to the client
-
-.. code-block:: python
-
-    # add the WETH/USDC pair to the client
-    # the base asset is WETH and the quote asset is USDC
-    client.add_pair(
-        pair_name="WETH/USDC",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
-    )
-
-If you add the ``WETH/USDC`` pair as in the above example then you are saying you want to think of trading ``WETH`` in
-terms of ``USDC``. In other words, all orders and the client orderbook will price ``WETH`` in terms of ``USDC``, so for
-example, if you wanted to create a new limit order you would say I want to sell ``1 WETH`` for ``2000 USDC``. It should
-be noted that there is no need to price assets in stable coin terms. In fact, being in defi it probably makes more sense
-to price things in terms of ``WETH`` ;).
-
-.. code-block:: python
-
-    client.add_pair(
-        pair_name="USDC/WETH",
-        base_asset_allowance=Decimal("1"),
-        quote_asset_allowance=Decimal("10000")
-    )
 
 By default when you instantiate a :ref:`rubi client <client>` you will only be able to create pairs from the tokens
 found in the ``token_addresses`` section of the ``network.yaml`` config for the chain you are connected to. This set of
@@ -231,20 +218,18 @@ Here's the signature of the method:
 
     def get_offers(
         self,
-        first: int = 10000000,
-        order_by: str = "timestamp",
-        order_direction: str = "desc",
-        formatted: bool = True,
-        book_side: OrderSide = OrderSide.NEUTRAL,
         maker: Optional[Union[ChecksumAddress, str]] = None,
         from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,
-        pay_gem: Optional[Union[ChecksumAddress, str]] = None,
-        buy_gem: Optional[Union[ChecksumAddress, str]] = None,
+        pair_names: Optional[List[str]] = None,
+        book_side: Optional[OrderSide] = None,
         open: Optional[bool] = None,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-    ) -> pd.DataFrame:
+        first: int = 10000000,
+        order_by: str = "timestamp",
+        order_direction: str = "desc",
+        as_dataframe: bool = True,
+    ) -> Optional[pd.DataFrame] | List[LimitOrder]:
 
 The method accepts the following parameters:
 
@@ -253,32 +238,28 @@ The method accepts the following parameters:
 
    * - Parameter
      - Description
-   * - `first`
-     - Number of offers to return
-   * - `order_by`
-     - Field to order the offers by. Default is "timestamp"
-   * - `order_direction`
-     - Direction to order the offers by. Default is "desc"
-   * - `formatted`
-     - Whether or not to return the dataframe with formatted fields (requires node connection)
-   * - `book_side`
-     - Specifies which side of the order book to consider
    * - `maker`
      - The address of the maker of the offer
    * - `from_address`
      - The address that originated the transaction that created the offer
-   * - `pair_name`
-     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
-   * - `pay_gem`
-     - The address of the token that the maker is offering. Optional, overrides the `pair_name` if provided
-   * - `buy_gem`
-     - The address of the token that the maker is requesting. Optional, overrides the `pair_name` if provided
+   * - `pair_names`
+     - List of token pair names in the format ["WETH/USDC"] following the pattern <ASSET/QUOTE>
+   * - `book_side`
+     - Specifies which side of the order book to consider
    * - `open`
      - Whether or not the offer is still active
    * - `start_time`
      - The unix timestamp of the earliest offer to return
    * - `end_time`
      - The unix timestamp of the latest offer to return
+   * - `first`
+     - Number of offers to return
+   * - `order_by`
+     - Field to order the offers by. Default is "timestamp"
+   * - `order_direction`
+     - Direction to order the offers by. Default is "desc"
+  *  - `as_dataframe`
+     - If the response should be as a dataframe or as a list of LimitOrders
 
 The `get_trades` Method
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -291,16 +272,15 @@ Here's the signature of the method:
 
     def get_trades(
         self,
+        taker: Optional[Union[ChecksumAddress, str]] = None,
+        from_address: Optional[Union[ChecksumAddress, str]] = None,
+        pair_names: Optional[List[str]] = None,
+        book_side: Optional[OrderSide] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
         first: int = 10000000,
         order_by: str = "timestamp",
         order_direction: str = "desc",
-        formatted: bool = True,
-        book_side: OrderSide = OrderSide.NEUTRAL,
-        taker: Optional[Union[ChecksumAddress, str]] = None,
-        from_address: Optional[Union[ChecksumAddress, str]] = None,
-        pair_name: Optional[str] = None,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
     ) -> pd.DataFrame:
 
 The method accepts the following parameters:
@@ -310,26 +290,24 @@ The method accepts the following parameters:
 
    * - Parameter
      - Description
+   * - `taker`
+     - The address of the taker of the trade
+   * - `from_address`
+     - The address that originated the transaction that created the trade (helpful when transactions go through the router)
+   * - `pair_names`
+     - List of token pair names in the format ["WETH/USDC"] following the pattern <ASSET/QUOTE>
+   * - `book_side`
+     - Specifies which side of the order book to consider
+   * - `start_time`
+     - The unix timestamp of the earliest trade to return
+   * - `end_time`
+     - The unix timestamp of the latest trade to return
    * - `first`
      - Number of trades to return
    * - `order_by`
      - Field to order the trades by. Default is "timestamp"
    * - `order_direction`
      - Direction to order the trades by. Default is "desc"
-   * - `formatted`
-     - Whether or not to return the dataframe with formatted fields (requires node connection)
-   * - `book_side`
-     - Specifies which side of the order book to consider
-   * - `taker`
-     - The address of the taker of the trade
-   * - `from_address`
-     - The address that originated the transaction that created the trade (helpful when transactions go through the router)
-   * - `pair_name`
-     - Token pair in the format "WETH/USDC" following the pattern <ASSET/QUOTE>
-   * - `start_time`
-     - The unix timestamp of the earliest trade to return
-   * - `end_time`
-     - The unix timestamp of the latest trade to return
 
 Retrieving Offer Data
 ^^^^^^^^^^^^^^^^^^^^^
@@ -341,7 +319,6 @@ In the example below, we will retrieve WETH/USDC offer data for a given time ran
     weth_usdc_offers = client.get_offers(
         pair_name="WETH/USDC",
         book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
-        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
         start_time=1688187600,
         end_time=1690606800,
     )
@@ -356,7 +333,8 @@ In the example below, we will access WETH/USDC trade data for a given time range
     weth_usdc_trades = client.get_trades(
         pair_name="WETH/USDC",
         book_side=OrderSide.NEUTRAL, # options are NEUTRAL, BUY, SELL
-        formatted=True, # by default is set to True, if set to False, raw data will be returned (with greater detail)
         start_time=1688187600,
         end_time=1690606800,
     )
+
+That brings us to the end of the quickstart. Next see the :doc:`overview` of the client's current functionality.

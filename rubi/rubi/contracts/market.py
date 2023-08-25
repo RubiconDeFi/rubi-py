@@ -3,68 +3,29 @@ from typing import Optional, Tuple, List
 from eth_typing import ChecksumAddress
 from web3 import Web3
 from web3.contract import Contract
+from web3.types import TxParams
 
-from rubi.contracts.base_contract import BaseContract, ContractType
-from rubi.contracts.contract_types import TransactionReceipt
-from rubi.network import Network
+from rubi.contracts.base_contract import BaseContract
 
 
 class RubiconMarket(BaseContract):
-    """This class represents the RubiconMarket.sol contract and by default has read functionality.
-    If a wallet and key are passed in instantiation then this class can also be used to write to the contract instance.
+    """This class represents the RubiconMarket.sol contract.
 
     :param w3: Web3 instance
     :type w3: Web3
     :param contract: Contract instance
     :type contract: Contract
-    :param wallet: a wallet address of the signer (optional, default is None)
-    :type wallet: Optional[ChecksumAddress]
-    :param key: the private key of the signer (optional, default is None)
-    :type key: Optional[str]
     """
 
     def __init__(
         self,
         w3: Web3,
         contract: Contract,
-        contract_type: ContractType = ContractType.RUBICON_MARKET,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
     ) -> None:
         """constructor method"""
         super().__init__(
             w3=w3,
             contract=contract,
-            contract_type=ContractType.RUBICON_MARKET,
-            wallet=wallet,
-            key=key,
-        )
-
-    @classmethod
-    def from_network(
-        cls,
-        network: Network,
-        wallet: Optional[ChecksumAddress] = None,
-        key: Optional[str] = None,
-    ) -> "RubiconMarket":
-        """Create a RubiconMarket instance based on a Network instance.
-
-        :param network: A Network instance.
-        :type network: Network
-        :param wallet: Optional wallet address to use for interacting with the contract (optional, default is None).
-        :type wallet: Optional[ChecksumAddress]
-        :param key: Optional private key for the wallet (optional, default is None).
-        :type key: Optional[str]
-        :return: A RubiconMarket instance based on the Network instance.
-        :rtype: RubiconMarket
-        """
-        return cls.from_address_and_abi(
-            w3=network.w3,
-            address=network.rubicon.market.address,
-            contract_abi=network.rubicon.market.abi,
-            contract_type=ContractType.RUBICON_MARKET,
-            wallet=wallet,
-            key=key,
         )
 
     ######################################################################
@@ -227,16 +188,16 @@ class RubiconMarket(BaseContract):
         pay_gem: ChecksumAddress,
         buy_amt: int,
         buy_gem: ChecksumAddress,
+        wallet: ChecksumAddress,
         pos: int = 0,
         rounding: bool = False,
-        owner: Optional[ChecksumAddress] = None,
-        recipient: Optional[ChecksumAddress] = None,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Make a new offer to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the pay_gem token
+    ) -> Optional[TxParams]:
+        """Construct a new offer transaction to buy the buy_amt of the buy_gem token in exchange for the pay_amt of the
+        pay_gem token
 
         :param pay_amt: the amount of the token being sold
         :type pay_amt: int
@@ -246,17 +207,13 @@ class RubiconMarket(BaseContract):
         :type buy_amt: int
         :param buy_gem: the address of the token being bought
         :type buy_gem: ChecksumAddress
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param pos: position of the offer in the linked list, default to 0 unless the maker knows the position they want
             to insert the offer at
         :type pos: int
         :param rounding: add rounding to match "close enough" orders, defaults to False
         :type: rounding: bool
-        :param owner: the owner of the offer, defaults to the wallet that was provided in instantiating this class.
-            (optional, default is None)
-        :type owner: Optional[ChecksumAddress]
-        :param recipient: the recipient of the offer's fill, defaults to the wallet that was provided in instantiating
-            this class (optional, default is None)
-        :type recipient: Optional[ChecksumAddress]
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -268,27 +225,19 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
 
-        if not self.signing_permissions:
-            raise Exception(
-                f"cannot write transaction without signing rights. "
-                f"re-instantiate {self.__class__} with a wallet and private key"
-            )
-
-        owner = owner if owner is not None else self.wallet
-        recipient = recipient if recipient is not None else self.wallet
-
         offer = self.contract.functions.offer(
-            pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, owner, recipient
+            pay_amt, pay_gem, buy_amt, buy_gem, pos, rounding, wallet, wallet
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=offer,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -297,15 +246,18 @@ class RubiconMarket(BaseContract):
     def cancel(
         self,
         id: int,
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Cancel an offer by offer id
+    ) -> Optional[TxParams]:
+        """Construct a transaction to cancel an offer by offer id
 
         :param id: the id of the offer to cancel
         :type id: int
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -317,16 +269,17 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
 
         cancel = self.contract.functions.cancel(id)
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=cancel,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -338,12 +291,13 @@ class RubiconMarket(BaseContract):
         pay_gems: List[ChecksumAddress],
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Batch the placement of a set of offers in one transaction
+    ) -> Optional[TxParams]:
+        """Construct a transaction to batch the placement of a set of offers.
 
         :param pay_amts: the amounts of the token being sold
         :type pay_amts: List[int]
@@ -353,6 +307,8 @@ class RubiconMarket(BaseContract):
         :type buy_amts: List[int]
         :param buy_gems: the addresses of the tokens being bought
         :type buy_gems: List[ChecksumAddress]
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -364,8 +320,8 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
         if not (len(pay_amts) == len(pay_gems) == len(buy_amts) == len(buy_gems)):
             raise Exception(
@@ -376,10 +332,11 @@ class RubiconMarket(BaseContract):
             pay_amts, pay_gems, buy_amts, buy_gems
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=batch_offer,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -388,15 +345,18 @@ class RubiconMarket(BaseContract):
     def batch_cancel(
         self,
         ids: List[int],
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Cancel a set offer by offer id in a single transaction
+    ) -> Optional[TxParams]:
+        """Construct a transaction to cancel a set offer by offer id.
 
         :param ids: the ids of the offers to cancel
         :type ids: List[int]
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -408,15 +368,16 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
         cancels = self.contract.functions.batchCancel(ids)
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=cancels,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -430,12 +391,13 @@ class RubiconMarket(BaseContract):
         pay_gems: List[ChecksumAddress],
         buy_amts: List[int],
         buy_gems: List[ChecksumAddress],
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Batch update a set of offers in a single transaction and return a list of new offer ids
+    ) -> Optional[TxParams]:
+        """Construct a transaction to update a set of offers by offer id.
 
         :param ids: the ids of the offers to cancel
         :type ids: List[int]
@@ -447,6 +409,8 @@ class RubiconMarket(BaseContract):
         :type buy_amts: List[int]
         :param buy_gems: the addresses of the tokens being bought
         :type buy_gems: List[ChecksumAddress]
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -458,18 +422,19 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
 
         batch_requote = self.contract.functions.batchRequote(
             ids, pay_amts, pay_gems, buy_amts, buy_gems
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=batch_requote,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -481,13 +446,14 @@ class RubiconMarket(BaseContract):
         pay_amt: int,
         buy_gem: ChecksumAddress,
         min_fill_amount: int,
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition that you receive at least the
-        min_fill_amount of the buy_gem token
+    ) -> Optional[TxParams]:
+        """Construct a transaction to sell the pay_amt of the pay_gem token in exchange for buy_gem, on the condition
+        that you receive at least the min_fill_amount of the buy_gem token
 
         :param pay_gem: the address of the tokens being sold
         :type pay_gem: ChecksumAddress
@@ -497,6 +463,8 @@ class RubiconMarket(BaseContract):
         :type buy_gem: ChecksumAddress
         :param min_fill_amount: minimum amount of the buy_gem token you want to receive
         :type min_fill_amount: int
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
             (optional, default is None)
         :type nonce: Optional[int]
@@ -508,17 +476,18 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
         sell_all_amount = self.contract.functions.sellAllAmount(
             pay_gem, pay_amt, buy_gem, min_fill_amount
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=sell_all_amount,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )
@@ -530,13 +499,14 @@ class RubiconMarket(BaseContract):
         buy_amt: int,
         pay_gem: ChecksumAddress,
         max_fill_amount: int,
+        wallet: ChecksumAddress,
         nonce: Optional[int] = None,
         gas: Optional[int] = None,
         max_fee_per_gas: Optional[int] = None,
         max_priority_fee_per_gas: Optional[int] = None,
-    ) -> TransactionReceipt:
-        """Buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition that it does not exceed the
-        max_fill_amount of the pay_gem token
+    ) -> Optional[TxParams]:
+        """Construct a transaction to buy the buy_amt of the buy_gem token in exchange for pay_gem, on the condition
+        that it does not exceed the max_fill_amount of the pay_gem token.
 
         :param buy_gem: the address of the tokens being bought
         :type buy_gem: ChecksumAddress
@@ -544,6 +514,8 @@ class RubiconMarket(BaseContract):
         :type buy_amt: int
         :param pay_gem: the address of the tokens being sold
         :type pay_gem: ChecksumAddress
+        :param wallet: The wallet address to use for interacting with the contract.
+        :type wallet: ChecksumAddress
         :param max_fill_amount: maximum amount of the pay_gem token you want to pay
         :type max_fill_amount: int
         :param nonce: nonce of the transaction, defaults to calling the chain state to get the nonce.
@@ -557,17 +529,18 @@ class RubiconMarket(BaseContract):
         :param max_priority_fee_per_gas: max priority fee that can be paid for gas, defaults to calling the chain to
             estimate the max_priority_fee_per_gas (optional, default is None)
         :type max_priority_fee_per_gas: Optional[int]
-        :return: An object representing the transaction receipt
-        :rtype: TransactionReceipt
+        :return: The built transaction. The result is None if the transaction fails to build
+        :rtype: Optional[TxParams]
         """
         buy_all_amount = self.contract.functions.buyAllAmount(
             buy_gem, buy_amt, pay_gem, max_fill_amount
         )
 
-        return self._default_transaction_handler(
+        return self._construct_transaction(
             instantiated_contract_function=buy_all_amount,
-            gas=gas,
+            wallet=wallet,
             nonce=nonce,
+            gas=gas,
             max_fee_per_gas=max_fee_per_gas,
             max_priority_fee_per_gas=max_priority_fee_per_gas,
         )

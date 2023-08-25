@@ -1,12 +1,11 @@
 import logging as log
 import os
-from _decimal import Decimal
 from multiprocessing import Queue
 
 from dotenv import load_dotenv
 
 from rubi import Client
-from rubi import EmitOfferEvent, Transaction, NewLimitOrder, OrderSide
+from rubi import OrderSide
 
 # load from env file
 load_dotenv("../../local.env")
@@ -34,11 +33,10 @@ client = Client.from_http_node_url(
 
 # query the open WETH/USDC offers for your wallet
 open_offers = client.get_offers(
-    pair_name="WETH/USDC",
-    book_side=OrderSide.NEUTRAL,
+    pair_names=["WETH/USDC"],
     open=True,
     maker=client.wallet,
     first=100,
-    formatted=True,
 )
-print(open_offers)
+
+log.info(open_offers)

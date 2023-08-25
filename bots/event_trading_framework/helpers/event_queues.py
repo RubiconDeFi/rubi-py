@@ -1,9 +1,11 @@
-import logging as log
+import logging
 
 from abc import ABC, abstractmethod
 from collections import deque
 from threading import Semaphore, Lock, Thread
 from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 
 class BaseEventQueue(ABC):
@@ -42,8 +44,7 @@ class BaseEventQueue(ABC):
         thread.start()
 
     def stop(self):
-        """Stop the event queue.
-        """
+        """Stop the event queue."""
         self.running = False
 
     @abstractmethod
@@ -57,8 +58,7 @@ class BaseEventQueue(ABC):
 
     @abstractmethod
     def _handle_messages(self):
-        """This method should be implemented by subclasses to handle messages in the event queue.
-        """
+        """This method should be implemented by subclasses to handle messages in the event queue."""
         raise NotImplementedError()
 
 
@@ -70,6 +70,7 @@ class FreshEventQueue(BaseEventQueue):
     :param message_handler: The callable object that handles the messages from the queue.
     :type message_handler: Callable
     """
+
     def __init__(self, message_handler: Callable):
         message_queue = deque(maxlen=1)
         super().__init__(message_queue=message_queue, message_handler=message_handler)
@@ -93,7 +94,7 @@ class FreshEventQueue(BaseEventQueue):
         """This method handles messages from the fresh event queue. It acquires the message notifier semaphore,
         retrieves the latest message from the queue, and passes it to the message handler.
         """
-        log.info(f"{self.__class__} started")
+        logger.info(f"{self.__class__} started")
         while self.running:
             self.message_notifier.acquire()
 
@@ -111,6 +112,7 @@ class FIFOEventQueue(BaseEventQueue):
     :param message_handler: The callable object that handles the messages from the queue.
     :type message_handler: Callable
     """
+
     def __init__(self, message_handler: Callable):
         message_queue = deque()
         super().__init__(message_queue=message_queue, message_handler=message_handler)
@@ -132,7 +134,7 @@ class FIFOEventQueue(BaseEventQueue):
         retrieves the first message from the queue, and passes it to the message handler.
 
         """
-        log.info(f"{self.__class__} started")
+        logger.info(f"{self.__class__} started")
         while self.running:
             self.message_notifier.acquire()
 

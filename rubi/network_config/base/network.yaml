@@ -7,10 +7,8 @@ market_data_url: "https://graph.rubicon.finance/subgraphs/name/RubiconV2_Base_Ma
 market_data_fallback_url: "https://graph.rubicon.finance/subgraphs/name/RubiconV2_Base_Mainnet"
 
 rubicon:
- market:
-  address: "0x9A5215E96E1185d4e6002C95C3Cc0aB6eEaD354F"
- router:
-  address: "0x929675f6a6aC12D7cC3463BE1df7221ca35b8a00"
+ market: "0x9A5215E96E1185d4e6002C95C3Cc0aB6eEaD354F"
+ router: "0x929675f6a6aC12D7cC3463BE1df7221ca35b8a00"
 
 token_addresses:
  WETH: "0x4200000000000000000000000000000000000006"

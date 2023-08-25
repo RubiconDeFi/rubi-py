@@ -8,7 +8,6 @@ implement the following abstract methods:
 * on_shutdown
 * on_orderbook
 * on_order
-* on_transaction_result (this will only receive events if the `ThreadedTransactionManager` is used to place transactions)
 
 This [Grid bot](../example_bots/gridbot.py) is an example of inheriting the `BaseEventTradingFramework` to develop a 
 strategy.
@@ -29,14 +28,3 @@ own thread and processes events on the queue. Currently, there are two event imp
 To explain the `FreshEventQueue` further, if the queue handler is busy and multiple events occur then whenever a new
 event comes it will replace the current event on the queue. As such, when the handler becomes ready again it will 
 immediately pull only the freshest event.
-
-### Threaded transaction manager
-
-The threaded transaction manager allows the framework to handle each new transaction in a new thread. Thus, the 
-framework does not need to wait for a transaction to keep on processing events.
-
-The status of transactions is passed back to the transaction result queue. These results are processed by the 
-`on_transaction_result` handler in the framework that will be implemented in any strategy inheriting from the
-`BaseEventTradingFramework`.
-
-The `ThreadedTransactionManager` also handles nonces so multiple transactions can be placed simultaneously.

@@ -22,18 +22,21 @@ Examples of using the rubi sdk can be found [here](docs/examples).
 │   │   ├── example.py
 │   ├── ...
 ├── network_config
+│   ├── abis
+│   │   ├── ERC20.json
+│   │   ├── market.json
+│   │   ├── ...
 │   ├── optimism
-│   │   ├── abis
 │   │   ├── network.yaml
 │   ├── ...
-│   ├── ERC20.json
 │   ├── README.md
 ├── rubi
 │   ├── contracts
 │   ├── data
 │   ├── network
-│   ├── types
+│   ├── rubicon_types
 │   ├── client.py
+│   ├── __init__.py
 ├── tests
 │   ├── ...
 ├── poetry.lock
