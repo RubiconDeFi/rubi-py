@@ -893,7 +893,6 @@ class Client:
         order_direction: str = "desc",
         as_dataframe: bool = True,
     ) -> Optional[pd.DataFrame] | List[LimitOrder]:
-
         # TODO: add support for multiple pair_names
         if len(pair_names) == 1:
             base_asset, quote_asset = pair_names[0].split("/")
