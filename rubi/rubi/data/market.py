@@ -44,8 +44,10 @@ class MarketData:
 
         if network is not None:
             self.tokens = network.tokens
+            self.netwrok = network
         else:
             self.tokens = None  # noqa
+            self.network = None  # noqa
 
         self.subgraph: Subgraph = self._initialize_subgraph(
             url=url, fallback_url=fallback_url
@@ -123,6 +125,9 @@ class MarketData:
     ) -> Optional[Decimal]:
         """Helper to convert an amount to decimals for the given ERC20"""
 
+        if self.tokens.get(Web3.to_checksum_address(gem)) is None:
+            self.network.token_from_address(gem)
+
         try:
             return self.tokens[Web3.to_checksum_address(gem)].to_decimal(amt)
         except KeyError:
@@ -130,6 +135,9 @@ class MarketData:
 
     def _erc20_to_symbol(self, gem: Union[ChecksumAddress, str]) -> Optional[str]:
         """Helper to get the symbol of the given ERC20"""
+
+        if self.tokens.get(Web3.to_checksum_address(gem)) is None:
+            self.network.token_from_address(gem)
 
         try:
             return self.tokens[Web3.to_checksum_address(gem)].symbol

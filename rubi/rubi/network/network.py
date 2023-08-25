@@ -1,4 +1,5 @@
 import os
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from typing import Optional, Dict, Union
@@ -10,6 +11,7 @@ from web3 import Web3
 from rubi.contracts import ERC20, RubiconMarket, RubiconRouter, TransactionHandler
 # from rubi.data import MarketData
 
+logger = logging.getLogger(__name__)
 
 class NetworkId(Enum):
     # MAINNET
@@ -200,3 +202,22 @@ class Network:
             checksummed_token_addresses[k] = self.w3.to_checksum_address(v)
 
         return checksummed_token_addresses
+
+    def token_from_address(
+        self, address: Union[ChecksumAddress, str]
+    ):
+        
+        try: 
+            address = self.w3.to_checksum_address(address)
+        except:
+            logger.error(f"Could not checksum address {address}")
+            return
+
+        try:
+            erc20 = ERC20.from_address(self.w3, address)
+        except: 
+            logger.error(f"Could not find token with address {address}")
+            return 
+
+        self.tokens[erc20.symbol] = erc20
+        self.tokens[erc20.address] = erc20
