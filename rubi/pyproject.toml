@@ -20,7 +20,7 @@ py-evm = "0.7.0a4"
 eth-utils = "2.2.0"
 subgrounds = { version = "1.6.1", extras = ["dash"] }
 pyyaml = "6.0.1"
-python-semantic-release = "8.0.4"
+python-semantic-release = "7.34.3"                        # Warning: upgrading to 8.0.0 breaks existing ci/cd gh actions
 black = "23.7.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -41,13 +41,13 @@ test_with_coverage = "scripts:test_with_coverage"
 generate_coverage_report = "scripts:test_coverage_html"
 
 [tool.semantic_release]
-version_toml = "pyproject.toml:tool.poetry.version"     # version location
-branch = "master"                                       # branch to make releases of
-changelog_file = "./CHANGELOG.md"                      # changelog file
-build_command = "poetry build"                          # build dists
-dist_path = "../dist/"                                  # where to put dists
-upload_to_release = true                                # auto-create GitHub release
-upload_to_pypi = false                                  # don't auto-upload to PyPI
-remove_dist = false                                     # don't remove dists
-patch_without_tag = false                               # patch release by default -> TODO    
+version_toml = "pyproject.toml:tool.poetry.version"       # version location
+branch = "master"                                         # branch to make releases of
+changelog_file = "./CHANGELOG.md"                         # changelog file
+build_command = "poetry build"                            # build dists
+dist_path = "../dist/"                                    # where to put dists
+upload_to_release = true                                  # auto-create GitHub release
+upload_to_pypi = false                                    # don't auto-upload to PyPI
+remove_dist = false                                       # don't remove dists
+patch_without_tag = false                                 # patch release by default -> TODO    
 version_source = "tag"                           
