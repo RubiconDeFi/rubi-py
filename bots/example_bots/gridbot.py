@@ -14,6 +14,7 @@ from rubi import (
     RubiconMarketApproval,
     TransactionStatus,
 )
+from rubi.data.helpers.query_types import SubgraphResponse
 from web3.types import TxParams
 
 from event_trading_framework import BaseEventTradingFramework
@@ -89,15 +90,6 @@ class GridBot(BaseEventTradingFramework):
         # Orderbook poller
         self.client.start_orderbook_poller(pair_name=self.pair_name)
 
-        base_asset_wallet_balance = self.client.get_balance(self.grid.base_asset)
-        quote_asset_wallet_balance = self.client.get_balance(self.grid.quote_asset)
-
-        self.grid.update_inventory(
-            open_orders=self.client.open_limit_orders,
-            base_asset_wallet_balance=base_asset_wallet_balance,
-            quote_asset_wallet_balance=quote_asset_wallet_balance,
-        )
-
         # set allowed_to_place_new_orders to True
         self.allowed_to_place_new_orders = True
 
@@ -132,6 +124,21 @@ class GridBot(BaseEventTradingFramework):
             self.grid.add_trade(
                 order_side=order.order_side, price=order.price, size=order.size
             )
+
+    def on_subgrounds_order_query(self, response: SubgraphResponse):
+        logger.debug(f"NEW SUBGROUNDS ORDER QUERY, timestamp: {time.time_ns()}")
+        logger.debug(response)
+
+        base_asset_wallet_balance = self.client.get_balance(self.grid.base_asset)
+        quote_asset_wallet_balance = self.client.get_balance(self.grid.quote_asset)
+
+        self.grid.update_inventory(
+            open_orders=self.client.open_limit_orders,
+            base_asset_wallet_balance=base_asset_wallet_balance,
+            quote_asset_wallet_balance=quote_asset_wallet_balance,
+        )
+
+        logger.info(f"inventory: {self.grid.inventory}")
 
     ######################################################################
     # place transaction methods
