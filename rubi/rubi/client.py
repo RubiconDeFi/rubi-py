@@ -1,5 +1,6 @@
 import logging
 from _decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Queue
 from threading import Thread
 from time import sleep
@@ -9,6 +10,7 @@ import pandas as pd
 from eth_typing import ChecksumAddress
 from web3.types import EventData, Nonce, TxParams
 
+from rubi.data.helpers.query_types import SubgraphResponse
 from rubi import LimitOrder
 from rubi.contracts import (
     ERC20,
@@ -395,6 +397,7 @@ class Client:
         event_type: Type[BaseEvent],
         filters: Optional[Dict[str, Any]] = None,
         event_handler: Optional[Callable] = None,
+        from_block: int = 0,
         poll_time: int = 2,
     ) -> None:
         """Starts a background event poller that continuously listens for events of the specified event type
@@ -411,10 +414,11 @@ class Client:
         :param event_handler: Optional event handler function to process the retrieved events, defaults to the
             self._default_event_handler (optional, default is None).
         :type event_handler: Optional[Callable], optional
+        :param from_block: The block to create the filter from. Defaults to the latest block.
+        :type from_block: int
         :param poll_time: Polling interval in seconds, defaults to 2 seconds.
         :type poll_time: int, optional
         :raises Exception: If the message queue is not configured.
-        :raises PairDoesNotExistException: If the pair does not exist in the client.
         """
         if self.message_queue is None:
             raise Exception(
@@ -457,6 +461,7 @@ class Client:
             event_handler=self._default_event_handler
             if event_handler is None
             else event_handler,
+            from_block=from_block,
             poll_time=poll_time,
         )
 
@@ -495,6 +500,26 @@ class Client:
                 )
 
             self.message_queue.put(event)
+
+    def stop_event_poller(
+        self,
+        pair_name: str,
+        event_type: Type[BaseEvent],
+    ) -> None:
+        """Stop a running event poller for a specific event type.
+
+        :param pair_name: The name of the pair we are monitoring events of.
+        :type pair_name: str
+        :param event_type: The type of event we are polling for.
+        :type event_type: Type[BaseEvent]
+        """
+
+        event_type.get_event_contract(
+            market=self.network.rubicon_market, router=self.network.rubicon_router
+        ).stop_event_poller(
+            pair_name=pair_name,
+            event_type=event_type,
+        )
 
     ######################################################################
     # order methods
@@ -892,7 +917,7 @@ class Client:
         order_by: str = "timestamp",
         order_direction: str = "desc",
         as_dataframe: bool = True,
-    ) -> Optional[pd.DataFrame] | List[LimitOrder]:
+    ) -> Optional[pd.DataFrame] | SubgraphResponse:
         # TODO: add support for multiple pair_names
         if len(pair_names) == 1:
             base_asset, quote_asset = pair_names[0].split("/")
@@ -933,38 +958,43 @@ class Client:
                         as_dataframe=as_dataframe,
                     )
                 case _:
-                    bids = self.market_data.get_offers(
-                        maker=maker,
-                        from_address=from_address,
-                        buy_gem=self.network.tokens[base_asset].address,
-                        pay_gem=self.network.tokens[quote_asset].address,
-                        side=OrderSide.BUY.value.lower(),
-                        open=open,
-                        start_time=start_time,
-                        end_time=end_time,
-                        start_block=start_block,
-                        end_block=end_block,
-                        first=first,
-                        order_by=order_by,
-                        order_direction=order_direction,
-                        as_dataframe=as_dataframe,
-                    )
-                    asks = self.market_data.get_offers(
-                        maker=maker,
-                        from_address=from_address,
-                        buy_gem=self.network.tokens[quote_asset].address,
-                        pay_gem=self.network.tokens[base_asset].address,
-                        side=OrderSide.SELL.value.lower(),
-                        open=open,
-                        start_time=start_time,
-                        end_time=end_time,
-                        start_block=start_block,
-                        end_block=end_block,
-                        first=first,
-                        order_by=order_by,
-                        order_direction=order_direction,
-                        as_dataframe=as_dataframe,
-                    )
+                    with ThreadPoolExecutor() as executor:
+                        bids_future = executor.submit(
+                            self.market_data.get_offers,
+                            maker=maker,
+                            from_address=from_address,
+                            buy_gem=self.network.tokens[base_asset].address,
+                            pay_gem=self.network.tokens[quote_asset].address,
+                            side=OrderSide.BUY.value.lower(),
+                            open=open,
+                            start_time=start_time,
+                            end_time=end_time,
+                            start_block=start_block,
+                            end_block=end_block,
+                            first=first,
+                            order_by=order_by,
+                            order_direction=order_direction,
+                            as_dataframe=as_dataframe,
+                        )
+                        asks_future = executor.submit(
+                            self.market_data.get_offers,
+                            maker=maker,
+                            from_address=from_address,
+                            buy_gem=self.network.tokens[quote_asset].address,
+                            pay_gem=self.network.tokens[base_asset].address,
+                            side=OrderSide.SELL.value.lower(),
+                            open=open,
+                            start_time=start_time,
+                            end_time=end_time,
+                            start_block=start_block,
+                            end_block=end_block,
+                            first=first,
+                            order_by=order_by,
+                            order_direction=order_direction,
+                            as_dataframe=as_dataframe,
+                        )
+                    bids = bids_future.result()
+                    asks = asks_future.result()
 
                     if as_dataframe:
                         result = pd.concat([bids, asks]).reset_index(drop=True)
@@ -989,10 +1019,10 @@ class Client:
                 as_dataframe=as_dataframe,
             )
 
-        if isinstance(result, List):
+        if isinstance(result, SubgraphResponse):
             limit_orders: List[LimitOrder] = []
 
-            for offer in result:
+            for offer in result.body:
                 base_asset, quote_asset = self._get_base_and_quote_asset(
                     raw=offer, pair_names=pair_names
                 )
@@ -1004,7 +1034,7 @@ class Client:
                         base_asset=base_asset, quote_asset=quote_asset, offer=offer
                     )
                 )
-            return limit_orders
+            return SubgraphResponse(block_number=result.block_number, body=limit_orders)
 
         return result
 

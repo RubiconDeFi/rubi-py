@@ -85,6 +85,10 @@ class BaseOrder:
         self.order_side = order_side
         self.order_type = order_type
 
+    def __repr__(self):
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
+
 
 class NewMarketOrder(BaseOrder):
     """Class representing a new market order.
@@ -149,10 +153,6 @@ class NewLimitOrder(BaseOrder):
 
         self.size = size
         self.price = price
-
-    def __repr__(self):
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 class UpdateLimitOrder(BaseOrder):
@@ -287,10 +287,6 @@ class LimitOrder(BaseOrder):
 
     def update_with_take(self, order_event: "OrderEvent"):
         self.filled_size += order_event.size
-
-    def __repr__(self):
-        items = ("{}={!r}".format(k, self.__dict__[k]) for k in self.__dict__)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 class NewCancelOrder(BaseOrder):

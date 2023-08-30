@@ -82,7 +82,9 @@ class BaseEvent(ABC):
     @staticmethod
     @abstractmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """Abstract method to create an event filter for the given contract with optional argument filters. Must be
         overridden in each event subclass.
@@ -92,6 +94,8 @@ class BaseEvent(ABC):
         :param argument_filters: Optional filters. Only events that match these filters will be returned when the filter
             is queried.
         :type argument_filters: Optional[Dict[str, Any]]
+        :param from_block: Optional block to get events from, defaults to fetching from the latest block.
+        :type from_block: int
         :return: The created event filter.
         :rtype: LogFilter
         """
@@ -210,11 +214,14 @@ class EmitOfferEvent(BaseMarketEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitOffer.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -266,11 +273,14 @@ class EmitTakeEvent(BaseMarketEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitTake.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -322,11 +332,14 @@ class EmitCancelEvent(BaseMarketEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitCancel.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -370,11 +383,14 @@ class EmitFeeEvent(BaseMarketEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitFee.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -404,11 +420,14 @@ class EmitDeleteEvent(BaseMarketEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitDelete.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -476,11 +495,14 @@ class EmitSwap(BaseEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         return contract.events.emitSwap.create_filter(
-            argument_filters=argument_filters, fromBlock="latest"
+            argument_filters=argument_filters,
+            fromBlock=from_block if from_block != 0 else "latest",
         )
 
     @staticmethod
@@ -534,7 +556,9 @@ class EmitApproval(BaseEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         raise Exception("This method doesn't make sense on this class")
@@ -583,7 +607,9 @@ class EmitTransfer(BaseEvent):
 
     @staticmethod
     def create_event_filter(
-        contract: Contract, argument_filters: Optional[Dict[str, Any]] = None
+        contract: Contract,
+        argument_filters: Optional[Dict[str, Any]] = None,
+        from_block: int = 0,
     ) -> LogFilter:
         """implementation of BaseEvent create_event_filter"""
         raise Exception("This method doesn't make sense on this class")

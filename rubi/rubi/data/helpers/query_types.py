@@ -1,6 +1,22 @@
-from typing import Any, List
+from typing import Any, List, Dict
 
 from eth_typing import ChecksumAddress
+from subgrounds import FieldPath
+
+
+class SubgraphResponse:
+    def __init__(self, block_number: int, body: List[Any]):
+        self.block_number = block_number
+        self.body = body
+
+    def __add__(self, other: "SubgraphResponse") -> "SubgraphResponse":
+        block_number = (
+            self.block_number
+            if self.block_number < other.block_number
+            else other.block_number
+        )
+
+        return SubgraphResponse(block_number=block_number, body=self.body + other.body)
 
 
 class SubgraphOffer:
@@ -29,35 +45,44 @@ class SubgraphOffer:
         self.open = open
 
     @staticmethod
-    def get_fields(offer_query: Any) -> List:
+    def get_fields(field_paths: Dict[str, FieldPath], formatted: bool = True) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
-        return [
-            offer_query.id,
-            offer_query.timestamp,
-            offer_query.index,
-            offer_query.maker.id,
-            offer_query.from_address.id,
-            offer_query.pay_gem,
-            offer_query.buy_gem,
-            offer_query.pay_amt,
-            offer_query.buy_amt,
-            offer_query.paid_amt,
-            offer_query.bought_amt,
-            offer_query.price,
-            offer_query.open,
-            offer_query.removed_timestamp,
-            offer_query.removed_block,
-            offer_query.transaction.id,
-            offer_query.transaction.block_number,
-            offer_query.transaction.block_index,
-            offer_query.pay_amt_decimals,
-            offer_query.buy_amt_decimals,
-            offer_query.paid_amt_decimals,
-            offer_query.bought_amt_decimals,
-            offer_query.pay_gem_symbol,
-            offer_query.buy_gem_symbol,
-            offer_query.datetime,
+        fields = [
+            field_paths["offer"].id,
+            field_paths["offer"].timestamp,
+            field_paths["offer"].index,
+            field_paths["offer"].maker.id,
+            field_paths["offer"].from_address.id,
+            field_paths["offer"].pay_gem,
+            field_paths["offer"].buy_gem,
+            field_paths["offer"].pay_amt,
+            field_paths["offer"].buy_amt,
+            field_paths["offer"].paid_amt,
+            field_paths["offer"].bought_amt,
+            field_paths["offer"].price,
+            field_paths["offer"].open,
+            field_paths["offer"].removed_timestamp,
+            field_paths["offer"].removed_block,
+            field_paths["offer"].transaction.id,
+            field_paths["offer"].transaction.block_number,
+            field_paths["offer"].transaction.block_index,
+            field_paths["offer"].datetime,
+            field_paths["block"].number,
         ]
+
+        if formatted:
+            fields.extend(
+                [
+                    field_paths["offer"].pay_amt_decimals,
+                    field_paths["offer"].buy_amt_decimals,
+                    field_paths["offer"].paid_amt_decimals,
+                    field_paths["offer"].bought_amt_decimals,
+                    field_paths["offer"].pay_gem_symbol,
+                    field_paths["offer"].buy_gem_symbol,
+                ]
+            )
+
+        return fields
 
 
 class SubgraphTrade:
@@ -66,6 +91,7 @@ class SubgraphTrade:
     @staticmethod
     def get_fields(trade_query: Any) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
+
         return [
             trade_query.id,
             trade_query.timestamp,

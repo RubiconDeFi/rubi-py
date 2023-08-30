@@ -3,6 +3,7 @@ from multiprocessing import Queue
 from typing import Union
 
 from rubi import OrderBook, OrderEvent
+from rubi.data.helpers.query_types import SubgraphResponse
 
 from event_trading_framework.helpers import FreshEventQueue, FIFOEventQueue
 
@@ -26,6 +27,9 @@ class BaseEventTradingFramework(ABC):
         # Initialize message queues
         self.orderbook_event_queue = FreshEventQueue(message_handler=self.on_orderbook)
         self.order_event_queue = FIFOEventQueue(message_handler=self.on_order)
+        self.subgrounds_order_query_event_queue = FreshEventQueue(
+            message_handler=self.on_subgrounds_order_query
+        )
 
     @abstractmethod
     def on_startup(self):
@@ -46,6 +50,7 @@ class BaseEventTradingFramework(ABC):
         # start message queue handlers
         self.orderbook_event_queue.start()
         self.order_event_queue.start()
+        self.subgrounds_order_query_event_queue.start()
 
         self.running = True
         while self.running:
@@ -55,6 +60,8 @@ class BaseEventTradingFramework(ABC):
                 self.orderbook_event_queue.add_message(message=message)
             elif isinstance(message, OrderEvent):
                 self.order_event_queue.add_message(message=message)
+            elif isinstance(message, SubgraphResponse):
+                self.subgrounds_order_query_event_queue.add_message(message=message)
             else:
                 raise Exception("Unexpected message fetched from queue")
 
@@ -91,5 +98,14 @@ class BaseEventTradingFramework(ABC):
 
         :param order: The order event to be handled.
         :type order: OrderEvent
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def on_subgrounds_order_query(self, response: SubgraphResponse):
+        """This method should be implemented by subclasses to handle subgrounds order queries.
+
+        :param response: The subgraph response to be handled.
+        :type response: SubgraphResponse
         """
         raise NotImplementedError()

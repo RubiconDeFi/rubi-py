@@ -49,6 +49,8 @@ class BaseContract:
 
                 self.error_decoder[error_hex_code] = item["name"]
 
+        self.running_event_pollers: Dict[str, int] = {}
+
     @classmethod
     def from_address_and_abi(
         cls,
@@ -137,6 +139,7 @@ class BaseContract:
         event_type: Type[BaseEvent],
         argument_filters: Optional[Dict[str, Any]] = None,
         event_handler: Optional[Callable] = None,
+        from_block: int = 0,
         poll_time: int = 2,
     ) -> None:
         """Start a thread which runs an event poller for a specific event type.
@@ -149,12 +152,16 @@ class BaseContract:
         :type argument_filters: Optional[Dict[str, Any]]
         :param event_handler: Optional event handler function. Defaults to using the events default handler.
         :type event_handler: Optional[Callable]
+        :param from_block: The block to create the filter from. Defaults to the latest block.
+        :type from_block: int
         :param poll_time: The time interval between each poll in seconds. Defaults to 2 seconds.
         :type poll_time: int
         """
 
         event_filter = event_type.create_event_filter(
-            contract=self.contract, argument_filters=argument_filters
+            contract=self.contract,
+            argument_filters=argument_filters,
+            from_block=from_block,
         )
         handler = (
             event_handler if event_handler is not None else event_type.default_handler
@@ -169,23 +176,26 @@ class BaseContract:
                 argument_filters,
                 event_filter,
                 handler,
+                from_block,
                 poll_time,
             ),
             daemon=True,
         )
         thread.start()
 
-    @staticmethod
     def _start_default_event_poller(
+        self,
         pair_name: str,
         event_type: Type[BaseEvent],
         contract: Contract,
         argument_filters: Optional[Dict[str, Any]],
         event_filter: LogFilter,
         event_handler: Callable,
+        from_block: int,
         poll_time: int,
     ) -> None:
-        """Start the default event poller loop. This thread will stop if the pair is removed from the client.
+        """Start the default event poller loop. This thread will stop a new event poller with a different from_block is
+        started.
 
         :param pair_name: The name of the event pair.
         :type pair_name: str
@@ -195,33 +205,65 @@ class BaseContract:
         :type event_filter: LogFilter
         :param event_handler: The event handler function.
         :type event_handler: Callable
+        :param from_block: The block to create the filter from. Defaults to the latest block.
+        :type from_block: int
         :param poll_time: The time interval between poll iterations in seconds.
         :type poll_time: int
         """
-        polling = True
+        event_poller_name = pair_name + event_type.__name__
 
-        while polling:
+        if (
+            self.running_event_pollers.get(event_poller_name, False)
+            and from_block == self.running_event_pollers[event_poller_name]
+        ):
+            logging.debug(
+                f"Event poller for {event_type.__name__} on {pair_name} with this config already started."
+            )
+            return
+
+        self.running_event_pollers[event_poller_name] = from_block
+        logging.debug(
+            f"Event poller for {event_type.__name__} on {pair_name} started from block {from_block}."
+        )
+
+        while self.running_event_pollers[event_poller_name] == from_block:
             try:
                 for event_data in event_filter.get_new_entries():
-                    event_handler(pair_name, event_type, event_data)
+                    try:
+                        event_handler(pair_name, event_type, event_data)
+                    except Exception as e:
+                        logger.error(f"Error {e} handling event data: {event_data}")
             except Exception as e:
                 logger.error(e)
 
                 # The filter has been deleted by the node and needs to be recreated
                 if "filter not found" in str(e):
                     event_filter = event_type.create_event_filter(
-                        contract=contract, argument_filters=argument_filters
+                        contract=contract,
+                        argument_filters=argument_filters,
+                        from_block=from_block,
                     )
                     logger.info(f"event filter for: {event_type} has been recreated")
 
-                # TODO: this is a hack to detect if a PairDoesNotExistException is raised and polling should stop.
-                #  Currently an additional except PairDoesNotExistException as e: cannot be added as this causes a
-                #  circular import. Think about restructuring the directories to avoid this (e.g one root level types
-                #  directory).
-                if "add pair to the client" in str(e):
-                    polling = False
-
             sleep(poll_time)
+
+        logging.debug(f"Event poller for {event_type.__name__} on {pair_name} stopped.")
+
+    def stop_event_poller(
+        self,
+        pair_name: str,
+        event_type: Type[BaseEvent],
+    ) -> None:
+        """Stop a running event poller for a specific event type.
+
+        :param pair_name: The name of the pair we are monitoring events of.
+        :type pair_name: str
+        :param event_type: The type of event to poll for.
+        :type event_type: Type[BaseEvent]
+        """
+
+        event_poller_name = pair_name + event_type.__name__
+        self.running_event_pollers[event_poller_name] = -1
 
     ######################################################################
     # helper methods

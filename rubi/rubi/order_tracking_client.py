@@ -1,6 +1,8 @@
 import logging
+import time
 from _decimal import Decimal
 from multiprocessing import Queue
+from threading import Lock, Thread
 from typing import Optional, Dict, List, Any, Type, Union
 
 from eth_typing import ChecksumAddress
@@ -52,17 +54,21 @@ class OrderTrackingClient(Client):
             network=network, message_queue=message_queue, wallet=wallet, key=key
         )
 
-        limit_orders_from_subgraph = self.get_offers(
-            maker=self.wallet, open=True, as_dataframe=False, pair_names=pair_names
-        )
-
         self.open_limit_orders: Dict[int, LimitOrder] = {}
-        if limit_orders_from_subgraph:
-            for limit_order in limit_orders_from_subgraph:
-                self.open_limit_orders[limit_order.order_id] = limit_order
-
         self.pairs_with_registered_event_listeners: List[str] = []
-        self._register_listeners(pair_names=pair_names)
+        self.running = True
+        self._subgrounds_update_lock = Lock()
+
+        subgrounds_poller = Thread(
+            target=self._register_subgrounds_poller,
+            kwargs={"pair_names": pair_names, "poll_time": 300},  # poll every 5 minutes
+            daemon=True,
+        )
+        subgrounds_poller.start()
+
+        # Make sure that we have gotten the subgrounds response for open orders before finishing instantiation
+        first_message = message_queue.get(block=True)
+        message_queue.put(first_message)
 
     @classmethod
     def from_http_node_url(
@@ -186,36 +192,39 @@ class OrderTrackingClient(Client):
 
     def _update_active_limit_orders(self, events: List[Any]) -> None:
         """Update active limit order based on incoming events"""
-        for event in events:
-            if not isinstance(event, OrderEvent):
-                continue
+        if not self._subgrounds_update_lock.locked():
+            for event in events:
+                if not isinstance(event, OrderEvent):
+                    continue
 
-            event: OrderEvent
-            if event.limit_order_owner != self.wallet:
-                continue
+                event: OrderEvent
+                if event.limit_order_owner != self.wallet:
+                    continue
 
-            match event.order_type:
-                case OrderType.LIMIT:
-                    if self.open_limit_orders.get(event.limit_order_id):
-                        # If we are already tracking the order then don't add it again
-                        continue
+                match event.order_type:
+                    case OrderType.LIMIT:
+                        if self.open_limit_orders.get(event.limit_order_id):
+                            # If we are already tracking the order then don't add it again
+                            continue
 
-                    self.open_limit_orders[
-                        event.limit_order_id
-                    ] = LimitOrder.from_order_event(order_event=event)
-                case OrderType.LIMIT_TAKEN:
-                    taken_order = self.open_limit_orders[event.limit_order_id]
+                        self.open_limit_orders[
+                            event.limit_order_id
+                        ] = LimitOrder.from_order_event(order_event=event)
+                    case OrderType.LIMIT_TAKEN:
+                        taken_order = self.open_limit_orders[event.limit_order_id]
 
-                    if taken_order.remaining_size - event.size <= Decimal("0"):
+                        if taken_order.remaining_size - event.size <= Decimal("0"):
+                            self._delete_active_limit_order(
+                                order_id=event.limit_order_id
+                            )
+                        else:
+                            self.open_limit_orders[
+                                event.limit_order_id
+                            ].update_with_take(order_event=event)
+                    case OrderType.CANCEL:
                         self._delete_active_limit_order(order_id=event.limit_order_id)
-                    else:
-                        self.open_limit_orders[event.limit_order_id].update_with_take(
-                            order_event=event
-                        )
-                case OrderType.CANCEL:
-                    self._delete_active_limit_order(order_id=event.limit_order_id)
-                case OrderType.LIMIT_DELETED:
-                    self._delete_active_limit_order(order_id=event.limit_order_id)
+                    case OrderType.LIMIT_DELETED:
+                        self._delete_active_limit_order(order_id=event.limit_order_id)
 
     def _delete_active_limit_order(self, order_id: int) -> None:
         """Delete active limit order"""
@@ -226,7 +235,37 @@ class OrderTrackingClient(Client):
                 f"Limit order {order_id} already removed from active limit orders."
             )
 
-    def _register_listeners(self, pair_names: List[str]) -> None:
+    def _register_subgrounds_poller(
+        self, pair_names: List[str], poll_time: int | float
+    ) -> None:
+        """Register subgrounds poller and event listeners"""
+        while self.running:
+            with self._subgrounds_update_lock:
+                self._stop_listeners()
+
+                subgrounds_response = self.get_offers(
+                    maker=self.wallet,
+                    open=True,
+                    as_dataframe=False,
+                    pair_names=pair_names,
+                )
+
+                if subgrounds_response.body:
+                    for limit_order in subgrounds_response.body:
+                        self.open_limit_orders[limit_order.order_id] = limit_order
+                else:
+                    self.open_limit_orders = {}
+
+                self.message_queue.put(subgrounds_response)
+
+            self._register_listeners(
+                pair_names=pair_names,
+                from_block=subgrounds_response.block_number,
+            )
+
+            time.sleep(poll_time)
+
+    def _register_listeners(self, pair_names: List[str], from_block: int) -> None:
         """Register event listeners"""
         new_pair_names = [
             pair_name
@@ -236,24 +275,47 @@ class OrderTrackingClient(Client):
 
         self.pairs_with_registered_event_listeners.extend(new_pair_names)
 
-        for pair_name in new_pair_names:
+        for pair_name in self.pairs_with_registered_event_listeners:
             self.start_event_poller(
                 pair_name=pair_name,
                 event_type=EmitOfferEvent,
                 filters={"maker": self.wallet},
+                from_block=from_block,
             )
             self.start_event_poller(
                 pair_name=pair_name,
                 event_type=EmitTakeEvent,
                 filters={"maker": self.wallet},
+                from_block=from_block,
             )
             self.start_event_poller(
                 pair_name=pair_name,
                 event_type=EmitCancelEvent,
                 filters={"maker": self.wallet},
+                from_block=from_block,
             )
             self.start_event_poller(
                 pair_name=pair_name,
                 event_type=EmitDeleteEvent,
                 filters={"maker": self.wallet},
+                from_block=from_block,
+            )
+
+    def _stop_listeners(self):
+        for pair_name in self.pairs_with_registered_event_listeners:
+            self.stop_event_poller(
+                pair_name=pair_name,
+                event_type=EmitOfferEvent,
+            )
+            self.stop_event_poller(
+                pair_name=pair_name,
+                event_type=EmitTakeEvent,
+            )
+            self.stop_event_poller(
+                pair_name=pair_name,
+                event_type=EmitCancelEvent,
+            )
+            self.stop_event_poller(
+                pair_name=pair_name,
+                event_type=EmitDeleteEvent,
             )

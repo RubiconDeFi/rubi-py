@@ -5,10 +5,11 @@ from typing import Optional, Dict, List, Union
 
 import pandas as pd
 from eth_typing import ChecksumAddress
-from subgrounds import Subgrounds, Subgraph, SyntheticField
+from subgrounds import Subgrounds, Subgraph, SyntheticField, FieldPath
 from subgrounds.pagination import ShallowStrategy
 from web3 import Web3
 
+from rubi.data.helpers.query_types import SubgraphResponse
 from rubi.contracts import ERC20
 from rubi.data.helpers import QueryValidation
 from rubi.data.helpers import SubgraphOffer, SubgraphTrade
@@ -266,7 +267,7 @@ class MarketData:
         order_by: str = "timestamp",
         order_direction: str = "desc",
         as_dataframe: bool = True,
-    ) -> Optional[pd.DataFrame] | List[SubgraphOffer]:
+    ) -> Optional[pd.DataFrame] | SubgraphResponse:
         """Returns a dataframe of offers placed on the market contract, with the option to pass in filters.
 
         :param maker: the address of the maker of the offer
@@ -294,10 +295,10 @@ class MarketData:
         :param as_dataframe: If the response should be a dataframe (default: True)
         :type as_dataframe: bool
         :return: a dataframe of offers placed on the market contract or a list of subgraph offer objects
-        :rtype: Optional[pd.DataFrame] | List[SubgraphOffer]
+        :rtype: Optional[pd.DataFrame] | SubgraphResponse
         """
 
-        offer_query = self._build_offers_query(
+        field_paths = self._build_offers_field_paths(
             order_by=order_by,
             order_direction=order_direction,
             first=first,
@@ -312,7 +313,7 @@ class MarketData:
             end_block=end_block,
         )
 
-        query_fields = SubgraphOffer.get_fields(offer_query=offer_query)
+        query_fields = SubgraphOffer.get_fields(field_paths=field_paths)
         if as_dataframe:
             response = self._query_offers_as_dataframe(query_fields=query_fields)
             # TODO: we could also pass this data to the offers_query method and handle it there, could help with price
@@ -401,7 +402,7 @@ class MarketData:
     # helper methods
     ######################################################################
 
-    def _build_offers_query(
+    def _build_offers_field_paths(
         self,
         order_by: str,
         order_direction: str,
@@ -415,7 +416,7 @@ class MarketData:
         end_time: Optional[int] = None,
         start_block: Optional[int] = None,  # TODO: add in start_block and end_block
         end_block: Optional[int] = None,  # TODO: add in start_block and end_block
-    ):
+    ) -> Dict["str", FieldPath]:
         """Helper method build an offers query."""
 
         QueryValidation.validate_offer_query(
@@ -445,14 +446,16 @@ class MarketData:
         ]
         where = [condition for condition in where if condition is not None]
 
-        offers_query = self.subgraph.Query.offers(  # noqa
+        offers_field_path = self.subgraph.Query.offers(  # noqa
             orderBy=order_by,
             orderDirection=order_direction,
             first=first,
             where=where if where else {},
         )
 
-        return offers_query
+        block_field_path = self.subgraph.Query._meta().block()  # noqa
+
+        return {"offer": offers_field_path, "block": block_field_path}
 
     def _build_trades_query(
         self,
@@ -530,7 +533,7 @@ class MarketData:
         # TODO: apply any data type conversions to the dataframe - possibly converting unformatted values to integers
         return df
 
-    def _query_offers(self, query_fields: List) -> List[SubgraphOffer]:
+    def _query_offers(self, query_fields: List) -> SubgraphResponse:
         """Helper method to query the offers subgraph entity."""
 
         response = self.subgrounds.query_json(
@@ -540,6 +543,9 @@ class MarketData:
         )
 
         if response:
+            block_number = response[0]["_meta"]["block"]["number"]
+            del response[0]["_meta"]
+
             raw_offers = list(response[0].values())[0]
             offers: List[SubgraphOffer] = []
 
@@ -557,9 +563,9 @@ class MarketData:
                         open=raw_offer["open"],
                     )
                 )
-            return offers
+            return SubgraphResponse(block_number=block_number, body=offers)
 
-        return []
+        raise Exception("Query failed for some reason")
 
     def _query_trades_as_dataframe(
         self,

@@ -51,7 +51,7 @@ class Grid:
         self.pair_name = f"{base_asset}/{quote_asset}"
 
         # Grid Inventory
-        self._inventory = {
+        self.inventory = {
             base_asset: Decimal(starting_base_asset_amount),
             quote_asset: Decimal(starting_quote_asset_amount),
         }
@@ -67,8 +67,8 @@ class Grid:
         self.min_level_size_in_base = Decimal(min_level_size_in_base)
 
         self.grid_size = (
-            self._inventory[self.base_asset]
-            + self._inventory[self.quote_asset] / self.fair_price
+            self.inventory[self.base_asset]
+            + self.inventory[self.quote_asset] / self.fair_price
         )
 
         # Grid
@@ -88,19 +88,36 @@ class Grid:
     # inventory functions
     ######################################################################
 
+    def update_fair_price(self, fair_price: Decimal):
+        self.fair_price = fair_price
+
+        # Update grid size based on new fair price
+        self.grid_size = (
+            self.inventory[self.base_asset]
+            + self.inventory[self.quote_asset] / self.fair_price
+        )
+
+        # Update grid based on new fair price
+        self.desired_grid: List[GridLevel] = self._construct_grid()
+        self.num_grid_levels = len(self.desired_grid)
+        self.middle_index = math.ceil(self.num_grid_levels / 2)
+
+        # Calculate new current index
+        self.current_grid_index: int = self._calculate_grid_index()
+
     def update_inventory(
         self,
         open_orders: Dict[int, LimitOrder],
         base_asset_wallet_balance: Decimal,
         quote_asset_wallet_balance: Decimal,
     ):
-        self._inventory[self.base_asset] = (
+        self.inventory[self.base_asset] = (
             self._amount_in_market(
                 side=OrderSide.SELL, open_limit_orders=list(open_orders.values())
             )
             + base_asset_wallet_balance
         )
-        self._inventory[self.quote_asset] = (
+        self.inventory[self.quote_asset] = (
             self._amount_in_market(
                 side=OrderSide.BUY, open_limit_orders=list(open_orders.values())
             )
@@ -109,8 +126,8 @@ class Grid:
         self.current_grid_index = self._calculate_grid_index()
 
     def add_trade(self, order_side: OrderSide, price: Decimal, size: Decimal) -> None:
-        self._inventory[self.base_asset] += size * order_side.sign()
-        self._inventory[self.quote_asset] -= size * price * order_side.sign()
+        self.inventory[self.base_asset] += size * order_side.sign()
+        self.inventory[self.quote_asset] -= size * price * order_side.sign()
 
         match order_side:
             case OrderSide.BUY:
@@ -119,16 +136,16 @@ class Grid:
                 self._last_sold_price = price
 
         self.grid_size = (
-            self._inventory[self.base_asset]
-            + self._inventory[self.quote_asset] / self.fair_price
+            self.inventory[self.base_asset]
+            + self.inventory[self.quote_asset] / self.fair_price
         )
         self.current_grid_index = self._calculate_grid_index()
 
     def get_base_asset_amount(self):
-        return self._inventory[self.base_asset]
+        return self.inventory[self.base_asset]
 
     def get_quote_asset_amount(self):
-        return self._inventory[self.quote_asset]
+        return self.inventory[self.quote_asset]
 
     ######################################################################
     # grid functions
@@ -141,8 +158,8 @@ class Grid:
             best_bid_price=best_bid_price, best_ask_price=best_ask_price
         )
 
-        bid_amount_available = self._inventory[self.quote_asset]
-        ask_amount_available = self._inventory[self.base_asset]
+        bid_amount_available = self.inventory[self.quote_asset]
+        ask_amount_available = self.inventory[self.base_asset]
 
         bids_to_place = []
         for bid in desired_bids:
@@ -203,7 +220,7 @@ class Grid:
         return desired_bids, desired_asks
 
     def _calculate_grid_index(self) -> int:
-        quote_as_percent_of_size = self._inventory[self.quote_asset] / (
+        quote_as_percent_of_size = self.inventory[self.quote_asset] / (
             self.grid_size * self.fair_price
         )
 

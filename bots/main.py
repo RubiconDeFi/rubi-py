@@ -13,7 +13,7 @@ from example_bots import Grid, GridBot
 if __name__ == "__main__":
     # setup logging
     logging.basicConfig(
-        format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+        format="%(asctime)s %(levelname)-8s %(name)s:%(lineno)d - %(message)s",
         level=logging.INFO,
         datefmt="%Y-%m-%d %H:%M:%S",
     )
