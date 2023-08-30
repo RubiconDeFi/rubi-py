@@ -45,9 +45,9 @@ class SubgraphOffer:
         self.open = open
 
     @staticmethod
-    def get_fields(field_paths: Dict[str, FieldPath]) -> List:
+    def get_fields(field_paths: Dict[str, FieldPath], formatted: bool = True) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
-        return [
+        fields = [
             field_paths["offer"].id,
             field_paths["offer"].timestamp,
             field_paths["offer"].index,
@@ -66,15 +66,23 @@ class SubgraphOffer:
             field_paths["offer"].transaction.id,
             field_paths["offer"].transaction.block_number,
             field_paths["offer"].transaction.block_index,
-            field_paths["offer"].pay_amt_decimals,
-            field_paths["offer"].buy_amt_decimals,
-            field_paths["offer"].paid_amt_decimals,
-            field_paths["offer"].bought_amt_decimals,
-            field_paths["offer"].pay_gem_symbol,
-            field_paths["offer"].buy_gem_symbol,
             field_paths["offer"].datetime,
             field_paths["block"].number,
         ]
+
+        if formatted:
+            fields.extend(
+                [
+                    field_paths["offer"].pay_amt_decimals,
+                    field_paths["offer"].buy_amt_decimals,
+                    field_paths["offer"].paid_amt_decimals,
+                    field_paths["offer"].bought_amt_decimals,
+                    field_paths["offer"].pay_gem_symbol,
+                    field_paths["offer"].buy_gem_symbol,
+                ]
+            )
+        
+        return fields
 
 
 class SubgraphTrade:
@@ -83,6 +91,7 @@ class SubgraphTrade:
     @staticmethod
     def get_fields(trade_query: Any) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
+        
         return [
             trade_query.id,
             trade_query.timestamp,
