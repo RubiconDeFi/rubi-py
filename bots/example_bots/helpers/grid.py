@@ -88,6 +88,23 @@ class Grid:
     # inventory functions
     ######################################################################
 
+    def update_fair_price(self, fair_price: Decimal):
+        self.fair_price = fair_price
+
+        # Update grid size based on new fair price
+        self.grid_size = (
+            self.inventory[self.base_asset]
+            + self.inventory[self.quote_asset] / self.fair_price
+        )
+
+        # Update grid based on new fair price
+        self.desired_grid: List[GridLevel] = self._construct_grid()
+        self.num_grid_levels = len(self.desired_grid)
+        self.middle_index = math.ceil(self.num_grid_levels / 2)
+
+        # Calculate new current index
+        self.current_grid_index: int = self._calculate_grid_index()
+
     def update_inventory(
         self,
         open_orders: Dict[int, LimitOrder],
