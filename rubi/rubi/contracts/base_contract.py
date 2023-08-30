@@ -229,7 +229,10 @@ class BaseContract:
         while self.running_event_pollers[event_poller_name] == from_block:
             try:
                 for event_data in event_filter.get_new_entries():
-                    event_handler(pair_name, event_type, event_data)
+                    try:
+                        event_handler(pair_name, event_type, event_data)
+                    except Exception as e:
+                        logger.error(f"Error {e} handling event data: {event_data}")
             except Exception as e:
                 logger.error(e)
 

@@ -66,6 +66,10 @@ class OrderTrackingClient(Client):
         )
         subgrounds_poller.start()
 
+        # Make sure that we have gotten the subgrounds response for open orders before finishing instantiation
+        first_message = message_queue.get(block=True)
+        message_queue.put(first_message)
+
     @classmethod
     def from_http_node_url(
         cls,
