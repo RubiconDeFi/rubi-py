@@ -81,7 +81,7 @@ class SubgraphOffer:
                     field_paths["offer"].buy_gem_symbol,
                 ]
             )
-        
+
         return fields
 
 
@@ -91,7 +91,7 @@ class SubgraphTrade:
     @staticmethod
     def get_fields(trade_query: Any) -> List:
         """Helper method to build a list of fields for the offers subgraph entity."""
-        
+
         return [
             trade_query.id,
             trade_query.timestamp,
