@@ -33,6 +33,44 @@ weth_usdc_trades = client.get_trades(pair_name="WETH/USDC", start_time=start_tim
 
 the offer entity for the `RubiconV2` subgraphs now all contain the relevant close information to properly determine when they were closed, removing the need to use the `_Internal` subgraph version that is present within this branch. 
 
+## Visualizing the Graph
+
+once the network object has been constructed, it is trivial to create an `html` representation of it that can be used to 
+visualize the network. the following demonstrates how to do so for a given pair: 
+
+```python 
+
+from pyvis.network import Network as Net
+
+# load trade data
+with open('weth_usdc_trades.pickle', 'rb') as f:
+   weth_usdc_trades = pickle.load(f)
+with open('weth_usdc_offers.pickle', 'rb') as f:
+   weth_usdc_offers = pickle.load(f)
+
+# build the network 
+network = Network.from_df(
+   client=client,
+   pair_names=["WETH/USDC"],
+   offers=[weth_usdc_offers],
+   trades=[weth_usdc_trades]
+)
+
+# build the graph
+network.build_graph(
+   pair_name="WETH/USDC",
+)
+
+# get the graph object 
+g = network.graphs['WETH/USDC']
+
+# create the visualization
+net = Net()
+net.from_nx(g)
+net.show("mygraph.html")
+
+```
+
 ## Going Forward
 
 This intial work sets the foundation for: 1) retroactiveley evaluating order book activity, 2): creating a network graph based
